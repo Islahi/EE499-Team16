@@ -37,3 +37,11 @@ Log items such as confirmed decisions, important advisor guidance, meaningful re
 - Substantive feedback worth carrying across sessions should be saved into the repository rather than existing only in chat.
 - The primary user's academic priority was clarified as recovering from a perceived C-level trajectory toward A-level performance; this is a quality target/risk framing, not a grade prediction or guarantee.
 
+
+## 2026-09-20 — Term 2 semester schedule added
+
+- Added a repository-tracked Term 2 task register under `02_Reports/Working/Planning/`.
+- The schedule covers data acquisition, product/software design, simulation design, 5-bus implementation, BESS optimization, uncertainty modelling, software integration, validation, IEEE 33-bus scaling, and final documentation/demo work.
+- Data acquisition is the immediate priority because the advisors requested project data before the next meeting (date TBA).
+- Added usage instructions explaining ownership, status/progress updates, dependencies, weekly review, and how to revise dates once official deadlines are announced.
+- The schedule is an internal planning artifact and does not replace official EE499 deadlines or confirmed technical decisions.
