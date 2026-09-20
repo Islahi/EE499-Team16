@@ -57,6 +57,7 @@ This is the main tab to edit.
 
 For each task, maintain:
 
+- **Task Explanation** — what the task actually involves and what work should be carried out.
 - **Owner** — Team, Muhammad, Mohammed, or Fahad.
 - **Status** — Not Started, In Progress, Blocked, Done, or TBA.
 - **Progress** — update as work advances.
