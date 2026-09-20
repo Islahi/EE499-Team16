@@ -54,3 +54,11 @@ Log items such as confirmed decisions, important advisor guidance, meaningful re
 - Added an early critical task for ethics/professional responsibility covering data integrity/provenance, transparent assumptions, reliability/safety implications, model limitations, environmental/economic trade-offs, responsible use, and final-report considerations.
 - Data acquisition remains the immediate advisor-meeting gate: Tasks 1–7 should be completed before the next meeting (date TBA).
 - Google Sheet: https://docs.google.com/spreadsheets/d/1HE7RNvaZ-VkVMlozWfkfPbe23hywnEdOzuaI1CfAEcY/edit
+
+
+## 2026-09-20 — Term 2 Gantt made dynamic
+
+- The Google Sheet Semester Gantt is now formula-linked to the Task Register.
+- Changes to task name, phase, Start/End dates, priority, status, and progress automatically propagate to the Gantt.
+- Weekly bars move automatically when dates change and use status-based formatting for Not Started, In Progress, Blocked, Done, and TBA.
+- The Task Register is the intended editing surface; the Gantt is now primarily a generated planning view.
