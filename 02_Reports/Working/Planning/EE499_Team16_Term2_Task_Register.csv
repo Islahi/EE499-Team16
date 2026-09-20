@@ -6,33 +6,34 @@ ID,Phase,Task,Deliverable / Definition of Done,Start,End,Priority,Owner,Status,P
 5,Data,"Check data licenses, units, resolution, and provenance","Documented source, units, timestamps, missing-data issues and permitted use",2026-09-23,2026-09-27,High,Team,Not Started,0,"2,3,4"
 6,Data,"Clean, resample, and synchronize datasets",Analysis-ready aligned dataset,2026-09-27,2026-10-01,Critical,Team,Not Started,0,"2,3,4"
 7,Data,Prepare data package for next advisor meeting (TBA),Data sources + sample plots + quality summary + unresolved questions,2026-09-29,2026-10-01,Critical,Team,Not Started,0,"5,6"
-8,Product Design,Confirm Term 2 product scope and minimum capabilities,Approved scope: user-defined distribution system + BESS planning workflow,2026-09-27,2026-10-01,Critical,Team,Not Started,0,Advisor discussion
-9,Product Design,Define software requirements and user workflow,Functional/non-functional requirements and main use cases,2026-10-04,2026-10-08,Critical,Team,Not Started,0,8
-10,Software Design,Design software architecture and module boundaries,"Architecture diagram covering UI, data, network, uncertainty, optimization, results",2026-10-04,2026-10-08,Critical,Team,Not Started,0,"8,9"
-11,Software Design,Define module interfaces and data flow,Inputs/outputs and data structures between modules,2026-10-06,2026-10-12,Critical,Team,Not Started,0,10
-12,Simulation Design,Finalize network and power-flow assumptions,"Network model, slack/source, line model, voltage limits, solver choice",2026-10-11,2026-10-15,Critical,Team,Not Started,0,"4,11"
-13,Simulation Design,Finalize BESS mathematical model,"SOC equation, efficiency, charge/discharge limits, energy/power ratings",2026-10-11,2026-10-19,Critical,Team,Not Started,0,11
-14,Simulation Design,"Finalize objective function, constraints, and metrics",Mathematical optimization problem and normalized performance metrics,2026-10-18,2026-10-22,Critical,Team,Not Started,0,"12,13"
-15,Simulation Design,Define uncertainty and scenario methodology,"Forecast-error model, Monte Carlo method, scenario handling/reduction method",2026-10-18,2026-10-29,High,Team,Not Started,0,"6,14"
-16,Validation Design,Design validation and software test plan,"Power-flow, BESS, optimizer, uncertainty, robustness and software test cases",2026-10-25,2026-10-29,Critical,Team,Not Started,0,"12,13,14"
-17,Core Implementation,Build deterministic 5-bus network engine,Runnable small network with configurable buses/lines/loads/source,2026-10-25,2026-11-05,Critical,Team,Not Started,0,"10,11,12"
-18,Core Implementation,Implement baseline power flow and basic visualization,"Bus voltage, line loading/losses and baseline result plots/tables",2026-11-01,2026-11-08,Critical,Team,Not Started,0,17
-19,Core Implementation,Implement data import and time-series handling,"Load/PV profile import, alignment, scaling and validation",2026-11-01,2026-11-12,High,Team,Not Started,0,"6,17"
-20,BESS Implementation,Implement BESS SOC and dispatch simulation,Working battery model integrated with time-series power flow,2026-11-08,2026-11-19,Critical,Team,Not Started,0,"13,18,19"
-21,Optimization,Implement deterministic BESS sizing and placement optimization,"Optimizer selects bus, power rating and energy capacity",2026-11-15,2026-11-26,Critical,Team,Not Started,0,"14,20"
-22,Validation,Verify optimizer against exhaustive search on small case,Known/reference optimum for a constrained 5-bus test case,2026-11-22,2026-12-03,Critical,Team,Not Started,0,"16,21"
-23,Uncertainty,Implement forecasting / forecast-error model,Validated forecast/error model with suitable error metrics,2026-11-15,2026-11-26,High,Team,Not Started,0,"6,15"
-24,Uncertainty,Implement Monte Carlo scenario generation,Renewable/load uncertainty scenarios generated from data/error model,2026-11-22,2026-12-03,Critical,Team,Not Started,0,"15,23"
-25,Uncertainty,Implement representative-scenario selection/reduction,Defensible reduced scenario set with preservation checks,2026-11-29,2026-12-10,High,Team,Not Started,0,24
-26,Optimization,Integrate uncertainty-aware BESS optimization,Sizing/placement evaluated across renewable/load scenarios,2026-12-06,2026-12-17,Critical,Team,Not Started,0,"21,24,25"
-27,Software Product,Build minimum decision-support user interface,"UI for network/data setup, baseline run, optimization and results",2026-11-29,2026-12-10,High,Team,Not Started,0,"9,10,18"
-28,Software Product,"Integrate optimizer, scenarios, and results into UI",End-to-end program workflow from user inputs to BESS recommendation,2026-12-06,2026-12-17,Critical,Team,Not Started,0,"26,27"
-29,Validation,Compare baseline vs optimized BESS system,Technical/economic before-vs-after results,2026-12-13,2026-12-17,Critical,Team,Not Started,0,"26,28"
-30,Validation,Compare deterministic vs uncertainty-aware designs,Evidence of whether uncertainty-aware planning improves robustness,2026-12-13,2026-12-24,Critical,Team,Not Started,0,"22,26"
-31,Validation,Run sensitivity and robustness testing,"Sensitivity to scenario count, optimizer settings, weights/costs and uncertainty",2026-12-20,2026-12-24,High,Team,Not Started,0,"26,30"
-32,Validation,Scale and validate on IEEE 33-bus case,Benchmark case demonstrating scalability beyond the 5-bus model,2026-12-20,2026-12-31,High,Team,Not Started,0,"18,26"
-33,Software Testing,"Test error handling, invalid inputs, and failure cases",Software test record and fixes for common invalid/failed cases,2026-12-13,2026-12-24,High,Team,Not Started,0,28
-34,Finalization,Freeze final simulation cases and generate final figures/tables,Reproducible final results package,2026-12-27,2026-12-31,Critical,Team,Not Started,0,"29,30,31,32"
-35,Documentation,Update final report and technical documentation,"Methods, architecture, validation, results, limitations and user documentation",2026-12-20,2027-01-05,Critical,Team,Not Started,0,29 onward
-36,Finalization,Prepare final presentation and live software demo,"Presentation, demo workflow and backup screenshots/results",2026-12-27,2027-01-05,Critical,Team,Not Started,0,"28,34"
-37,Finalization,"Final QA, reproducibility check, and submission buffer",Clean run from data import to final recommendation + submission-ready package,2027-01-03,2027-01-07,Critical,Team,Not Started,0,"34,35,36"
+8,Ethics & Responsibility,Define project ethics and professional-responsibility considerations,"Ethics note/checklist covering data integrity and provenance, transparent assumptions, grid reliability/safety impacts, model limitations, environmental/economic trade-offs, responsible use, and final-report points",2026-09-27,2026-10-08,Critical,Team,Not Started,0,"1,5"
+9,Product Design,Confirm Term 2 product scope and minimum capabilities,Approved scope: user-defined distribution system + BESS planning workflow,2026-09-27,2026-10-01,Critical,Team,Not Started,0,Advisor discussion
+10,Product Design,Define software requirements and user workflow,Functional/non-functional requirements and main use cases,2026-10-04,2026-10-08,Critical,Team,Not Started,0,9
+11,Software Design,Design software architecture and module boundaries,"Architecture diagram covering UI, data, network, uncertainty, optimization, results",2026-10-04,2026-10-08,Critical,Team,Not Started,0,"9,10"
+12,Software Design,Define module interfaces and data flow,Inputs/outputs and data structures between modules,2026-10-06,2026-10-12,Critical,Team,Not Started,0,11
+13,Simulation Design,Finalize network and power-flow assumptions,"Network model, slack/source, line model, voltage limits, solver choice",2026-10-11,2026-10-15,Critical,Team,Not Started,0,"4,12"
+14,Simulation Design,Finalize BESS mathematical model,"SOC equation, efficiency, charge/discharge limits, energy/power ratings",2026-10-11,2026-10-19,Critical,Team,Not Started,0,12
+15,Simulation Design,"Finalize objective function, constraints, and metrics",Mathematical optimization problem and normalized performance metrics,2026-10-18,2026-10-22,Critical,Team,Not Started,0,"13,14"
+16,Simulation Design,Define uncertainty and scenario methodology,"Forecast-error model, Monte Carlo method, scenario handling/reduction method",2026-10-18,2026-10-29,High,Team,Not Started,0,"6,15"
+17,Validation Design,Design validation and software test plan,"Power-flow, BESS, optimizer, uncertainty, robustness and software test cases",2026-10-25,2026-10-29,Critical,Team,Not Started,0,"13,14,15"
+18,Core Implementation,Build deterministic 5-bus network engine,Runnable small network with configurable buses/lines/loads/source,2026-10-25,2026-11-05,Critical,Team,Not Started,0,"11,12,13"
+19,Core Implementation,Implement baseline power flow and basic visualization,"Bus voltage, line loading/losses and baseline result plots/tables",2026-11-01,2026-11-08,Critical,Team,Not Started,0,18
+20,Core Implementation,Implement data import and time-series handling,"Load/PV profile import, alignment, scaling and validation",2026-11-01,2026-11-12,High,Team,Not Started,0,"6,18"
+21,BESS Implementation,Implement BESS SOC and dispatch simulation,Working battery model integrated with time-series power flow,2026-11-08,2026-11-19,Critical,Team,Not Started,0,"14,19,20"
+22,Optimization,Implement deterministic BESS sizing and placement optimization,"Optimizer selects bus, power rating and energy capacity",2026-11-15,2026-11-26,Critical,Team,Not Started,0,"15,21"
+23,Validation,Verify optimizer against exhaustive search on small case,Known/reference optimum for a constrained 5-bus test case,2026-11-22,2026-12-03,Critical,Team,Not Started,0,"17,22"
+24,Uncertainty,Implement forecasting / forecast-error model,Validated forecast/error model with suitable error metrics,2026-11-15,2026-11-26,High,Team,Not Started,0,"6,16"
+25,Uncertainty,Implement Monte Carlo scenario generation,Renewable/load uncertainty scenarios generated from data/error model,2026-11-22,2026-12-03,Critical,Team,Not Started,0,"16,24"
+26,Uncertainty,Implement representative-scenario selection/reduction,Defensible reduced scenario set with preservation checks,2026-11-29,2026-12-10,High,Team,Not Started,0,25
+27,Optimization,Integrate uncertainty-aware BESS optimization,Sizing/placement evaluated across renewable/load scenarios,2026-12-06,2026-12-17,Critical,Team,Not Started,0,"22,25,26"
+28,Software Product,Build minimum decision-support user interface,"UI for network/data setup, baseline run, optimization and results",2026-11-29,2026-12-10,High,Team,Not Started,0,"10,11,19"
+29,Software Product,"Integrate optimizer, scenarios, and results into UI",End-to-end program workflow from user inputs to BESS recommendation,2026-12-06,2026-12-17,Critical,Team,Not Started,0,"27,28"
+30,Validation,Compare baseline vs optimized BESS system,Technical/economic before-vs-after results,2026-12-13,2026-12-17,Critical,Team,Not Started,0,"27,29"
+31,Validation,Compare deterministic vs uncertainty-aware designs,Evidence of whether uncertainty-aware planning improves robustness,2026-12-13,2026-12-24,Critical,Team,Not Started,0,"23,27"
+32,Validation,Run sensitivity and robustness testing,"Sensitivity to scenario count, optimizer settings, weights/costs and uncertainty",2026-12-20,2026-12-24,High,Team,Not Started,0,"27,31"
+33,Validation,Scale and validate on IEEE 33-bus case,Benchmark case demonstrating scalability beyond the 5-bus model,2026-12-20,2026-12-31,High,Team,Not Started,0,"19,27"
+34,Software Testing,"Test error handling, invalid inputs, and failure cases",Software test record and fixes for common invalid/failed cases,2026-12-13,2026-12-24,High,Team,Not Started,0,29
+35,Finalization,Freeze final simulation cases and generate final figures/tables,Reproducible final results package,2026-12-27,2026-12-31,Critical,Team,Not Started,0,"30,31,32,33"
+36,Documentation,Update final report and technical documentation,"Methods, architecture, ethics/professional responsibility, validation, results, limitations and user documentation",2026-12-20,2027-01-05,Critical,Team,Not Started,0,30 onward
+37,Finalization,Prepare final presentation and live software demo,"Presentation, demo workflow and backup screenshots/results",2026-12-27,2027-01-05,Critical,Team,Not Started,0,"29,35"
+38,Finalization,"Final QA, reproducibility check, and submission buffer",Clean run from data import to final recommendation + submission-ready package,2027-01-03,2027-01-07,Critical,Team,Not Started,0,"35,36,37"
