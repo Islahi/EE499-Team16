@@ -1,0 +1,21 @@
+Your Grade	10.88/15
+
+Overall Feedback
+5/21/26, 8:26 PM
+-------------------------
+
+Please consider the comments given during the presentation.
+
+
+
+-------------------------
+
+- The proposed alternatives do not appear to be conceptually distinct, limiting meaningful comparison and trade-off analysis.
+
+- The evaluation is primarily qualitative, with insufficient quantitative analysis to support design decisions.
+
+- No actual design was presented; the project remains largely conceptual.
+
+- Key details of the simulation model are missing.
+
+- The relationships, interfaces, and functionality of the different statistical modules are not clearly defined.

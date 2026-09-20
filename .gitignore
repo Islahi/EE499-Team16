@@ -1,0 +1,35 @@
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+~$*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+
+# MATLAB / common generated files
+*.asv
+slprj/
+codegen/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local IDE metadata
+.vscode/
+.idea/
+
+# Exported handoff archives
+Exports/*.zip
+
+# Temporary/download artifacts
+*.tmp
+*.temp
+*.part

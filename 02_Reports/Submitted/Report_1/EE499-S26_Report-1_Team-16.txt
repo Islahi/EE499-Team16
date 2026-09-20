@@ -1,0 +1,22 @@
+Your Grade	3.52/5
+
+Overall Feedback
+- Essential project details are missing in order to clearly define the problem.
+
+- Optimization details are not clearly stated.
+
+- There are discrepancies between the title and the project specifications.
+
+- The simulation model, along with its parameters, variables, and outcomes, is not clearly defined.
+
+- Problem Statement should be concise and to-the-point, just about the problem at hand, no background, no solutions.
+
+- All Design Specifications have several problems; they need to be thoroughly revised and fixed.
+
+- What exactly will be the deliverables?
+
+- Project title is only about the Renewable Energy System while the presentation was about mixed generation system. Therefore, the title needs to be fixed. Moreover, it will also necessitate the design of the renewable segment to be added to an already existing non-renewable generation capacity, besides the storage.
+
+- What exactly will be the parameters used in optimization problem?
+
+This is a technically strong and well-focused Term 1 report that demonstrates solid 

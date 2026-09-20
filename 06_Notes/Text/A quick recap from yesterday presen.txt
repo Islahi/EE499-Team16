@@ -1,0 +1,15 @@
+A quick recap from yesterday presentation
+
+* The problem statement should be shorter 
+* Design specification should be measurable
+	* Deployable, agnostic, and scalable is not measurable 
+	* Renewable energy doesn't produce greenhouse gasses
+	* Stationary battery is not measurable
+* Constraints are not really constraints
+* Some items in realistic assumptions are not assumptions
+	* Battery efficiency
+	* Battery state of charge
+	* Battery lifetime
+* Do we have conventional generator in our system such as coal or oil? if so why not mention in the topic
+
+All and all we need to revise chapter 1.2 and 1.4
