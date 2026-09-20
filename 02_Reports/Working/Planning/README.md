@@ -70,6 +70,28 @@ The `Deliverable / Definition of Done` column defines what should exist before a
 
 This tab contains a short in-sheet reminder of the workflow and priorities.
 
+
+## Dynamic Gantt behavior
+
+The **Semester Gantt** is now automatically linked to the **Task Register**.
+
+Do **not** manually edit the task rows or weekly bars in the Gantt tab. Instead, update the Task Register:
+
+- changing **Start** or **End** moves the weekly Gantt bar automatically;
+- changing **Status** updates the Gantt status display and bar formatting;
+- changing **Progress** updates the percentage shown in the Gantt;
+- changing the task name, phase, or priority is also reflected automatically.
+
+Current status colors are:
+
+- **Not Started** — gray
+- **In Progress** — blue
+- **Blocked** — red
+- **Done** — green
+- **TBA** — yellow
+
+The weekly columns are fixed to the current internal semester planning window. If the official semester end moves outside that window, extend the weekly columns/formulas accordingly.
+
 ## Weekly workflow
 
 At least once each week:
