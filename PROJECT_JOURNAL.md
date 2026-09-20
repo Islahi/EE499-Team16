@@ -45,3 +45,12 @@ Log items such as confirmed decisions, important advisor guidance, meaningful re
 - Data acquisition is the immediate priority because the advisors requested project data before the next meeting (date TBA).
 - Added usage instructions explaining ownership, status/progress updates, dependencies, weekly review, and how to revise dates once official deadlines are announced.
 - The schedule is an internal planning artifact and does not replace official EE499 deadlines or confirmed technical decisions.
+
+
+## 2026-09-20 — Google Sheet schedule adopted and ethics prioritized
+
+- The Term 2 working schedule is now maintained as a native Google Sheet for easier team access and collaboration.
+- Repository planning instructions now link to the Google Sheet and keep the CSV as a version-controlled snapshot.
+- Added an early critical task for ethics/professional responsibility covering data integrity/provenance, transparent assumptions, reliability/safety implications, model limitations, environmental/economic trade-offs, responsible use, and final-report considerations.
+- Data acquisition remains the immediate advisor-meeting gate: Tasks 1–7 should be completed before the next meeting (date TBA).
+- Google Sheet: https://docs.google.com/spreadsheets/d/1HE7RNvaZ-VkVMlozWfkfPbe23hywnEdOzuaI1CfAEcY/edit
