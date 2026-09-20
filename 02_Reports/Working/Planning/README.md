@@ -2,9 +2,10 @@
 
 This folder contains the working semester schedule for EE499 Team 16:
 
-- `EE499_Team16_Term2_Gantt_Schedule.xlsx`
+- `EE499_Team16_Term2_Task_Register.csv` — repository-stored editable schedule/task register.
+- A formatted `.xlsx` Gantt workbook was also generated in the project chat for convenience.
 
-The workbook is an **internal planning tool**, not an official EE499 schedule. Official Term 2 deadlines are still TBA and should replace the internal dates when announced.
+The schedule is an **internal planning tool**, not an official EE499 schedule. Official Term 2 deadlines are still TBA and should replace the internal dates when announced.
 
 ## Immediate priority
 
@@ -22,26 +23,9 @@ Therefore, Tasks **1–7** are the current priority:
 
 The meeting package should contain the data sources, sample plots, quality/coverage notes, and unresolved questions.
 
-## Workbook structure
+## How to use the repository spreadsheet
 
-### 1. Semester Gantt
-
-This sheet gives the full semester timeline from **20 September 2026 to 7 January 2027**.
-
-Use it to see:
-
-- project phases,
-- task start/end dates,
-- weekly activity blocks,
-- critical tasks,
-- overall progress,
-- the next-advisor-meeting gate.
-
-The weekly bars are generated from each task's Start and End dates.
-
-### 2. Task Register
-
-This is the main sheet to update during the semester.
+Open `EE499_Team16_Term2_Task_Register.csv` in Excel, Google Sheets, LibreOffice Calc, or another spreadsheet application.
 
 For each task, maintain:
 
@@ -53,28 +37,26 @@ For each task, maintain:
 
 The `Deliverable / Definition of Done` column states what must exist before a task should be considered complete.
 
-### 3. Lists
-
-This sheet contains the values used by the dropdown menus in the Task Register. It usually does not need editing.
+The formatted Excel workbook generated in chat additionally contains a visual weekly Gantt chart and dropdown/formatting support. The CSV in this repository is the portable text-based planning record that can be version-controlled cleanly.
 
 ## Weekly workflow
 
 At least once each week:
 
-1. Open the **Task Register**.
+1. Open the task register.
 2. Update each active task's Owner, Status, and Progress.
 3. Adjust dates when necessary.
 4. Mark blocked tasks and note the dependency/problem.
-5. Review the **Semester Gantt** to check whether later tasks are being affected.
-6. Before advisor meetings, review the current critical tasks and prepare evidence/results rather than only reporting activity.
+5. Check whether delays affect dependent tasks.
+6. Before advisor meetings, prepare evidence/results rather than only reporting activity.
 
 ## When official dates are announced
 
-The current workbook uses internal planning dates because formal Term 2 deadlines are not yet available.
+The current schedule uses internal planning dates because formal Term 2 deadlines are not yet available.
 
 When the university/advisor announces a submission, presentation, or meeting date:
 
-1. Update the affected task dates in the Task Register.
+1. Update the affected task dates.
 2. Move upstream tasks earlier if required.
 3. Preserve a reasonable validation/reporting buffer near the end of the term.
 4. Do not treat **7 January 2027** as an official deadline unless confirmed by the course.
