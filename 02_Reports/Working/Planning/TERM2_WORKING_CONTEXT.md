@@ -147,39 +147,33 @@ If implementation or validation shows that an initial shadow-design choice is un
 
 ## 6. Recommended implementation sequence
 
-The current recommended sequence is:
+The revised implementation sequence is:
 
 ```text
-Data acquisition
+Data
     ↓
-Product definition / requirements
+Shadow baseline / code setup
     ↓
-Software architecture + interfaces
+V1 — Network simulator
     ↓
-Simulation / mathematical design
+V2 — Fixed BESS
     ↓
-Minimal deterministic 5-bus system
+V3 — Manual sizing/placement comparison
     ↓
-Baseline power flow
+V4 — Term 1 WSM + GWO optimization
     ↓
-BESS model + dispatch
+V5 — Term 1 ARIMA + Monte Carlo uncertainty workflow
     ↓
-Deterministic BESS sizing/placement
+V6 — Decision-support software
     ↓
-Uncertainty / scenario modelling
+Final validation + sensitivity
     ↓
-Uncertainty-aware BESS optimization
+IEEE 33-bus final case
     ↓
-Decision-support UI integration
-    ↓
-Validation + sensitivity testing
-    ↓
-IEEE 33-bus benchmark
-    ↓
-Final documentation + demonstration
+Final report + demo by 31 Dec 2026
 ```
 
-A key recommendation is **not to begin Term 2 by directly coding GWO**. The backend model, interfaces, deterministic baseline, and validation reference should be established first.
+The team is no longer treating Tasks 9–17 as a separate long design phase. The shadow design is used alongside implementation. Term 1 methods remain the default baseline and are changed only when implementation/validation or advisor feedback gives a clear reason.
 
 ## 7. Small-system validation strategy
 
@@ -415,7 +409,7 @@ Repository planning files:
 - `02_Reports/Working/Planning/README.md`
 - `02_Reports/Working/Planning/EE499_Team16_Term2_Task_Register.csv`
 
-The plan currently contains 38 tasks spanning:
+The revised plan currently contains **58 smaller tasks** and targets completion by **31 December 2026**. The tasks are intentionally split so each implementation step is easier to understand and track. They span:
 
 - data,
 - ethics,
@@ -506,4 +500,4 @@ The team has a substantial research and conceptual foundation from Term 1. The m
 
 > **a complete engineering design → a working integrated application → a validated result.**
 
-The most immediate practical work is **data acquisition and evaluation**, followed by freezing the minimum product architecture/design needed to begin the deterministic 5-bus implementation.
+The most immediate practical work is **data acquisition and evaluation**, then moving directly into the V1–V6 implementation path while using the shadow design as support. The internal plan now finishes on **31 December 2026**.
