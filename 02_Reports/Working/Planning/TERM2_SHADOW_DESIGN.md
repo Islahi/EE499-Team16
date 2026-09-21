@@ -2,7 +2,7 @@
 
 **Status:** Working / provisional  
 **Purpose:** Initial technical baseline for Tasks 9–17 and V1–V6 implementation  
-**Important:** This document does **not** revise submitted Chapters 1–3. It is a working shadow design that may be changed during Term 2 implementation and validation. Any implementation-driven change should be documented and justified in Chapter 4.
+**Important:** This document does **not** revise submitted Chapters 1–3. It starts from the **Term 1 baseline design** and fills missing implementation details such as software architecture, interfaces, control flow, and validation. Term 1 design choices remain the default implementation choices unless implementation, validation, unavailable data, or advisor feedback provides a clear reason to change them. Any implementation-driven change must be documented and justified in Chapter 4.
 
 ## 1. Why this document exists
 
@@ -10,11 +10,32 @@ Chapters 1–3 from Term 1 are treated as frozen. The team still needs enough te
 
 Therefore, Tasks 9–17 are treated as a **shadow design**:
 
-- define the minimum initial design needed to start coding,
+- preserve the Term 1 baseline as the starting point,
+- fill design details that were unclear or missing in Term 1,
+- define the minimum technical information needed to start coding,
 - implement the system incrementally,
-- revise the shadow design when implementation exposes a problem,
-- record and justify important changes in Chapter 4,
+- validate the Term 1 choices during implementation,
+- change a baseline choice only when there is a clear technical/advisor reason,
+- record and justify any important change in Chapter 4,
 - validate the final implementation in Chapter 5.
+
+## Baseline-preservation rule
+
+The default sequence is:
+
+```text
+Term 1 baseline
+    ↓
+Implement as written
+    ↓
+Validate / test
+    ↓
+Keep it if it works
+    ↓
+Change only if evidence shows a need
+```
+
+The shadow design must not silently replace a Term 1 method simply because another method may appear better before implementation.
 
 The implementation path is:
 
@@ -434,13 +455,13 @@ Initial operating limit:
 
 ## Solver
 
-Initial recommendation:
+The **Forward-Backward Sweep (FBS)** method selected in the Term 1 baseline remains the initial power-flow method to implement.
 
-- use a mature power-flow library such as **pandapower** for implementation,
-- do not rewrite the power-flow solver solely for novelty,
-- FBS from Term 1 may later be implemented/compared if required.
+Implementation should therefore begin by reproducing the Term 1 FBS-based radial power-flow approach.
 
-Reason: the project contribution is the integrated BESS-planning workflow rather than the power-flow solver itself.
+A trusted external solver such as pandapower may still be used as a **validation/reference tool** to compare results, but it should not replace FBS by default.
+
+If FBS later creates a verified technical problem, cannot support a required feature, or the advisors request a different solver, the change should be documented and justified in Chapter 4.
 
 ## Time step
 
@@ -572,11 +593,17 @@ where (J) aggregates appropriately normalized/weighted versions of:
 C(x),quad E_{curt}(x),quad E_{shed}(x)
 ]
 
-The exact normalization and weights should **not** be frozen yet.
+The initial weighting follows the Term 1 baseline:
 
-The Term 1 (0.50/0.25/0.25) weights should only be retained if implementation/sensitivity analysis supports them.
+[
+J = 0.50,C + 0.25,E_{curt} + 0.25,E_{shed}
+]
 
-Do not directly add incompatible raw quantities such as SAR and kWh without normalization or an economically consistent formulation.
+or the equivalent Term 1 Weighted Sum Method implementation.
+
+These weights are the **starting implementation values**. Task 32 sensitivity testing will later check how strongly the result depends on them. They should only be changed if sensitivity results, normalization requirements, implementation evidence, or advisor feedback shows a need.
+
+Because the three criteria have different units/scales, implementation must clearly define how the Weighted Sum Method makes them comparable. If the Term 1 report did not fully specify normalization, this is an implementation detail that must be clarified without changing the intended 0.50/0.25/0.25 priority unless necessary.
 
 ## Initial technical constraints
 
@@ -631,7 +658,7 @@ Even if not every metric is optimized directly, report:
 
 # Task 16 — Initial Uncertainty and Scenario Methodology
 
-This task is intentionally provisional until V5.
+This task follows the Term 1 uncertainty baseline first. Validation in V5 determines whether refinement is necessary.
 
 ## Uncertain variables
 
@@ -786,16 +813,22 @@ Use these controlled cases as references for V4.
 
 ## V4 — Optimizer
 
-Create a deliberately small search space and enumerate every valid BESS option.
+Implement **Grey Wolf Optimization (GWO)** as selected in the Term 1 baseline.
 
-Compare the selected optimizer with the known exhaustive-search optimum.
+Use a deliberately small 5-bus search case to independently enumerate every valid BESS option and establish a reference optimum.
+
+Then compare GWO against the exhaustive-search reference.
 
 Report:
 
 - selected solution,
 - objective difference,
 - runtime,
-- repeatability across runs for stochastic optimizers.
+- convergence behavior,
+- repeatability across multiple GWO runs,
+- effect of population size and iteration count where tested.
+
+GWO remains the main optimizer unless this validation exposes a technical problem or the advisors approve a change.
 
 ---
 
@@ -830,23 +863,17 @@ For PV also check physical rules such as no unrealistic nighttime generation.
 
 ### Scenario-count sensitivity
 
-Test multiple scenario counts and determine whether the selected BESS/performance stabilizes.
+Start from the Term 1 baseline of **45 retained scenarios**.
+
+Then test additional scenario counts as a sensitivity study to determine whether the final recommendation/performance is stable. This test is evidence for whether the Term 1 choice should be retained or changed; it is not a reason to replace 45 before implementation.
 
 ---
 
 ## V5 — Uncertainty-aware Planning
 
-Compare:
+First reproduce the Term 1 ARIMA → Monte Carlo → 45-scenario → GWO → WSM workflow.
 
-### Design A
-
-Deterministic BESS planning.
-
-### Design B
-
-Uncertainty-aware BESS planning.
-
-Evaluate both on the **same unseen/out-of-sample scenario set**.
+After the baseline workflow works, evaluate its result against deterministic planning and on unseen/out-of-sample conditions where practical.
 
 Compare:
 
@@ -855,6 +882,8 @@ Compare:
 - load shedding,
 - curtailment,
 - constraint pass rate / robustness.
+
+If this validation reveals that the Term 1 scenario-by-scenario/WSM workflow does not produce a technically defensible single BESS deployment, document that finding before changing the formulation.
 
 ---
 
@@ -888,15 +917,31 @@ After the small system is stable:
 
 # Shadow Design Change Rule
 
-This document is intentionally provisional.
+The **Term 1 baseline is the default implementation target**.
 
-When implementation reveals that an initial assumption or design choice is unsuitable:
+A baseline design choice should not be changed merely because another method appears more attractive before testing.
 
-1. identify the affected shadow-design item,
-2. record what changed,
-3. record the engineering reason/evidence,
-4. implement the revised design,
-5. validate the revised behavior,
-6. describe important changes from the Term 1 baseline in Chapter 4.
+When implementation reveals that a Term 1 assumption or design choice is unsuitable:
 
-The goal is **not** to preserve this document unchanged. The goal is to provide a clear starting point and a traceable design-to-implementation history.
+1. implement/test the baseline far enough to identify the actual problem,
+2. record the affected Term 1 design choice,
+3. record the implementation/validation evidence,
+4. discuss the change with the team/advisor when consequential,
+5. update the shadow design,
+6. implement the revised approach,
+7. validate the revised behavior,
+8. describe the important change and justification in Chapter 4.
+
+The preferred engineering history is:
+
+```text
+Term 1 design
+    ↓
+Baseline implementation
+    ↓
+Validation evidence
+    ↓
+Retain OR justified revision
+```
+
+The shadow design mainly exists to **fill missing implementation detail and make the Term 1 design executable**, not to redesign the project in advance.
