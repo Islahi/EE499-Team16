@@ -103,7 +103,49 @@ The discussion identified the following major gaps that should be repaired durin
 
 This list is consistent with `KNOWN_GAPS.md`, but adds the working software-product interpretation developed during the Term 2 discussion.
 
-## 5. Recommended implementation sequence
+## 5. Shadow design strategy for Tasks 9–17
+
+Chapters 1–3 from Term 1 are treated as **frozen** for Term 2 working purposes. The team will therefore not run a second full design phase before implementation.
+
+Instead, Tasks 9–17 are handled through a **shadow design / initial implementation baseline** documented in:
+
+- `02_Reports/Working/Planning/TERM2_SHADOW_DESIGN.md`
+
+The shadow design provides only the minimum initial technical definition needed to begin implementation. It covers:
+
+- product scope and minimum capabilities,
+- initial user workflow and software requirements,
+- software architecture and module responsibilities,
+- module interfaces and data flow,
+- network/power-flow assumptions,
+- BESS mathematical model,
+- objective function, constraints, and metrics,
+- uncertainty/scenario methodology,
+- validation and software-test plan.
+
+These are **provisional working decisions**, not replacements for the submitted Chapters 1–3 and not automatically binding decisions for `DECISIONS.md`.
+
+The intended Term 2 workflow is:
+
+```text
+Shadow design baseline
+    ↓
+V1 — Network simulator
+    ↓
+V2 — Fixed BESS
+    ↓
+V3 — Manual sizing/placement comparison
+    ↓
+V4 — Automatic optimization
+    ↓
+V5 — Uncertainty-aware optimization
+    ↓
+V6 — Final decision-support software
+```
+
+If implementation or validation shows that an initial shadow-design choice is unsuitable, the team should revise the shadow design, record the reason/evidence, implement the change, and document important changes from the Term 1 baseline in Chapter 4.
+
+## 7. Recommended implementation sequence
 
 The current recommended sequence is:
 
@@ -139,7 +181,7 @@ Final documentation + demonstration
 
 A key recommendation is **not to begin Term 2 by directly coding GWO**. The backend model, interfaces, deterministic baseline, and validation reference should be established first.
 
-## 6. Small-system validation strategy
+## 7. Small-system validation strategy
 
 A small ~5-bus radial system was discussed as a useful minimum implementation because it is:
 
@@ -160,7 +202,7 @@ This provides direct evidence that the optimization implementation works.
 
 The IEEE 33-bus system can then be used later to demonstrate scalability and benchmark behavior.
 
-## 7. BESS planning variables
+## 8. BESS planning variables
 
 The main planning variables discussed remain conceptually:
 
@@ -178,7 +220,7 @@ The distinction between power and energy capacity must remain clear.
 
 Operational dispatch/SOC behavior occurs inside the evaluation of a candidate planning solution.
 
-## 8. Optimization approach
+## 9. Optimization approach
 
 GWO was used in the Term 1 baseline, but it is **not automatically a permanent Term 2 decision**.
 
@@ -191,7 +233,7 @@ The discussion emphasized that:
 
 Potential methods discussed as alternatives or benchmarks include GWO, PSO, exhaustive/grid search, and mathematical optimization approaches when appropriate.
 
-## 9. Uncertainty as the main project differentiator
+## 10. Uncertainty as the main project differentiator
 
 BESS optimization by itself is not novel; commercial/research tools already perform storage sizing, dispatch, planning, or placement in various forms.
 
@@ -219,7 +261,7 @@ The design is only genuinely uncertainty-aware if the scenarios affect the optim
 
 A practical first uncertainty level is scenario/expected-value optimization, potentially combined with reliability/constraint-violation metrics.
 
-## 10. Deterministic vs uncertainty-aware validation
+## 11. Deterministic vs uncertainty-aware validation
 
 A particularly strong Term 2 validation experiment discussed is:
 
@@ -239,7 +281,7 @@ Possible comparison metrics include:
 
 This experiment can demonstrate the value of uncertainty-aware planning without requiring the team to invent a novel optimization algorithm.
 
-## 11. Scenario-generation issue from Term 1
+## 12. Scenario-generation issue from Term 1
 
 The Term 1 approach of generating 100 scenarios and retaining:
 
@@ -259,7 +301,7 @@ K-medoids may be attractive because selected representatives are actual generate
 
 No replacement method has yet been confirmed as a team decision.
 
-## 12. Existing tools and project positioning
+## 13. Existing tools and project positioning
 
 Existing software/frameworks discussed include:
 
@@ -280,7 +322,7 @@ Instead, the working contribution should be framed more narrowly around an integ
 
 The team may use an existing trusted power-flow engine rather than rewriting a power-flow solver purely for novelty.
 
-## 13. Immediate advisor-driven priority: data
+## 14. Immediate advisor-driven priority: data
 
 The current advisors asked the team to **obtain project data before the next meeting**, whose date is currently TBA.
 
@@ -330,7 +372,7 @@ The working rule discussed is:
 
 > A dataset is not considered ready merely because a source was found; the team should be able to show its structure, quality, provenance, and representative behavior.
 
-## 14. Time resolution
+## 15. Time resolution
 
 The discussion suggested **hourly data as the initial common resolution** because it is practical for:
 
@@ -345,7 +387,7 @@ This is a recommendation/working assumption, **not yet a confirmed team decision
 
 Higher-resolution data (for example 15- or 30-minute) can still be retained and later evaluated if useful.
 
-## 15. Ethics and professional responsibility
+## 16. Ethics and professional responsibility
 
 Ethics/professional responsibility was added as an early critical task instead of leaving it until final-report writing.
 
@@ -362,7 +404,7 @@ Topics to consider include:
 
 This is currently treated as prudent engineering/report work. A repository text search did not independently establish a specifically named mandatory "Ethics" section in the official material.
 
-## 16. Current semester planning system
+## 17. Current semester planning system
 
 The working Term 2 plan is maintained in a Google Sheet:
 
@@ -415,7 +457,7 @@ Status colors:
 - Done — green,
 - TBA — yellow.
 
-## 17. Immediate weekly-team-meeting focus
+## 18. Immediate weekly-team-meeting focus
 
 The discussion proposed the following focus for the current weekly meeting:
 
@@ -437,7 +479,7 @@ Useful meeting outcomes include assigning owners for:
 
 and agreeing what each person must bring before the next advisor meeting.
 
-## 18. Important open decisions
+## 19. Important open decisions
 
 Future AI assistants should **not silently assume** the following have been confirmed:
 
@@ -456,7 +498,7 @@ Future AI assistants should **not silently assume** the following have been conf
 
 These should be discussed with the team/advisors and recorded in `DECISIONS.md` only when explicitly confirmed.
 
-## 19. Overall current interpretation
+## 20. Overall current interpretation
 
 The project should not be treated as starting from zero.
 
