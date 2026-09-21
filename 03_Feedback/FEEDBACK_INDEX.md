@@ -56,3 +56,7 @@ An alternate/returned Term 1 PDF found at the root of the original project folde
 ## Classroom guidance — design vs implementation
 
 See `General_Guidance/Design_vs_Implementation_Guidance.md` and the original photo beside it.
+
+## Report 1 reanalysis
+
+- `03_Feedback/Term_1/Report_1_Feedback_Reanalysis.md` — comment-by-comment comparison of the Report 1 reviewer feedback against the actual submitted Report 1, with explanation of why each issue was flagged and how to improve it.
