@@ -170,7 +170,7 @@ Final validation + sensitivity
     ↓
 IEEE 33-bus final case
     ↓
-Final report + demo by 31 Dec 2026
+Continuous Chapter 4 writing + validation + final report/demo by 31 Dec 2026
 ```
 
 The team is no longer treating Tasks 9–17 as a separate long design phase. The shadow design is used alongside implementation. Term 1 methods remain the default baseline and are changed only when implementation/validation or advisor feedback gives a clear reason.
@@ -409,7 +409,7 @@ Repository planning files:
 - `02_Reports/Working/Planning/README.md`
 - `02_Reports/Working/Planning/EE499_Team16_Term2_Task_Register.csv`
 
-The revised plan currently contains **58 smaller tasks** and targets completion by **31 December 2026**. The tasks are intentionally split so each implementation step is easier to understand and track. They span:
+The revised plan currently contains **66 smaller tasks** and targets completion by **31 December 2026**. The tasks are intentionally split so each implementation step is easier to understand and track. They span:
 
 - data,
 - ethics,
