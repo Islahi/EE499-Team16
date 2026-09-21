@@ -1,88 +1,217 @@
 # Term 2 Gantt Schedule — How to Use
 
-## Primary working schedule
+## Primary schedule
 
-The current semester schedule is maintained as a native Google Sheet:
+The working Term 2 schedule is here:
 
 https://docs.google.com/spreadsheets/d/1HE7RNvaZ-VkVMlozWfkfPbe23hywnEdOzuaI1CfAEcY/edit
 
-Use the Google Sheet as the **primary working copy** because it is easier for the team to access and update collaboratively.
+The target is to finish the internal project plan by **31 December 2026**.
 
-This repository also keeps `EE499_Team16_Term2_Task_Register.csv` as a version-controlled snapshot of the task register.
+The Google Sheet is the main working copy.  
+`EE499_Team16_Term2_Task_Register.csv` is the repo snapshot.
 
-The schedule is an **internal planning tool**, not an official EE499 schedule. Official Term 2 deadlines are still TBA and should replace the internal dates when announced.
+## Main idea
 
-## Immediate priorities
+We are not doing another long design phase before coding.
 
-### 1. Data before the next advisor meeting
+Chapters 1–3 are treated as frozen. We use the Term 1 design as the starting baseline, then fill the missing details through the shadow design while we implement the program.
 
-The advisors asked the team to obtain the required project data before the next meeting (date TBA).
+The rule is simple:
 
-Tasks **1–7** therefore remain the immediate delivery gate:
+```text
+Term 1 design
+    ↓
+Implement it
+    ↓
+Test it
+    ↓
+Keep it if it works
+    ↓
+Change only when there is a clear reason
+```
 
-1. Define required datasets and fields.
-2. Acquire load-demand time-series data.
-3. Acquire solar/weather/PV data.
-4. Acquire distribution-network reference data.
-5. Check source, license, units, resolution, timestamps, and data quality.
-6. Clean/resample/synchronize the datasets.
-7. Prepare the advisor-meeting data package.
+If we change something important, the reason should be written in Chapter 4.
 
-The meeting package should contain the data sources, sample plots, quality/coverage notes, and unresolved questions.
+The current shadow design is:
 
-### 2. Ethics and professional responsibility
+- `TERM2_SHADOW_DESIGN.md`
 
-Task **8** is also an early priority rather than an end-of-term writing exercise.
+## Development path
 
-The team should define the project's ethics/professional-responsibility considerations while the design is still being developed, including:
+The project is built in six versions:
 
-- data integrity and provenance,
-- transparent assumptions and limitations,
-- grid reliability and safety implications,
-- environmental/economic trade-offs,
-- responsible interpretation/use of optimization recommendations,
-- and points that may need to be carried into the final report.
+1. **V1 — Network simulator**
+2. **V2 — Fixed BESS**
+3. **V3 — Manual sizing / placement comparison**
+4. **V4 — Automatic optimization**
+5. **V5 — Uncertainty-aware optimization**
+6. **V6 — Final decision-support software**
 
-At present this is treated as a prudent project/report task; the repository search did not independently verify a specifically named mandatory "Ethics" section in the official material.
+The point is to understand and validate each layer before adding the next one.
+
+## Schedule summary
+
+| Tasks | Stage | Dates | Main result |
+|---|---|---|---|
+| 1–7 | Data | 20–27 Sep | Load, PV/weather and network data ready |
+| 8 | Ethics | 27 Sep–3 Oct | Working ethics/responsibility note |
+| 9–11 | Shadow baseline + setup | 27 Sep–4 Oct | Initial implementation structure ready |
+| 12–18 | V1 — Network | 2–21 Oct | Validated 5-bus FBS network simulator |
+| 19–24 | V2 — Fixed BESS | 18 Oct–2 Nov | Fixed BESS model working and validated |
+| 25–28 | V3 — Manual comparison | 1–9 Nov | Understand effect of BESS location, P and E |
+| 29–36 | V4 — GWO optimization | 7–29 Nov | Term 1 WSM + GWO implemented and checked |
+| 37–44 | V5 — Uncertainty | 22 Nov–14 Dec | ARIMA + Monte Carlo + 45-scenario workflow working |
+| 45–50 | V6 — Software | 1–18 Dec | Simple end-to-end decision-support UI |
+| 51–55 | Final validation | 17–26 Dec | Before/after, sensitivity, IEEE 33-bus and final outputs |
+| 56–58 | Documentation + finalization | 18–31 Dec | Chapter 4/5 updates, final discussion, demo and QA |
+
+Some stages overlap on purpose. For example, the UI can start while V5 is finishing, and report writing starts before all final testing is complete.
+
+## What each version means
+
+### V1 — Network simulator
+
+Build the small 5-bus radial network using the **Forward-Backward Sweep (FBS)** method from Term 1.
+
+Done when:
+
+- power flow runs,
+- bus voltage is shown,
+- line/current/loading is shown,
+- losses and power balance are available,
+- load/PV time series can be simulated,
+- the result has been checked against a trusted/reference result.
+
+### V2 — Fixed BESS
+
+Add one battery with manually selected:
+
+- bus (B),
+- power (P),
+- energy (E).
+
+Done when SOC, charging/discharging, efficiency and limits work correctly and the BESS changes the network power flow correctly.
+
+### V3 — Manual comparison
+
+Before using GWO, manually try a few:
+
+- bus locations,
+- power ratings,
+- energy capacities.
+
+The goal is to understand what should happen and create a reference for the optimizer.
+
+### V4 — Automatic optimization
+
+Implement the Term 1 baseline:
+
+- cost / curtailment / load shedding metrics,
+- WSM with the initial 0.50 / 0.25 / 0.25 weights,
+- GWO using (B,P,E).
+
+Then compare GWO with exhaustive search on the small case.
+
+Do not replace GWO before this test unless there is a clear technical/advisor reason.
+
+### V5 — Uncertainty
+
+Implement the Term 1 uncertainty path first:
+
+```text
+Historical data
+    ↓
+ARIMA
+    ↓
+Monte Carlo
+    ↓
+100 scenarios
+    ↓
+15 best + 15 worst + 15 random
+    ↓
+45 scenarios
+    ↓
+GWO / WSM
+```
+
+Then validate:
+
+- ARIMA using RMSE/MAPE,
+- scenario realism,
+- whether the 45-scenario workflow gives a clear usable BESS result.
+
+Only change the method after a real problem is found.
+
+### V6 — Final software
+
+Put the working backend into a simple UI.
+
+Minimum flow:
+
+```text
+Load network/data
+    ↓
+Run baseline
+    ↓
+Run BESS optimization
+    ↓
+Show selected B, P, E
+    ↓
+Show before/after results
+```
+
+The UI does not need to be fancy. The engineering model is more important.
+
+## Final validation
+
+Tasks 51–55 answer the questions reviewers previously raised:
+
+- Does BESS actually improve the system?
+- Does changing scenario count affect the result?
+- Do GWO population/iterations matter?
+- Do WSM weights strongly change the recommendation?
+- Does the program still work on IEEE 33-bus?
+- Can the result be reproduced?
+
+These results mainly belong in **Chapter 5**.
+
+## Report connection
+
+Because Chapters 1–3 are frozen:
+
+- **Task 8** → Appendix D / ethics material and Chapter 6.2 where useful.
+- **Tasks 9–17 shadow design** → internal implementation support; do not rewrite Chapters 1–3.
+- **V1–V6 implementation** → Chapter 4.
+- **Validation tasks** → Chapter 5.
+- **Evaluation/discussion** → Chapter 6.
+- Important changes from Term 1 → explain and justify in Chapter 4.
 
 ## Google Sheet structure
-
-### Semester Gantt
-
-Use this tab for the weekly semester overview. A filled square means that the task is active during that week.
 
 ### Task Register
 
 This is the main tab to edit.
 
-For each task, maintain:
+Update:
 
-- **Task Explanation** — what the task actually involves and what work should be carried out.
-- **Owner** — Team, Muhammad, Mohammed, or Fahad.
-- **Status** — Not Started, In Progress, Blocked, Done, or TBA.
-- **Progress** — update as work advances.
-- **Start / End** — revise when real dates change.
-- **Dependency** — note prerequisite tasks or decisions.
+- **Owner**
+- **Status**
+- **Progress**
+- **Start / End**
+- **Dependency**
 
-The `Deliverable / Definition of Done` column defines what should exist before a task is considered complete.
+The task wording is intentionally short and simple.  
+The `Task Explanation` column tells you what you actually need to do.  
+The `Deliverable / Definition of Done` column tells you when the task is finished.
 
-### Instructions
+### Semester Gantt
 
-This tab contains a short in-sheet reminder of the workflow and priorities.
+Do not manually draw the bars.
 
+The Gantt reads the Task Register automatically.
 
-## Dynamic Gantt behavior
-
-The **Semester Gantt** is now automatically linked to the **Task Register**.
-
-Do **not** manually edit the task rows or weekly bars in the Gantt tab. Instead, update the Task Register:
-
-- changing **Start** or **End** moves the weekly Gantt bar automatically;
-- changing **Status** updates the Gantt status display and bar formatting;
-- changing **Progress** updates the percentage shown in the Gantt;
-- changing the task name, phase, or priority is also reflected automatically.
-
-Current status colors are:
+Status colors:
 
 - **Not Started** — gray
 - **In Progress** — blue
@@ -90,51 +219,30 @@ Current status colors are:
 - **Done** — green
 - **TBA** — yellow
 
-The weekly columns are fixed to the current internal semester planning window. If the official semester end moves outside that window, extend the weekly columns/formulas accordingly.
+The current weekly window ends with the week of **27 December**, which covers the internal finish date of **31 December 2026**.
 
-## Weekly workflow
+### Instructions
 
-At least once each week:
+Contains the short version of this workflow inside the Google Sheet.
 
-1. Open the Google Sheet.
-2. Update active tasks in **Task Register**.
-3. Assign or revise owners.
-4. Update status and progress.
-5. Adjust dates when required.
-6. Mark blocked tasks and their dependencies.
-7. Check the **Semester Gantt** for downstream impact.
-8. Before advisor meetings, prepare evidence/results rather than only reporting activity.
+## Weekly routine
 
-## When official dates are announced
+Once a week:
 
-When the university or advisor announces a submission, presentation, or meeting date:
+1. Check the active tasks.
+2. Update owner.
+3. Update status and progress.
+4. Move dates if reality changed.
+5. Check blocked tasks.
+6. Check the Gantt for later tasks that are affected.
+7. Save evidence of completed work: code, plots, test results, or notes.
 
-1. Update the affected task dates in the Google Sheet.
-2. Move dependent/upstream work earlier if required.
-3. Preserve a reasonable validation/reporting buffer.
-4. Do not treat **7 January 2027** as an official deadline unless confirmed by the course.
+## Important rule
 
-## Planning logic
+The schedule is not the permanent technical decision record.
 
-The schedule currently follows this sequence:
+Confirmed major project changes should still be recorded in `DECISIONS.md`.
 
-1. **Data acquisition**
-2. **Ethics / professional responsibility**
-3. **Product and software design**
-4. **Simulation/mathematical design**
-5. **Minimal deterministic 5-bus implementation**
-6. **BESS model and deterministic optimization**
-7. **Uncertainty modelling and scenario generation**
-8. **Uncertainty-aware BESS optimization**
-9. **Decision-support program integration**
-10. **Validation and sensitivity analysis**
-11. **IEEE 33-bus scalability/benchmark testing**
-12. **Final documentation, presentation, and demo**
-
-The intention is to avoid jumping directly into coding before the architecture, mathematical model, interfaces, assumptions, ethical considerations, and validation plan are sufficiently defined.
-
-## Important planning rule
-
-The schedule is **not a permanent technical decision record**.
-
-Changes to algorithms, network models, optimization methods, uncertainty methods, or other major technical choices become project decisions only after the team/advisor confirms them and they are recorded in `DECISIONS.md`.
+The schedule tells us **what to work on and when**.  
+The shadow design tells us **how we currently plan to build it**.  
+Chapter 4 later records **what we actually built and what changed**.
