@@ -12,11 +12,9 @@
 
 ### Team
 
-- Mohammed Alansari — PME
-- Muhammad Islahi — ECE
-- Fahad Badr Alotaibi — PME
-- Project advisor/customer: Dr. Hatem Sindi
-- Co-advisor: Dr. Ahmad Milyani
+- Member 1 — PME
+- Member 2 — ECE
+- Member 3 — PME
 
 Student IDs remain in the original official/submitted documents and are intentionally not repeated in the AI-facing context files.
 
