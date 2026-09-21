@@ -145,7 +145,7 @@ V6 — Final decision-support software
 
 If implementation or validation shows that an initial shadow-design choice is unsuitable, the team should revise the shadow design, record the reason/evidence, implement the change, and document important changes from the Term 1 baseline in Chapter 4.
 
-## 7. Recommended implementation sequence
+## 6. Recommended implementation sequence
 
 The current recommended sequence is:
 
