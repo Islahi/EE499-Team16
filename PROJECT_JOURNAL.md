@@ -85,4 +85,5 @@ Log items such as confirmed decisions, important advisor guidance, meaningful re
 - Reorganized `05_Meetings/` into `Raw_Recordings/` and `Meeting_Minutes/` and moved the existing meeting documents without changing their contents.
 - Added consent, privacy, review, retention, and transcription-quality guidance; raw audio/video formats are ignored by Git by default.
 - Machine transcripts and summaries remain drafts until a team member verifies names, technical terms, numerical values, decisions, owners, and deadlines against the recording.
-- Added the repository-wide commands “write meeting minutes” and “write MM,” with a standard Markdown template and safeguards against inventing missing meeting facts.
+- Added the repository-wide commands “write meeting minutes” and “write MM,” with safeguards against inventing missing meeting facts. The commands now use the official `EE499MeetingMinutes.docx` Word form as the authoritative template and preserve its section/table structure.
+- Added `tools/VideoCompressor/`, a local Streamlit interface for extracting transcription-ready M4A audio or compressing meeting video with FFmpeg without overwriting the source.
