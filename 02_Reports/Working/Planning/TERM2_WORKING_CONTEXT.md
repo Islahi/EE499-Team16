@@ -166,7 +166,7 @@ V5 — Term 1 ARIMA + Monte Carlo uncertainty workflow
     ↓
 V6 — Decision-support software
     ↓
-Final validation + sensitivity
+Final Term 1 requirements validation
     ↓
 IEEE 33-bus final case
     ↓
@@ -409,7 +409,19 @@ Repository planning files:
 - `02_Reports/Working/Planning/README.md`
 - `02_Reports/Working/Planning/EE499_Team16_Term2_Task_Register.csv`
 
-The revised plan currently contains **66 smaller tasks** and targets completion by **31 December 2026**. The tasks are intentionally split so each implementation step is easier to understand and track. They span:
+The revised plan currently contains **66 smaller tasks** and targets completion by **31 December 2026**.
+
+The report/validation rule is now explicit:
+
+- **Chapter 4 = implementation + verification** of each module.
+- **Chapter 5 = validation of the final system against the original Term 1 requirements**.
+- **Chapter 6 = discussion, limitations, impacts, and conclusion**.
+
+Verification includes checks such as FBS reference comparison, SOC hand checks, GWO vs exhaustive search, ARIMA error checking, scenario realism, sensitivity/robustness checks, and software failure cases. These do not replace the final requirement validation.
+
+Chapter 5 uses the Term 1 requirements as the reference and reports each as **Met, Partially Met, or Not Met** with measured evidence.
+
+The tasks span:
 
 - data,
 - ethics,
