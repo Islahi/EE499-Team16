@@ -11,6 +11,10 @@ The target is to finish the internal project plan by **31 December 2026**.
 The Google Sheet is the main working copy.  
 `EE499_Team16_Term2_Task_Register.csv` is the repo snapshot.
 
+For a simple detailed explanation of every task, use:
+
+- `TERM2_DETAILED_TASK_GUIDE.md` — start date, deadline, what to do, deliverable, dependencies, report connection, and important notes for Tasks 1–58.
+
 ## Main idea
 
 We are not doing another long design phase before coding.
