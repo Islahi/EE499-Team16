@@ -2,16 +2,17 @@
 
 **Internal finish:** 31 December 2026
 
-## Main report rule
+## Official-template rule
 
-- **Chapter 4 = implementation + verification.**
-- **Chapter 5 = validation against the original Term 1 requirements.**
-- **Chapter 6 = discussion, limitations and conclusion.**
+This guide now follows **EE499_Final_Report_Template_v2025_Fall**.
 
-Verification asks: **did we build the part correctly?**  
-Validation asks: **did the final system meet what we promised in Term 1?**
+- **Chapter 4 — Implementation:** practical implementation details, multiple trials, related design calculations, justified changes from the baseline design, and final-product assembly with multiple images.
+- **Chapter 5 — Validation Experiments:** formal experiments on major parts and/or the final product to validate the design specifications.
+- Every Chapter 5 experiment must contain: objective, relevant background, detailed work plan/steps, tools, organized figures/tables/data, and analysis/conclusion.
+- **Chapter 6:** use the exact template headings: 6.1 Evaluation of Solution, 6.2 Impact of Solution, 6.3 Future Work, 6.4 Conclusion.
+- **Appendix D:** code of ethics + project ethical issue + analysis using the code + informed decision.
 
-Do not change the Term 1 requirements just to make them pass.
+The Term 1 requirements/specifications remain the main validation reference.
 
 ---
 
@@ -169,7 +170,7 @@ Supporting material.
 
 ---
 
-## Task 8 — Write ethics / responsibility notes
+## Task 8 — Prepare Appendix D ethics material
 
 **Phase:** Ethics  
 **Start:** 9/27/2026  
@@ -179,15 +180,15 @@ Supporting material.
 
 ### What to do
 
-List the main issues: honest data use, assumptions, model limits, grid reliability and responsible use of recommendations.
+Choose an appropriate engineering/professional code of ethics, identify one ethical issue related to our project or final software, analyze the issue using the selected code, and record an informed decision. This follows the final-report template Appendix D requirement.
 
 ### Done when
 
-Working ethics note for Appendix D.
+Working Appendix D ethics draft with code, issue, analysis and decision.
 
 ### Report placement
 
-Appendix D / Chapter 6.3 ethics and professional responsibility.
+Appendix D — Recognition of Ethical and Professional Responsibility.
 
 ---
 
@@ -209,7 +210,7 @@ Shadow design accepted as starting baseline.
 
 ### Report placement
 
-Chapter 4.1 — implementation approach and software structure.
+Chapter 4 — implementation approach/software structure.
 
 ---
 
@@ -231,7 +232,7 @@ Runnable project structure.
 
 ### Report placement
 
-Chapter 4.1 — implementation approach and software structure.
+Chapter 4 — implementation approach/software structure.
 
 ---
 
@@ -253,7 +254,7 @@ Simple data format/interface note.
 
 ### Report placement
 
-Chapter 4.1 — implementation approach and software structure.
+Chapter 4 — implementation approach/software structure.
 
 ---
 
@@ -275,7 +276,7 @@ Create one small radial network that is easy to understand and debug.
 
 ### Report placement
 
-Chapter 4.2 — V1 network simulator. Verification stays here.
+Chapter 4 — V1 practical implementation, trials and calculations.
 
 ---
 
@@ -297,7 +298,7 @@ FBS runs on the 5-bus case.
 
 ### Report placement
 
-Chapter 4.2 — V1 network simulator. Verification stays here.
+Chapter 4 — V1 practical implementation, trials and calculations.
 
 ---
 
@@ -319,7 +320,7 @@ FBS result verified for the small test case.
 
 ### Report placement
 
-Chapter 4.2 — V1 network simulator. Verification stays here.
+Chapter 4 — V1 practical implementation, trials and calculations.
 
 ---
 
@@ -341,7 +342,7 @@ Readable V1 result output.
 
 ### Report placement
 
-Chapter 4.2 — V1 network simulator. Verification stays here.
+Chapter 4 — V1 practical implementation, trials and calculations.
 
 ---
 
@@ -363,7 +364,7 @@ Profiles load correctly.
 
 ### Report placement
 
-Chapter 4.2 — V1 network simulator. Verification stays here.
+Chapter 4 — V1 practical implementation, trials and calculations.
 
 ---
 
@@ -385,7 +386,7 @@ Time-series 5-bus simulation works.
 
 ### Report placement
 
-Chapter 4.2 — V1 network simulator. Verification stays here.
+Chapter 4 — V1 practical implementation, trials and calculations.
 
 ---
 
@@ -407,7 +408,7 @@ V1 network implementation verified and stable.
 
 ### Report placement
 
-Chapter 4.2 — V1 network simulator. Verification stays here.
+Chapter 4 — V1 practical implementation, trials and calculations.
 
 ---
 
@@ -429,7 +430,7 @@ Chapter 4 V1 subsection draft.
 
 ### Report placement
 
-Chapter 4.2 — V1 network simulator. Verification stays here.
+Chapter 4 — V1 practical implementation, trials and calculations.
 
 ---
 
@@ -451,7 +452,7 @@ BESS settings written in code/config.
 
 ### Report placement
 
-Chapter 4.3 — V2 BESS integration. Verification stays here.
+Chapter 4 — V2 BESS implementation, trials and calculations.
 
 ---
 
@@ -473,7 +474,7 @@ SOC changes correctly for simple tests.
 
 ### Report placement
 
-Chapter 4.3 — V2 BESS integration. Verification stays here.
+Chapter 4 — V2 BESS implementation, trials and calculations.
 
 ---
 
@@ -495,7 +496,7 @@ Battery limits enforced.
 
 ### Report placement
 
-Chapter 4.3 — V2 BESS integration. Verification stays here.
+Chapter 4 — V2 BESS implementation, trials and calculations.
 
 ---
 
@@ -517,7 +518,7 @@ Fixed BESS changes network injection.
 
 ### Report placement
 
-Chapter 4.3 — V2 BESS integration. Verification stays here.
+Chapter 4 — V2 BESS implementation, trials and calculations.
 
 ---
 
@@ -539,7 +540,7 @@ Full V2 simulation completed.
 
 ### Report placement
 
-Chapter 4.3 — V2 BESS integration. Verification stays here.
+Chapter 4 — V2 BESS implementation, trials and calculations.
 
 ---
 
@@ -561,7 +562,7 @@ V2 BESS implementation verified.
 
 ### Report placement
 
-Chapter 4.3 — V2 BESS integration. Verification stays here.
+Chapter 4 — V2 BESS implementation, trials and calculations.
 
 ---
 
@@ -583,7 +584,7 @@ Chapter 4 V2 subsection draft.
 
 ### Report placement
 
-Chapter 4.3 — V2 BESS integration. Verification stays here.
+Chapter 4 — V2 BESS implementation, trials and calculations.
 
 ---
 
@@ -605,7 +606,7 @@ Manual comparison table planned.
 
 ### Report placement
 
-Chapter 4.4 — manual BESS trials. This is not Chapter 5 validation.
+Chapter 4 — manual implementation trials requested by the template.
 
 ---
 
@@ -627,7 +628,7 @@ Location comparison results.
 
 ### Report placement
 
-Chapter 4.4 — manual BESS trials. This is not Chapter 5 validation.
+Chapter 4 — manual implementation trials requested by the template.
 
 ---
 
@@ -649,7 +650,7 @@ Size comparison results.
 
 ### Report placement
 
-Chapter 4.4 — manual BESS trials. This is not Chapter 5 validation.
+Chapter 4 — manual implementation trials requested by the template.
 
 ---
 
@@ -671,7 +672,7 @@ V3 reference results ready.
 
 ### Report placement
 
-Chapter 4.4 — manual BESS trials. This is not Chapter 5 validation.
+Chapter 4 — manual implementation trials requested by the template.
 
 ---
 
@@ -693,7 +694,7 @@ Chapter 4 V3 subsection draft.
 
 ### Report placement
 
-Chapter 4.4 — manual BESS trials. This is not Chapter 5 validation.
+Chapter 4 — manual implementation trials requested by the template.
 
 ---
 
@@ -715,7 +716,7 @@ Evaluator returns all main metrics.
 
 ### Report placement
 
-Chapter 4.5 — deterministic optimization and optimizer verification.
+Chapter 4 — optimization implementation, trials and design calculations.
 
 ---
 
@@ -737,7 +738,7 @@ Working WSM fitness value.
 
 ### Report placement
 
-Chapter 4.5 — deterministic optimization and optimizer verification.
+Chapter 4 — optimization implementation, trials and design calculations.
 
 ---
 
@@ -759,7 +760,7 @@ GWO can create valid B,P,E candidates.
 
 ### Report placement
 
-Chapter 4.5 — deterministic optimization and optimizer verification.
+Chapter 4 — optimization implementation, trials and design calculations.
 
 ---
 
@@ -781,7 +782,7 @@ GWO evaluates real simulation results.
 
 ### Report placement
 
-Chapter 4.5 — deterministic optimization and optimizer verification.
+Chapter 4 — optimization implementation, trials and design calculations.
 
 ---
 
@@ -803,7 +804,7 @@ First automatic BESS result.
 
 ### Report placement
 
-Chapter 4.5 — deterministic optimization and optimizer verification.
+Chapter 4 — optimization implementation, trials and design calculations.
 
 ---
 
@@ -825,7 +826,7 @@ Reference optimum for small case.
 
 ### Report placement
 
-Chapter 4.5 — deterministic optimization and optimizer verification.
+Chapter 4 — optimization implementation, trials and design calculations.
 
 ---
 
@@ -847,7 +848,7 @@ GWO validation result.
 
 ### Report placement
 
-Chapter 4.5 — deterministic optimization and optimizer verification.
+Chapter 4 — optimization implementation, trials and design calculations.
 
 ---
 
@@ -869,7 +870,7 @@ GWO setting comparison.
 
 ### Report placement
 
-Chapter 4.5 — deterministic optimization and optimizer verification.
+Chapter 4 — optimization implementation, trials and design calculations.
 
 ---
 
@@ -891,11 +892,11 @@ Chapter 4 V4 subsection draft.
 
 ### Report placement
 
-Chapter 4.5 — deterministic optimization and optimizer verification.
+Chapter 4 — optimization implementation, trials and design calculations.
 
 ---
 
-## Task 41 — Prepare Term 1 requirement validation plan
+## Task 41 — Design Chapter 5 validation experiments
 
 **Phase:** Validation Planning  
 **Start:** 11/27/2026  
@@ -905,15 +906,15 @@ Chapter 4.5 — deterministic optimization and optimizer verification.
 
 ### What to do
 
-Create the Chapter 5 structure before final testing. List every Term 1 requirement, its target, how it will be tested, what measured result is needed and what evidence will be saved. Chapter 5 should validate the final product against these requirements.
+Plan the formal Chapter 5 experiments that will validate the Term 1 design specifications. For each experiment define: objective, relevant background, detailed work steps, tools, data/figures/tables to collect, and how the data will be analyzed. Map every Term 1 requirement to at least one experiment or direct evidence check.
 
 ### Done when
 
-Chapter 5 requirement-validation plan and empty matrix ready.
+Chapter 5 experiment plan + requirement-to-evidence map.
 
 ### Report placement
 
-Chapter 5.1 — Term 1 requirements and validation plan.
+Chapter 5 — validation experiment planning and requirement mapping.
 
 ---
 
@@ -935,7 +936,7 @@ ARIMA forecast working.
 
 ### Report placement
 
-Chapter 4.6 — uncertainty implementation and module verification.
+Chapter 4 — uncertainty implementation, trials and justified changes.
 
 ---
 
@@ -957,7 +958,7 @@ ARIMA implementation verified with forecast-error results.
 
 ### Report placement
 
-Chapter 4.6 — uncertainty implementation and module verification.
+Chapter 4 — uncertainty implementation, trials and justified changes.
 
 ---
 
@@ -979,7 +980,7 @@ Use the ARIMA/error behavior to generate the 100 scenarios described in the Term
 
 ### Report placement
 
-Chapter 4.6 — uncertainty implementation and module verification.
+Chapter 4 — uncertainty implementation, trials and justified changes.
 
 ---
 
@@ -1001,7 +1002,7 @@ Select 15 best, 15 worst and 15 random scenarios using clear rules.
 
 ### Report placement
 
-Chapter 4.6 — uncertainty implementation and module verification.
+Chapter 4 — uncertainty implementation, trials and justified changes.
 
 ---
 
@@ -1023,7 +1024,7 @@ Monte Carlo scenarios verified as physically/statistically reasonable.
 
 ### Report placement
 
-Chapter 4.6 — uncertainty implementation and module verification.
+Chapter 4 — uncertainty implementation, trials and justified changes.
 
 ---
 
@@ -1045,7 +1046,7 @@ Scenario optimization results.
 
 ### Report placement
 
-Chapter 4.6 — uncertainty implementation and module verification.
+Chapter 4 — uncertainty implementation, trials and justified changes.
 
 ---
 
@@ -1067,7 +1068,7 @@ Term 1 uncertainty workflow completed.
 
 ### Report placement
 
-Chapter 4.6 — uncertainty implementation and module verification.
+Chapter 4 — uncertainty implementation, trials and justified changes.
 
 ---
 
@@ -1089,7 +1090,7 @@ V5 uncertainty workflow verified or issue clearly documented.
 
 ### Report placement
 
-Chapter 4.6 — uncertainty implementation and module verification.
+Chapter 4 — uncertainty implementation, trials and justified changes.
 
 ---
 
@@ -1111,7 +1112,7 @@ Chapter 4 V5 subsection draft.
 
 ### Report placement
 
-Chapter 4.6 — uncertainty implementation and module verification.
+Chapter 4 — uncertainty implementation, trials and justified changes.
 
 ---
 
@@ -1133,7 +1134,7 @@ Simple UI sketch/workflow.
 
 ### Report placement
 
-Chapter 4.7/4.9 — software integration and final system.
+Chapter 4 — final software assembly/integration with screenshots/images.
 
 ---
 
@@ -1155,7 +1156,7 @@ Input screen working.
 
 ### Report placement
 
-Chapter 4.7/4.9 — software integration and final system.
+Chapter 4 — final software assembly/integration with screenshots/images.
 
 ---
 
@@ -1177,7 +1178,7 @@ Baseline run works from UI.
 
 ### Report placement
 
-Chapter 4.7/4.9 — software integration and final system.
+Chapter 4 — final software assembly/integration with screenshots/images.
 
 ---
 
@@ -1199,7 +1200,7 @@ Optimization works from UI.
 
 ### Report placement
 
-Chapter 4.7/4.9 — software integration and final system.
+Chapter 4 — final software assembly/integration with screenshots/images.
 
 ---
 
@@ -1221,7 +1222,7 @@ Basic software usability completed.
 
 ### Report placement
 
-Chapter 4.7/4.9 — software integration and final system.
+Chapter 4 — final software assembly/integration with screenshots/images.
 
 ---
 
@@ -1243,7 +1244,7 @@ V6 full workflow works.
 
 ### Report placement
 
-Chapter 4.7/4.9 — software integration and final system.
+Chapter 4 — final software assembly/integration with screenshots/images.
 
 ---
 
@@ -1257,19 +1258,19 @@ Chapter 4.7/4.9 — software integration and final system.
 
 ### What to do
 
-Document the UI, input flow, backend connection, results display, error handling and full end-to-end workflow. Add screenshots when useful.
+Document the UI and final software integration: input flow, backend connection, results display, error handling, save/export and end-to-end operation. Include clear screenshots/images of the final product and show how the separate modules are assembled into one system.
 
 ### Done when
 
-Chapter 4 V6 subsection draft.
+Chapter 4 V6/final-product subsection draft with screenshots.
 
 ### Report placement
 
-Chapter 4.7/4.9 — software integration and final system.
+Chapter 4 — final software assembly/integration with screenshots/images.
 
 ---
 
-## Task 58 — Test final performance requirements
+## Task 58 — Experiment 1 - Technical and economic performance
 
 **Phase:** Validation  
 **Start:** 12/17/2026  
@@ -1279,21 +1280,21 @@ Chapter 4.7/4.9 — software integration and final system.
 
 ### What to do
 
-Using the final system and the same baseline/optimized case, measure the Term 1 performance requirements such as load-shedding reduction, renewable-curtailment reduction, operational-cost reduction, voltage limits and SOC limits. Save the exact measured values for Chapter 5.
+Run the final baseline and optimized-BESS cases using the same inputs. Validate the Term 1 performance specifications such as load-shedding reduction, renewable-curtailment reduction, operational-cost reduction, voltage limits and SOC/DoD limits. Save the objective, background, detailed steps, tools, figures/tables, measured data and analysis for Chapter 5.
 
 ### Done when
 
-Measured results for the Term 1 performance requirements.
+Complete performance validation experiment with figures/tables and conclusions.
 
 ### Report placement
 
-Chapter 5 — validation against Term 1 requirements.
+Chapter 5 — formal validation experiment.
 
 ---
 
-## Task 59 — Run sensitivity and robustness checks
+## Task 59 — Experiment 2 - Optimizer and uncertainty requirements
 
-**Phase:** Implementation Verification  
+**Phase:** Validation  
 **Start:** 12/18/2026  
 **Deadline:** 12/22/2026  
 **Priority:** Critical  
@@ -1301,19 +1302,19 @@ Chapter 5 — validation against Term 1 requirements.
 
 ### What to do
 
-Check reviewer concerns such as scenario count, GWO population/iterations and WSM weights. Use this to understand whether the implementation result is stable and whether any design change is justified. Keep these checks mainly with Chapter 4, not as the main Chapter 5 validation.
+Formally test the Term 1 optimizer/uncertainty specifications. Check scenario count, GWO convergence/iteration limits and the behavior of the selected solution across the retained scenarios. Use the earlier sensitivity/robustness work as supporting evidence where useful. Save objective, background, steps, tools, data and analysis.
 
 ### Done when
 
-Sensitivity/robustness evidence and any justified implementation change.
+Complete optimizer/uncertainty validation experiment with measured evidence.
 
 ### Report placement
 
-Chapter 4.8 — implementation verification / robustness.
+Chapter 5 — formal validation experiment.
 
 ---
 
-## Task 60 — Test network-size / scalability requirement
+## Task 60 — Experiment 3 - Network scalability
 
 **Phase:** Validation  
 **Start:** 12/20/2026  
@@ -1323,19 +1324,19 @@ Chapter 4.8 — implementation verification / robustness.
 
 ### What to do
 
-Run the stable framework on the IEEE 33-bus system to show the final implementation satisfies the Term 1 network-size/scalability requirement and is not limited to the 5-bus development case.
+Run the stable final framework on the IEEE 33-bus network and use the same implementation workflow. Validate the Term 1 minimum-network-size/extendability requirement and collect the required experiment objective, background, steps, tools, figures/tables and analysis.
 
 ### Done when
 
-IEEE 33-bus evidence for the network-size/scalability requirement.
+Complete IEEE 33-bus scalability validation experiment.
 
 ### Report placement
 
-Chapter 5 — validation against Term 1 requirements.
+Chapter 5 — formal validation experiment.
 
 ---
 
-## Task 61 — Validate all Term 1 requirements
+## Task 61 — Complete Chapter 5 validation results
 
 **Phase:** Validation  
 **Start:** 12/23/2026  
@@ -1345,15 +1346,15 @@ Chapter 5 — validation against Term 1 requirements.
 
 ### What to do
 
-Create the final Chapter 5 validation matrix. For every Term 1 requirement, keep the original target and show the test used, measured result, evidence and status: Met, Partially Met or Not Met. Do not change a requirement just to make it pass.
+Combine the formal validation experiments and create the final requirement-evidence summary. For every Term 1 design requirement show the target, experiment/direct check, measured result, evidence location and status: Met, Partially Met or Not Met. Keep the detailed reasoning in the experiment analysis and Chapter 6.1.
 
 ### Done when
 
-Complete Term 1 requirement-validation matrix.
+Chapter 5 complete with formal experiments + requirement-evidence summary.
 
 ### Report placement
 
-Chapter 5 — validation against Term 1 requirements.
+Chapter 5 — validation results summary; feeds Chapter 6.1 Evaluation of Solution.
 
 ---
 
@@ -1375,7 +1376,7 @@ Software failure-case verification record.
 
 ### Report placement
 
-Chapter 4.8 — implementation verification / robustness.
+Chapter 4 — implementation/failure-case trials unless directly used in a formal validation experiment.
 
 ---
 
@@ -1397,11 +1398,11 @@ Reproducible final results package.
 
 ### Report placement
 
-Final reproducible evidence package for Chapters 4–5.
+Evidence package used by Chapters 4–6.
 
 ---
 
-## Task 64 — Merge and polish Chapter 4
+## Task 64 — Merge and polish Chapter 4 to template
 
 **Phase:** Documentation  
 **Start:** 12/20/2026  
@@ -1411,19 +1412,19 @@ Final reproducible evidence package for Chapters 4–5.
 
 ### What to do
 
-Combine the V1–V6 Chapter 4 drafts, remove repeated parts, add implementation changes from Term 1, make figures/tables consistent and check the final implementation story.
+Combine the V1-V6 drafts and make sure Chapter 4 follows the final-report template: practical implementation details, multiple trials used to reach a satisfactory design, related design calculations, justified changes from the Term 1 baseline, and the final assembled product with multiple screenshots/images. Remove repeated text and make figures/tables consistent.
 
 ### Done when
 
-Complete Chapter 4 ready for final review.
+Complete Chapter 4 matching the final-report template.
 
 ### Report placement
 
-Final Chapter 4 merge and polish.
+Chapter 4 final template compliance pass.
 
 ---
 
-## Task 65 — Finish Chapter 5, Chapter 6 and ethics
+## Task 65 — Finish Chapter 5, Chapter 6 and Appendix D
 
 **Phase:** Documentation  
 **Start:** 12/23/2026  
@@ -1433,15 +1434,15 @@ Final Chapter 4 merge and polish.
 
 ### What to do
 
-Fill Chapter 5 only with the final Term 1 requirement-validation experiments and matrix. Use Chapter 6 to discuss what the results mean, limitations and conclusions. Finish Appendix D ethics material.
+Finish Chapter 5 using the required validation-experiment format: objectives, background, detailed work plan, tools, collected data in organized figures/tables, and analysis/conclusions. Then write Chapter 6 using the template headings: 6.1 Evaluation of Solution, 6.2 Impact of Solution, 6.3 Future Work, and 6.4 Conclusion. Finish Appendix D with the code of ethics, ethical issue, analysis and informed decision.
 
 ### Done when
 
-Chapter 5 requirement validation + Chapter 6 discussion + ethics ready.
+Chapters 5-6 + Appendix D completed using the official template.
 
 ### Report placement
 
-Finish Chapter 5, Chapter 6 and ethics.
+Chapter 5 + Chapter 6.1–6.4 + Appendix D.
 
 ---
 
@@ -1463,7 +1464,7 @@ Demo + submission-ready project.
 
 ### Report placement
 
-Demo and final QA.
+Final demo/QA.
 
 ---
 
