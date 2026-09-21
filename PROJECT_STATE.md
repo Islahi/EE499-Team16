@@ -1,6 +1,6 @@
 # Project State
 
-**Last context update:** 2026-09-20
+**Last context update:** 2026-09-21
 
 ## Snapshot
 
@@ -11,7 +11,9 @@
 - **Latest authoritative submitted document:** `02_Reports/Submitted/Term_1_Final/EE499-S26_Report-Term_1_Team-16.docx`
 - **Formal Term 2 deadlines in supplied schedule:** TBD
 - **Approximate end of term:** January 7, 2027 (planning estimate supplied by the user; not an official deadline)
-- **Current chat task policy:** Immediate work is assigned by the user in chat; there is intentionally no permanent AI-generated task list.
+- **Current Term 2 working context:** See `02_Reports/Working/Planning/TERM2_WORKING_CONTEXT.md` for the software-product direction, uncertainty-planning concept, data priority, planning workflow, and open decisions developed in recent team/project discussions.
+- **Immediate advisor-driven priority:** Obtain and evaluate the required project data before the next advisor meeting (date TBA).
+- **Current chat task policy:** Immediate work is assigned by the user in chat; planning artifacts preserve the semester workflow but do not turn unconfirmed technical recommendations into decisions.
 
 ## Official Term 2 course expectations
 
