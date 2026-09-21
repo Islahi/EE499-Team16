@@ -13,6 +13,7 @@ __pycache__/
 venv/
 .env
 .env.*
+tools/VideoTranscriber/API_key.txt
 
 # MATLAB / common generated files
 *.asv
