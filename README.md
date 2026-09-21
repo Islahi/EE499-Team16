@@ -65,10 +65,10 @@ The access mode changes only the persistence mechanism; it does not grant the AI
 - `02_Reports/Working/` — drafts, planning material, and design-support documents
 - `03_Feedback/` — grades, returned/alternate report copy, classroom guidance, and feedback index
 - `04_Research/` — external papers, literature notes, and research data/workbooks
-- `05_Meetings/` — meeting-minute records
+- `05_Meetings/` — raw meeting inputs and reviewed meeting documentation, separated by folder
 - `06_Notes/` — Obsidian and miscellaneous project notes
 - `07_Implementation/` — Term 2 code, model, data, results, and validation artifacts as they are created
-- `tools/` — repository maintenance tools
+- `tools/` — repository maintenance tools and the vendored local meeting-transcription utility
 - `Exports/` — generated handoff ZIPs; not intended for Git tracking
 
 `MIGRATION_MAP.csv` records where every file from the supplied project folder was moved. Nothing from the supplied folder was intentionally discarded.

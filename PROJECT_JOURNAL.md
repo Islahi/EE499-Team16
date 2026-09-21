@@ -77,3 +77,12 @@ Log items such as confirmed decisions, important advisor guidance, meaningful re
 - Added `03_Feedback/Term_1/Report_1_Feedback_Reanalysis.md`.
 - The analysis compares each preserved Report 1 reviewer comment directly against the actual Report 1 submission and explains the underlying engineering issue and concrete improvement.
 - Main recurring issue: the project topic was relevant, but scope, optimization formulation, simulation workflow, measurable design specifications, variable roles, and tangible deliverables were not yet connected into one precise/testable engineering design.
+
+
+## 2026-09-21 — Local meeting-transcription workflow added
+
+- Vendored the MIT-licensed DataAnts-AI VideoTranscriber at upstream commit `d1e1fedcaeefa812868cc73fa216b3424c7cb915` under `tools/VideoTranscriber/`.
+- Reorganized `05_Meetings/` into `Raw_Recordings/` and `Meeting_Minutes/` and moved the existing meeting documents without changing their contents.
+- Added consent, privacy, review, retention, and transcription-quality guidance; raw audio/video formats are ignored by Git by default.
+- Machine transcripts and summaries remain drafts until a team member verifies names, technical terms, numerical values, decisions, owners, and deadlines against the recording.
+- Added the repository-wide commands “write meeting minutes” and “write MM,” with a standard Markdown template and safeguards against inventing missing meeting facts.

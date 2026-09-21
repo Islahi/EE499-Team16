@@ -161,3 +161,19 @@ When asked only to check/read the repository, respond with a compact state summa
 - Repository status
 
 Do not start solving the project autonomously.
+
+## Meeting-minutes workflow
+
+When the user says **“write meeting minutes”**, **“write MM”**, or an equivalent instruction:
+
+1. Inspect `05_Meetings/Raw_Recordings/` and identify the raw transcript or meeting material specified by the user. If no file is specified, use the newest plausible raw transcript only when the intended source is unambiguous; otherwise ask which meeting to process.
+2. Treat recordings, transcripts, and AI summaries as unverified source material. Never modify or replace the raw source.
+3. If only audio/video is available and the environment can run `tools/VideoTranscriber/`, transcribe it first. If transcription cannot be run, report the limitation instead of inventing content.
+4. Compare transcript statements carefully and create concise, factual meeting minutes. Correct obvious transcription artifacts only when the intended meaning is clear. Mark unclear passages as `[unclear — verify recording]`.
+5. Do not invent attendees, agenda items, decisions, votes, action owners, deadlines, advisor guidance, or technical conclusions. Distinguish discussion, proposals, confirmed decisions, and unresolved questions.
+6. Use the structure in `05_Meetings/Meeting_Minutes/MEETING_MINUTES_TEMPLATE.md` unless an official course template or explicit user instruction requires another format.
+7. Save the result under `05_Meetings/Meeting_Minutes/` as `YYYY-MM-DD_Meeting_Minutes.md`. Add a short distinguishing suffix when more than one meeting occurred on the same date.
+8. Label the document **Draft — requires team verification** until the user/team confirms it. Include traceability to the source filename and list any material uncertainties that need review.
+9. After user/team confirmation, remove the draft label if requested. Record confirmed major technical decisions in `DECISIONS.md` and update `PROJECT_JOURNAL.md` only when the normal maintenance rules require it.
+
+The AI must not imply that transcription or summarization accuracy replaces human verification or participant consent.

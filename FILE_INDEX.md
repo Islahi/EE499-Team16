@@ -8,13 +8,13 @@ Original files preserved: **46**.
 |---|---|---|---|
 | `06_Notes/Text/A quick recap from yesterday presen.txt` | 06_Notes | Informal project/study note unless separately classified above. | `A quick recap from yesterday presen.txt` |
 | `03_Feedback/Term_1/EE499-S26_Term1Report_Team-16.pdf` | 03_Feedback | Alternate/returned Term 1 PDF from original root; differs from 55-page submitted PDF and is preserved as feedback/history evidence. | `EE499-S26_Term1Report_Team-16.pdf` |
-| `05_Meetings/2026-02-12 EE499_Meeting_Minutes.docx` | 05_Meetings | Meeting minutes. | `Meeting Minutes/2026-02-12 EE499_Meeting_Minutes.docx` |
-| `05_Meetings/2026-02-24 EE499_Meeting_Minutes.docx` | 05_Meetings | Meeting minutes. | `Meeting Minutes/2026-02-24 EE499_Meeting_Minutes.docx` |
-| `05_Meetings/2026-02-26 EE499_Meeting_Minutes.docx` | 05_Meetings | Meeting minutes. | `Meeting Minutes/2026-02-26 EE499_Meeting_Minutes.docx` |
-| `05_Meetings/2026-04-12 EE499_Meeting_Minutes.docx` | 05_Meetings | Meeting minutes. | `Meeting Minutes/2026-04-12 EE499_Meeting_Minutes.docx` |
-| `05_Meetings/2026-04-19 EE499_Meeting_Minutes.docx` | 05_Meetings | Meeting minutes. | `Meeting Minutes/2026-04-19 EE499_Meeting_Minutes.docx` |
-| `05_Meetings/EE499MeetingMinutes.docx` | 05_Meetings | Meeting minutes. | `Meeting Minutes/EE499MeetingMinutes.docx` |
-| `05_Meetings/External Meeting EE499_Meeting_Minutes.docx` | 05_Meetings | Meeting minutes. | `Meeting Minutes/External Meeting EE499_Meeting_Minutes.docx` |
+| `05_Meetings/Meeting_Minutes/2026-02-12 EE499_Meeting_Minutes.docx` | 05_Meetings | Meeting minutes. | `Meeting Minutes/2026-02-12 EE499_Meeting_Minutes.docx` |
+| `05_Meetings/Meeting_Minutes/2026-02-24 EE499_Meeting_Minutes.docx` | 05_Meetings | Meeting minutes. | `Meeting Minutes/2026-02-24 EE499_Meeting_Minutes.docx` |
+| `05_Meetings/Meeting_Minutes/2026-02-26 EE499_Meeting_Minutes.docx` | 05_Meetings | Meeting minutes. | `Meeting Minutes/2026-02-26 EE499_Meeting_Minutes.docx` |
+| `05_Meetings/Meeting_Minutes/2026-04-12 EE499_Meeting_Minutes.docx` | 05_Meetings | Meeting minutes. | `Meeting Minutes/2026-04-12 EE499_Meeting_Minutes.docx` |
+| `05_Meetings/Meeting_Minutes/2026-04-19 EE499_Meeting_Minutes.docx` | 05_Meetings | Meeting minutes. | `Meeting Minutes/2026-04-19 EE499_Meeting_Minutes.docx` |
+| `05_Meetings/Meeting_Minutes/EE499MeetingMinutes.docx` | 05_Meetings | Meeting minutes. | `Meeting Minutes/EE499MeetingMinutes.docx` |
+| `05_Meetings/Meeting_Minutes/External Meeting EE499_Meeting_Minutes.docx` | 05_Meetings | Meeting minutes. | `Meeting Minutes/External Meeting EE499_Meeting_Minutes.docx` |
 | `06_Notes/Obsidian/Senior Design Project.md` | 06_Notes | Informal project/study note unless separately classified above. | `Obsidian/Senior Design Project.md` |
 | `06_Notes/Obsidian/Talking Point.md` | 06_Notes | Informal project/study note unless separately classified above. | `Obsidian/Talking Point.md` |
 | `02_Reports/Working/Design_Support/Alternative_3_Justification.docx` | 02_Reports/Working | Working/draft/support material; not a submitted authority. | `Report/Alternative_3_Justification.docx` |

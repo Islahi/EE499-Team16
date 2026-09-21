@@ -1,0 +1,16 @@
+# Do not commit raw meeting media by default.
+*.aac
+*.avi
+*.flac
+*.m4a
+*.mkv
+*.mov
+*.mp3
+*.mp4
+*.ogg
+*.wav
+*.webm
+
+# Keep this folder and its guidance tracked.
+!.gitignore
+!README.md
