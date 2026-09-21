@@ -111,7 +111,7 @@ Instead, Tasks 9–17 are handled through a **shadow design / initial implementa
 
 - `02_Reports/Working/Planning/TERM2_SHADOW_DESIGN.md`
 
-The shadow design provides only the minimum initial technical definition needed to begin implementation. It covers:
+The shadow design provides only the minimum initial technical definition needed to begin implementation. **Term 1 design choices are preserved as the default starting implementation and should only be changed after implementation/validation, unavailable data, or advisor feedback gives a clear reason.** It covers:
 
 - product scope and minimum capabilities,
 - initial user workflow and software requirements,
@@ -123,7 +123,7 @@ The shadow design provides only the minimum initial technical definition needed 
 - uncertainty/scenario methodology,
 - validation and software-test plan.
 
-These are **provisional working decisions**, not replacements for the submitted Chapters 1–3 and not automatically binding decisions for `DECISIONS.md`.
+These are **implementation-support definitions**, not replacements for the submitted Chapters 1–3 and not automatically binding decisions for `DECISIONS.md`. The shadow design mainly fills missing architecture/interface/control/validation detail around the Term 1 baseline rather than redesigning the selected Term 1 methods in advance.
 
 The intended Term 2 workflow is:
 
