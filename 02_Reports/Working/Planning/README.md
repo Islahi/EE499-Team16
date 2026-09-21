@@ -1,60 +1,82 @@
-# Term 2 Gantt Schedule — How to Use
+# Term 2 Planning — How to Use
 
 ## Main working files
 
 - Google Sheet schedule: https://docs.google.com/spreadsheets/d/1HE7RNvaZ-VkVMlozWfkfPbe23hywnEdOzuaI1CfAEcY/edit
 - Chapters 4–6 Writing Map: https://docs.google.com/document/d/1raGucOGbKPVh9FvsIZkMzoAT2raXHNQTlgHec9KbwGo/edit
-- `TERM2_SHADOW_DESIGN.md` — starting implementation baseline.
-- `TERM2_DETAILED_TASK_GUIDE.md` — detailed explanation of all tasks.
+- `TERM2_SHADOW_DESIGN.md` — implementation baseline.
+- `TERM2_DETAILED_TASK_GUIDE.md` — detailed explanation of the current tasks.
 - `EE499_Team16_Term2_Task_Register.csv` — repo snapshot of the live Task Register.
 
-## Core rule
+## Official final-report template
 
-**Chapter 4 = implementation + verification.**  
-**Chapter 5 = validation against the original Term 1 requirements.**  
-**Chapter 6 = discussion and conclusion.**
+Planning is now aligned to **EE499_Final_Report_Template_v2025_Fall**.
 
-Verification means checking that a module/code implementation works correctly. Examples: FBS reference check, SOC hand check, GWO vs exhaustive search, ARIMA error check, scenario realism, software failure cases.
+### Chapter 4 — Implementation
 
-Validation means checking whether the final product satisfies the requirements already written in Term 1. Examples: load-shedding reduction, curtailment reduction, operational-cost reduction, voltage/SOC limits, scenario count, optimizer iteration limit, PV penetration and network size/scalability.
+The template requires:
 
-## Chapter 4 writing while implementing
+- practical implementation details,
+- subsections showing multiple trials used to reach a satisfactory level,
+- related design calculations,
+- justified/documented changes from the baseline design,
+- final-product assembly with multiple photographs/images.
 
-Write each section while the implementation is fresh:
+For our software project, V1–V6 provide the implementation subsections. Manual BESS trials, GWO/exhaustive-search trials, forecast/scenario checks, sensitivity work and software failure-case trials are useful Chapter 4 evidence. The final software section should include multiple screenshots/images.
 
-- Task 19 → V1 network simulator
-- Task 26 → V2 BESS integration
-- Task 31 → V3 manual BESS trials
-- Task 40 → V4 deterministic optimization
-- Task 50 → V5 uncertainty implementation
-- Task 57 → V6 software integration
-- Task 64 → merge and polish the complete Chapter 4
+### Chapter 5 — Validation Experiments
 
-Task 59 sensitivity/robustness and Task 62 software-failure testing are also implementation verification, so their main evidence belongs with Chapter 4.
+Chapter 5 is not only a pass/fail matrix.
 
-## Chapter 5
+The template allows validation experiments on **major parts and/or the final product** to validate the design specifications.
 
-Task 41 prepares the validation plan from the Term 1 requirements.
+Every formal experiment needs:
 
-Main final validation tasks:
+1. experiment objective,
+2. relevant background,
+3. detailed work plan/steps,
+4. appropriate tools,
+5. collected data in organized figures/tables,
+6. analysis/interpretation and conclusion.
 
-- Task 58 → performance requirements
-- Task 60 → network-size / scalability requirement
-- Task 61 → complete Term 1 requirement-validation matrix
+Current formal experiments:
 
-The final matrix uses:
+- Task 58 → Experiment 1: technical/economic performance
+- Task 59 → Experiment 2: optimizer/uncertainty requirements
+- Task 60 → Experiment 3: IEEE 33-bus/network scalability
+- Task 61 → requirement-evidence summary
 
-`Requirement → Target → Test → Measured result → Met / Partially Met / Not Met → Evidence`
+The original Term 1 requirements/specifications remain the validation targets.
 
-Do not rewrite a requirement to make it easier to pass.
+### Chapter 6 — Discussion and Conclusion
 
-## Chapter 4.9
+Use the exact template headings:
 
-Chapter 4.9 is the **final integrated system**. It does not introduce new algorithms. It shows how everything connects after V1–V6:
+- **6.1 Evaluation of Solution** — discuss whether customer/design requirements were satisfied based on Chapter 5 results.
+- **6.2 Impact of Solution** — global/social/environmental/economic/safety impacts as relevant.
+- **6.3 Future Work** — recommended future improvements.
+- **6.4 Conclusion** — summarize the need, solution and final achievements.
 
-`Inputs → FBS/network → BESS → uncertainty → GWO/WSM → selected B,P,E → results/UI`
+### Appendix D
 
-Explain what the user provides, what the program does internally, how modules connect, and what outputs are produced.
+Include:
+
+- an appropriate code of ethics,
+- one ethical issue related to the project/final product,
+- analysis using the code,
+- an informed decision.
+
+## Writing while implementing
+
+Write Chapter 4 gradually:
+
+- Task 19 → V1
+- Task 26 → V2
+- Task 31 → V3 trials
+- Task 40 → V4
+- Task 50 → V5
+- Task 57 → V6/final product
+- Task 64 → merge + official-template compliance check
 
 ## Weekly use
 
