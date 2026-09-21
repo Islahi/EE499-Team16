@@ -28,7 +28,7 @@ The latest authoritative submitted project document is the **Term 1 final report
 
 The formal Term 2 assignment deadlines are still **TBD** in the available official schedule. The approximate end of the term is **January 7, 2027**; treat that as planning context, not an official submission deadline.
 
-See `PROJECT_STATE.md` for the short current-state record and `KNOWN_GAPS.md` for issues that need attention when relevant to the user's task.
+See `PROJECT_STATE.md` for the short current-state record, `02_Reports/Working/Planning/TERM2_WORKING_CONTEXT.md` for the current Term 2 discussion/working direction, and `KNOWN_GAPS.md` for issues that need attention when relevant to the user's task.
 
 ## How the AI should work with this repository
 
@@ -39,10 +39,11 @@ Read in this order:
 1. `README.md`
 2. `AI_GUIDE.md`
 3. `PROJECT_STATE.md`
-4. `REQUIREMENTS.md`
-5. `KNOWN_GAPS.md`
-6. `DECISIONS.md`
-7. `USER_PREFERENCES.md` when working with the primary repository user
+4. `02_Reports/Working/Planning/TERM2_WORKING_CONTEXT.md`
+5. `REQUIREMENTS.md`
+6. `KNOWN_GAPS.md`
+7. `DECISIONS.md`
+8. `USER_PREFERENCES.md` when working with the primary repository user
 8. Then inspect the original files relevant to the current chat request.
 
 When the user only says **“check the repository”** or equivalent, do not start project work. Give a short summary containing: project, phase, current focus, latest submitted work, deadline status, important open issues, and confirmation that the repository was read. Then wait for the user's task.
