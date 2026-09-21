@@ -48,6 +48,42 @@ The final Term 1 feedback is especially important: the project was described as 
 
 Therefore, Term 2 needs to turn the researched pieces into a **defined, implemented, testable, and validated engineering system**.
 
+## Final-report template alignment
+
+The actual **EE499_Final_Report_Template_v2025_Fall** has now been read directly and is the authority for Chapters 4 onward.
+
+### Chapter 4 — Implementation
+The template requires practical implementation details, multiple trials used to reach a satisfactory level, related design calculations, justified changes from the baseline design, and final-product assembly with multiple photographs/images.
+
+For this project, V1–V6 remain a useful working subsection structure inside Chapter 4. Manual BESS comparisons, exhaustive-search/GWO trials, forecast/scenario checks, sensitivity work, software failure cases, calculations and screenshots are implementation evidence.
+
+### Chapter 5 — Validation Experiments
+The template says validation experiments may test **major parts of the product and/or the final product** to validate the design specifications. Each formal experiment must contain:
+- objectives,
+- relevant background,
+- detailed work plan/steps,
+- tools,
+- collected data in organized figures/tables,
+- analysis/interpretation and conclusions.
+
+The current formal experiment plan is:
+1. technical/economic performance,
+2. optimizer/uncertainty requirements,
+3. IEEE 33-bus/network scalability,
+followed by a Term 1 requirement-evidence summary.
+
+### Chapter 6 — Discussion and Conclusion
+Use the exact template headings:
+- 6.1 Evaluation of Solution,
+- 6.2 Impact of Solution,
+- 6.3 Future Work,
+- 6.4 Conclusion.
+
+Chapter 6.1 is where the team discusses whether the customer/design requirements were satisfied based on the Chapter 5 validation results.
+
+### Appendix D
+Must contain an appropriate code of ethics, one project-related ethical issue, analysis using that code, and an informed decision.
+
 ## 3. General Guidance interpretation
 
 The classroom General Guidance distinguishes the project as both **software** and **simulation**.
@@ -414,8 +450,8 @@ The revised plan currently contains **66 smaller tasks** and targets completion 
 The report/validation rule is now explicit:
 
 - **Chapter 4 = implementation + verification** of each module.
-- **Chapter 5 = validation of the final system against the original Term 1 requirements**.
-- **Chapter 6 = discussion, limitations, impacts, and conclusion**.
+- **Chapter 5 = formal validation experiments on major parts and/or the final product to validate the Term 1 design specifications**.
+- **Chapter 6 = Evaluation of Solution, Impact of Solution, Future Work, and Conclusion**.
 
 Verification includes checks such as FBS reference comparison, SOC hand checks, GWO vs exhaustive search, ARIMA error checking, scenario realism, sensitivity/robustness checks, and software failure cases. These do not replace the final requirement validation.
 
