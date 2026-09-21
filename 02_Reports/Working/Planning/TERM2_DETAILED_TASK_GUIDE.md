@@ -1,22 +1,23 @@
 # Term 2 Detailed Task Guide
 
-**Internal finish:** 31 December 2026  
-**Main rule:** implement the Term 1 design first, test it, and only change it when there is a clear reason.
+**Internal finish:** 31 December 2026
 
-This file explains the live Gantt tasks in simple wording. The Google Sheet is still the main place to update Owner, Status, Progress and dates.
+## Main report rule
 
-## Writing approach
+- **Chapter 4 = implementation + verification.**
+- **Chapter 5 = validation against the original Term 1 requirements.**
+- **Chapter 6 = discussion, limitations and conclusion.**
 
-Chapter 4 is written alongside implementation. Each V1–V6 stage has a matching writing task. Chapter 5 is prepared before final testing, then filled with real results. The final validation uses the original Term 1 requirements and reports each one as **Met, Partially Met, or Not Met**.
+Verification asks: **did we build the part correctly?**  
+Validation asks: **did the final system meet what we promised in Term 1?**
 
-For the full Chapter 4–6 placement map, use the Google Doc linked from the planning README.
+Do not change the Term 1 requirements just to make them pass.
 
 ---
 
-# Data
-
 ## Task 1 — Define the data we need
 
+**Phase:** Data  
 **Start:** 9/20/2026  
 **Deadline:** 9/21/2026  
 **Priority:** Critical  
@@ -32,12 +33,13 @@ One clear data checklist.
 
 ### Report placement
 
-Supporting project material used later in Chapters 4–5.
+Supporting material.
 
 ---
 
 ## Task 2 — Get load data
 
+**Phase:** Data  
 **Start:** 9/20/2026  
 **Deadline:** 9/24/2026  
 **Priority:** Critical  
@@ -53,12 +55,13 @@ Load dataset ready.
 
 ### Report placement
 
-Supporting project material used later in Chapters 4–5.
+Supporting material.
 
 ---
 
 ## Task 3 — Get PV / weather data
 
+**Phase:** Data  
 **Start:** 9/20/2026  
 **Deadline:** 9/24/2026  
 **Priority:** Critical  
@@ -74,12 +77,13 @@ PV/weather dataset ready.
 
 ### Report placement
 
-Supporting project material used later in Chapters 4–5.
+Supporting material.
 
 ---
 
 ## Task 4 — Get network data
 
+**Phase:** Data  
 **Start:** 9/22/2026  
 **Deadline:** 9/24/2026  
 **Priority:** Critical  
@@ -95,12 +99,13 @@ Prepare a small 5-bus test case and the IEEE 33-bus data for later use.
 
 ### Report placement
 
-Supporting project material used later in Chapters 4–5.
+Supporting material.
 
 ---
 
 ## Task 5 — Check the selected data
 
+**Phase:** Data  
 **Start:** 9/23/2026  
 **Deadline:** 9/25/2026  
 **Priority:** High  
@@ -116,12 +121,13 @@ Short data quality note.
 
 ### Report placement
 
-Supporting project material used later in Chapters 4–5.
+Supporting material.
 
 ---
 
 ## Task 6 — Clean and align the data
 
+**Phase:** Data  
 **Start:** 9/24/2026  
 **Deadline:** 9/26/2026  
 **Priority:** Critical  
@@ -137,12 +143,13 @@ Simulation-ready load/PV files.
 
 ### Report placement
 
-Supporting project material used later in Chapters 4–5.
+Supporting material.
 
 ---
 
 ## Task 7 — Prepare data for advisor
 
+**Phase:** Data  
 **Start:** 9/25/2026  
 **Deadline:** 9/27/2026  
 **Priority:** Critical  
@@ -158,14 +165,13 @@ Advisor data package.
 
 ### Report placement
 
-Supporting project material used later in Chapters 4–5.
+Supporting material.
 
 ---
 
-# Ethics
-
 ## Task 8 — Write ethics / responsibility notes
 
+**Phase:** Ethics  
 **Start:** 9/27/2026  
 **Deadline:** 10/3/2026  
 **Priority:** Medium  
@@ -181,14 +187,13 @@ Working ethics note for Appendix D.
 
 ### Report placement
 
-Appendix D / ethics notes; can also support Chapter 6.2.
+Appendix D / Chapter 6.3 ethics and professional responsibility.
 
 ---
 
-# Shadow Design
-
 ## Task 9 — Confirm the implementation baseline
 
+**Phase:** Shadow Design  
 **Start:** 9/27/2026  
 **Deadline:** 9/29/2026  
 **Priority:** Critical  
@@ -204,14 +209,13 @@ Shadow design accepted as starting baseline.
 
 ### Report placement
 
-Chapter 4.1 implementation strategy/setup. This does not revise Chapters 1–3.
+Chapter 4.1 — implementation approach and software structure.
 
 ---
 
-# Setup
-
 ## Task 10 — Set up the code structure
 
+**Phase:** Setup  
 **Start:** 9/30/2026  
 **Deadline:** 10/3/2026  
 **Priority:** High  
@@ -227,12 +231,13 @@ Runnable project structure.
 
 ### Report placement
 
-Chapter 4.1 implementation strategy/setup. This does not revise Chapters 1–3.
+Chapter 4.1 — implementation approach and software structure.
 
 ---
 
 ## Task 11 — Define basic input / output formats
 
+**Phase:** Setup  
 **Start:** 10/1/2026  
 **Deadline:** 10/4/2026  
 **Priority:** High  
@@ -248,14 +253,13 @@ Simple data format/interface note.
 
 ### Report placement
 
-Chapter 4.1 implementation strategy/setup. This does not revise Chapters 1–3.
+Chapter 4.1 — implementation approach and software structure.
 
 ---
 
-# V1 - Network
-
 ## Task 12 — Prepare the 5-bus test case
 
+**Phase:** V1 - Network  
 **Start:** 10/2/2026  
 **Deadline:** 10/5/2026  
 **Priority:** Critical  
@@ -271,12 +275,13 @@ Create one small radial network that is easy to understand and debug.
 
 ### Report placement
 
-Chapter 4.2 (V1). Validation evidence can also support Chapter 5.
+Chapter 4.2 — V1 network simulator. Verification stays here.
 
 ---
 
 ## Task 13 — Implement FBS for one time step
 
+**Phase:** V1 - Network  
 **Start:** 10/4/2026  
 **Deadline:** 10/10/2026  
 **Priority:** Critical  
@@ -292,12 +297,13 @@ FBS runs on the 5-bus case.
 
 ### Report placement
 
-Chapter 4.2 (V1). Validation evidence can also support Chapter 5.
+Chapter 4.2 — V1 network simulator. Verification stays here.
 
 ---
 
-## Task 14 — Check the FBS result
+## Task 14 — Verify the FBS result
 
+**Phase:** V1 - Network  
 **Start:** 10/8/2026  
 **Deadline:** 10/12/2026  
 **Priority:** Critical  
@@ -305,20 +311,21 @@ Chapter 4.2 (V1). Validation evidence can also support Chapter 5.
 
 ### What to do
 
-Compare voltages, power balance and losses with a trusted/reference result or simple manual checks.
+Check that the FBS implementation is working correctly by comparing voltages, power balance and losses with a trusted/reference result or simple manual checks. This is implementation verification, not final project validation.
 
 ### Done when
 
-Static power-flow check completed.
+FBS result verified for the small test case.
 
 ### Report placement
 
-Chapter 4.2 (V1). Validation evidence can also support Chapter 5.
+Chapter 4.2 — V1 network simulator. Verification stays here.
 
 ---
 
 ## Task 15 — Show basic network results
 
+**Phase:** V1 - Network  
 **Start:** 10/10/2026  
 **Deadline:** 10/14/2026  
 **Priority:** High  
@@ -334,12 +341,13 @@ Readable V1 result output.
 
 ### Report placement
 
-Chapter 4.2 (V1). Validation evidence can also support Chapter 5.
+Chapter 4.2 — V1 network simulator. Verification stays here.
 
 ---
 
 ## Task 16 — Import load and PV profiles
 
+**Phase:** V1 - Network  
 **Start:** 10/11/2026  
 **Deadline:** 10/15/2026  
 **Priority:** High  
@@ -355,12 +363,13 @@ Profiles load correctly.
 
 ### Report placement
 
-Chapter 4.2 (V1). Validation evidence can also support Chapter 5.
+Chapter 4.2 — V1 network simulator. Verification stays here.
 
 ---
 
 ## Task 17 — Add the hourly simulation loop
 
+**Phase:** V1 - Network  
 **Start:** 10/14/2026  
 **Deadline:** 10/18/2026  
 **Priority:** Critical  
@@ -376,12 +385,13 @@ Time-series 5-bus simulation works.
 
 ### Report placement
 
-Chapter 4.2 (V1). Validation evidence can also support Chapter 5.
+Chapter 4.2 — V1 network simulator. Verification stays here.
 
 ---
 
-## Task 18 — Validate V1
+## Task 18 — Verify V1 network implementation
 
+**Phase:** V1 - Network  
 **Start:** 10/17/2026  
 **Deadline:** 10/21/2026  
 **Priority:** Critical  
@@ -389,22 +399,21 @@ Chapter 4.2 (V1). Validation evidence can also support Chapter 5.
 
 ### What to do
 
-Check the time-series power flow, outputs and power balance. Fix V1 before adding the battery.
+Check the time-series power flow, outputs and power balance. Fix any implementation problem before adding the battery. This verifies that V1 works correctly; it does not test the Term 1 project requirements yet.
 
 ### Done when
 
-V1 accepted as stable baseline.
+V1 network implementation verified and stable.
 
 ### Report placement
 
-Chapter 4.2 (V1). Validation evidence can also support Chapter 5.
+Chapter 4.2 — V1 network simulator. Verification stays here.
 
 ---
 
-# Documentation
-
 ## Task 19 — Write Chapter 4 - V1 network implementation
 
+**Phase:** Documentation  
 **Start:** 10/18/2026  
 **Deadline:** 10/23/2026  
 **Priority:** High  
@@ -420,14 +429,13 @@ Chapter 4 V1 subsection draft.
 
 ### Report placement
 
-Chapter 4.2 (V1). Validation evidence can also support Chapter 5.
+Chapter 4.2 — V1 network simulator. Verification stays here.
 
 ---
 
-# V2 - BESS
-
 ## Task 20 — Set the starting BESS parameters
 
+**Phase:** V2 - BESS  
 **Start:** 10/18/2026  
 **Deadline:** 10/20/2026  
 **Priority:** High  
@@ -443,12 +451,13 @@ BESS settings written in code/config.
 
 ### Report placement
 
-Chapter 4.3 (V2). Battery checks can also support Chapter 5.
+Chapter 4.3 — V2 BESS integration. Verification stays here.
 
 ---
 
 ## Task 21 — Implement SOC update
 
+**Phase:** V2 - BESS  
 **Start:** 10/19/2026  
 **Deadline:** 10/23/2026  
 **Priority:** Critical  
@@ -464,12 +473,13 @@ SOC changes correctly for simple tests.
 
 ### Report placement
 
-Chapter 4.3 (V2). Battery checks can also support Chapter 5.
+Chapter 4.3 — V2 BESS integration. Verification stays here.
 
 ---
 
 ## Task 22 — Add charge / discharge limits
 
+**Phase:** V2 - BESS  
 **Start:** 10/21/2026  
 **Deadline:** 10/25/2026  
 **Priority:** Critical  
@@ -485,12 +495,13 @@ Battery limits enforced.
 
 ### Report placement
 
-Chapter 4.3 (V2). Battery checks can also support Chapter 5.
+Chapter 4.3 — V2 BESS integration. Verification stays here.
 
 ---
 
 ## Task 23 — Connect a fixed BESS to the network
 
+**Phase:** V2 - BESS  
 **Start:** 10/23/2026  
 **Deadline:** 10/27/2026  
 **Priority:** Critical  
@@ -506,12 +517,13 @@ Fixed BESS changes network injection.
 
 ### Report placement
 
-Chapter 4.3 (V2). Battery checks can also support Chapter 5.
+Chapter 4.3 — V2 BESS integration. Verification stays here.
 
 ---
 
 ## Task 24 — Run fixed-BESS time series
 
+**Phase:** V2 - BESS  
 **Start:** 10/26/2026  
 **Deadline:** 10/30/2026  
 **Priority:** Critical  
@@ -527,12 +539,13 @@ Full V2 simulation completed.
 
 ### Report placement
 
-Chapter 4.3 (V2). Battery checks can also support Chapter 5.
+Chapter 4.3 — V2 BESS integration. Verification stays here.
 
 ---
 
-## Task 25 — Validate V2
+## Task 25 — Verify V2 BESS implementation
 
+**Phase:** V2 - BESS  
 **Start:** 10/29/2026  
 **Deadline:** 11/2/2026  
 **Priority:** Critical  
@@ -540,22 +553,21 @@ Chapter 4.3 (V2). Battery checks can also support Chapter 5.
 
 ### What to do
 
-Check SOC by hand for simple steps and test SOC/power limits and network interaction.
+Check SOC by hand for simple steps and test SOC limits, power limits, charge/discharge behavior and network interaction. This verifies the battery code before using it in later stages.
 
 ### Done when
 
-V2 battery model validated.
+V2 BESS implementation verified.
 
 ### Report placement
 
-Chapter 4.3 (V2). Battery checks can also support Chapter 5.
+Chapter 4.3 — V2 BESS integration. Verification stays here.
 
 ---
 
-# Documentation
-
 ## Task 26 — Write Chapter 4 - V2 BESS implementation
 
+**Phase:** Documentation  
 **Start:** 10/30/2026  
 **Deadline:** 11/4/2026  
 **Priority:** High  
@@ -571,14 +583,13 @@ Chapter 4 V2 subsection draft.
 
 ### Report placement
 
-Chapter 4.3 (V2). Battery checks can also support Chapter 5.
+Chapter 4.3 — V2 BESS integration. Verification stays here.
 
 ---
 
-# V3 - Manual Compare
-
 ## Task 27 — Choose manual test cases
 
+**Phase:** V3 - Manual Compare  
 **Start:** 11/1/2026  
 **Deadline:** 11/2/2026  
 **Priority:** Medium  
@@ -594,12 +605,13 @@ Manual comparison table planned.
 
 ### Report placement
 
-Chapter 4.4 (V3).
+Chapter 4.4 — manual BESS trials. This is not Chapter 5 validation.
 
 ---
 
 ## Task 28 — Compare BESS locations
 
+**Phase:** V3 - Manual Compare  
 **Start:** 11/2/2026  
 **Deadline:** 11/5/2026  
 **Priority:** High  
@@ -615,12 +627,13 @@ Location comparison results.
 
 ### Report placement
 
-Chapter 4.4 (V3).
+Chapter 4.4 — manual BESS trials. This is not Chapter 5 validation.
 
 ---
 
 ## Task 29 — Compare BESS P and E sizes
 
+**Phase:** V3 - Manual Compare  
 **Start:** 11/4/2026  
 **Deadline:** 11/7/2026  
 **Priority:** High  
@@ -636,12 +649,13 @@ Size comparison results.
 
 ### Report placement
 
-Chapter 4.4 (V3).
+Chapter 4.4 — manual BESS trials. This is not Chapter 5 validation.
 
 ---
 
 ## Task 30 — Summarize what changes the result
 
+**Phase:** V3 - Manual Compare  
 **Start:** 11/6/2026  
 **Deadline:** 11/9/2026  
 **Priority:** High  
@@ -657,14 +671,13 @@ V3 reference results ready.
 
 ### Report placement
 
-Chapter 4.4 (V3).
+Chapter 4.4 — manual BESS trials. This is not Chapter 5 validation.
 
 ---
 
-# Documentation
-
 ## Task 31 — Write Chapter 4 - V3 manual comparison
 
+**Phase:** Documentation  
 **Start:** 11/7/2026  
 **Deadline:** 11/11/2026  
 **Priority:** Medium  
@@ -680,14 +693,13 @@ Chapter 4 V3 subsection draft.
 
 ### Report placement
 
-Chapter 4.4 (V3).
+Chapter 4.4 — manual BESS trials. This is not Chapter 5 validation.
 
 ---
 
-# V4 - Optimization
-
 ## Task 32 — Implement cost / curtailment / shedding metrics
 
+**Phase:** V4 - Optimization  
 **Start:** 11/7/2026  
 **Deadline:** 11/11/2026  
 **Priority:** Critical  
@@ -703,12 +715,13 @@ Evaluator returns all main metrics.
 
 ### Report placement
 
-Chapter 4.5 (V4). Optimizer verification also supports Chapter 5.
+Chapter 4.5 — deterministic optimization and optimizer verification.
 
 ---
 
 ## Task 33 — Implement the Term 1 WSM objective
 
+**Phase:** V4 - Optimization  
 **Start:** 11/9/2026  
 **Deadline:** 11/12/2026  
 **Priority:** Critical  
@@ -724,12 +737,13 @@ Working WSM fitness value.
 
 ### Report placement
 
-Chapter 4.5 (V4). Optimizer verification also supports Chapter 5.
+Chapter 4.5 — deterministic optimization and optimizer verification.
 
 ---
 
 ## Task 34 — Implement GWO candidate variables
 
+**Phase:** V4 - Optimization  
 **Start:** 11/11/2026  
 **Deadline:** 11/17/2026  
 **Priority:** Critical  
@@ -745,12 +759,13 @@ GWO can create valid B,P,E candidates.
 
 ### Report placement
 
-Chapter 4.5 (V4). Optimizer verification also supports Chapter 5.
+Chapter 4.5 — deterministic optimization and optimizer verification.
 
 ---
 
 ## Task 35 — Connect GWO to the simulator
 
+**Phase:** V4 - Optimization  
 **Start:** 11/15/2026  
 **Deadline:** 11/20/2026  
 **Priority:** Critical  
@@ -766,12 +781,13 @@ GWO evaluates real simulation results.
 
 ### Report placement
 
-Chapter 4.5 (V4). Optimizer verification also supports Chapter 5.
+Chapter 4.5 — deterministic optimization and optimizer verification.
 
 ---
 
 ## Task 36 — Run deterministic GWO
 
+**Phase:** V4 - Optimization  
 **Start:** 11/19/2026  
 **Deadline:** 11/22/2026  
 **Priority:** Critical  
@@ -787,12 +803,13 @@ First automatic BESS result.
 
 ### Report placement
 
-Chapter 4.5 (V4). Optimizer verification also supports Chapter 5.
+Chapter 4.5 — deterministic optimization and optimizer verification.
 
 ---
 
 ## Task 37 — Build exhaustive-search reference
 
+**Phase:** V4 - Optimization  
 **Start:** 11/20/2026  
 **Deadline:** 11/24/2026  
 **Priority:** High  
@@ -808,12 +825,13 @@ Reference optimum for small case.
 
 ### Report placement
 
-Chapter 4.5 (V4). Optimizer verification also supports Chapter 5.
+Chapter 4.5 — deterministic optimization and optimizer verification.
 
 ---
 
 ## Task 38 — Compare GWO with exhaustive search
 
+**Phase:** V4 - Optimization  
 **Start:** 11/23/2026  
 **Deadline:** 11/27/2026  
 **Priority:** Critical  
@@ -829,12 +847,13 @@ GWO validation result.
 
 ### Report placement
 
-Chapter 4.5 (V4). Optimizer verification also supports Chapter 5.
+Chapter 4.5 — deterministic optimization and optimizer verification.
 
 ---
 
 ## Task 39 — Test GWO population and iterations
 
+**Phase:** V4 - Optimization  
 **Start:** 11/25/2026  
 **Deadline:** 11/29/2026  
 **Priority:** High  
@@ -850,14 +869,13 @@ GWO setting comparison.
 
 ### Report placement
 
-Chapter 4.5 (V4). Optimizer verification also supports Chapter 5.
+Chapter 4.5 — deterministic optimization and optimizer verification.
 
 ---
 
-# Documentation
-
 ## Task 40 — Write Chapter 4 - V4 GWO implementation
 
+**Phase:** Documentation  
 **Start:** 11/26/2026  
 **Deadline:** 12/1/2026  
 **Priority:** High  
@@ -873,14 +891,13 @@ Chapter 4 V4 subsection draft.
 
 ### Report placement
 
-Chapter 4.5 (V4). Optimizer verification also supports Chapter 5.
+Chapter 4.5 — deterministic optimization and optimizer verification.
 
 ---
 
-# Validation Planning
+## Task 41 — Prepare Term 1 requirement validation plan
 
-## Task 41 — Prepare Chapter 5 validation format
-
+**Phase:** Validation Planning  
 **Start:** 11/27/2026  
 **Deadline:** 12/2/2026  
 **Priority:** High  
@@ -888,22 +905,21 @@ Chapter 4.5 (V4). Optimizer verification also supports Chapter 5.
 
 ### What to do
 
-Create the Chapter 5 structure before the final tests. List each validation experiment, the Term 1 requirement it checks, the test method, metric, expected evidence and where the result will be placed.
+Create the Chapter 5 structure before final testing. List every Term 1 requirement, its target, how it will be tested, what measured result is needed and what evidence will be saved. Chapter 5 should validate the final product against these requirements.
 
 ### Done when
 
-Chapter 5 validation outline + requirement matrix template.
+Chapter 5 requirement-validation plan and empty matrix ready.
 
 ### Report placement
 
-Chapter 5.1 validation plan / requirement matrix template.
+Chapter 5.1 — Term 1 requirements and validation plan.
 
 ---
 
-# V5 - Uncertainty
-
 ## Task 42 — Implement ARIMA
 
+**Phase:** V5 - Uncertainty  
 **Start:** 11/22/2026  
 **Deadline:** 11/28/2026  
 **Priority:** High  
@@ -919,12 +935,13 @@ ARIMA forecast working.
 
 ### Report placement
 
-Chapter 4.6 (V5). Forecast/scenario validation also supports Chapter 5.
+Chapter 4.6 — uncertainty implementation and module verification.
 
 ---
 
-## Task 43 — Validate ARIMA
+## Task 43 — Verify ARIMA forecast accuracy
 
+**Phase:** V5 - Uncertainty  
 **Start:** 11/27/2026  
 **Deadline:** 12/1/2026  
 **Priority:** High  
@@ -932,20 +949,21 @@ Chapter 4.6 (V5). Forecast/scenario validation also supports Chapter 5.
 
 ### What to do
 
-Compare forecast and historical test data using RMSE, MAPE and simple plots.
+Check that the ARIMA implementation behaves correctly using held-out historical data, RMSE, MAPE and simple plots. Keep this as implementation verification in Chapter 4; it supports confidence in the uncertainty module.
 
 ### Done when
 
-ARIMA validation results.
+ARIMA implementation verified with forecast-error results.
 
 ### Report placement
 
-Chapter 4.6 (V5). Forecast/scenario validation also supports Chapter 5.
+Chapter 4.6 — uncertainty implementation and module verification.
 
 ---
 
 ## Task 44 — Generate 100 Monte Carlo scenarios
 
+**Phase:** V5 - Uncertainty  
 **Start:** 11/29/2026  
 **Deadline:** 12/3/2026  
 **Priority:** Critical  
@@ -961,12 +979,13 @@ Use the ARIMA/error behavior to generate the 100 scenarios described in the Term
 
 ### Report placement
 
-Chapter 4.6 (V5). Forecast/scenario validation also supports Chapter 5.
+Chapter 4.6 — uncertainty implementation and module verification.
 
 ---
 
 ## Task 45 — Select the 45 Term 1 scenarios
 
+**Phase:** V5 - Uncertainty  
 **Start:** 12/2/2026  
 **Deadline:** 12/5/2026  
 **Priority:** Critical  
@@ -982,12 +1001,13 @@ Select 15 best, 15 worst and 15 random scenarios using clear rules.
 
 ### Report placement
 
-Chapter 4.6 (V5). Forecast/scenario validation also supports Chapter 5.
+Chapter 4.6 — uncertainty implementation and module verification.
 
 ---
 
-## Task 46 — Check scenario realism
+## Task 46 — Verify scenario realism
 
+**Phase:** V5 - Uncertainty  
 **Start:** 12/4/2026  
 **Deadline:** 12/7/2026  
 **Priority:** High  
@@ -995,20 +1015,21 @@ Chapter 4.6 (V5). Forecast/scenario validation also supports Chapter 5.
 
 ### What to do
 
-Compare generated scenarios with historical data using range, mean, variation and profile shape. Check PV physical limits.
+Check that generated scenarios are realistic compared with historical load/PV behavior using range, mean, variation and profile shape, and check PV physical limits. This verifies the uncertainty implementation before final requirement validation.
 
 ### Done when
 
-Scenario quality check.
+Monte Carlo scenarios verified as physically/statistically reasonable.
 
 ### Report placement
 
-Chapter 4.6 (V5). Forecast/scenario validation also supports Chapter 5.
+Chapter 4.6 — uncertainty implementation and module verification.
 
 ---
 
 ## Task 47 — Run GWO for the 45 scenarios
 
+**Phase:** V5 - Uncertainty  
 **Start:** 12/5/2026  
 **Deadline:** 12/10/2026  
 **Priority:** Critical  
@@ -1024,12 +1045,13 @@ Scenario optimization results.
 
 ### Report placement
 
-Chapter 4.6 (V5). Forecast/scenario validation also supports Chapter 5.
+Chapter 4.6 — uncertainty implementation and module verification.
 
 ---
 
 ## Task 48 — Apply WSM to the scenario results
 
+**Phase:** V5 - Uncertainty  
 **Start:** 12/9/2026  
 **Deadline:** 12/12/2026  
 **Priority:** Critical  
@@ -1045,12 +1067,13 @@ Term 1 uncertainty workflow completed.
 
 ### Report placement
 
-Chapter 4.6 (V5). Forecast/scenario validation also supports Chapter 5.
+Chapter 4.6 — uncertainty implementation and module verification.
 
 ---
 
-## Task 49 — Validate the V5 result
+## Task 49 — Verify V5 uncertainty workflow
 
+**Phase:** V5 - Uncertainty  
 **Start:** 12/11/2026  
 **Deadline:** 12/14/2026  
 **Priority:** Critical  
@@ -1058,22 +1081,21 @@ Chapter 4.6 (V5). Forecast/scenario validation also supports Chapter 5.
 
 ### What to do
 
-Check whether the uncertainty workflow gives one clear, usable BESS recommendation and identify any real problem before changing the method.
+Check that the full ARIMA → Monte Carlo → 45-scenario → GWO/WSM workflow runs correctly and gives a clear usable BESS result. If there is a real technical problem, document it before changing the Term 1 method.
 
 ### Done when
 
-V5 baseline accepted or issue documented.
+V5 uncertainty workflow verified or issue clearly documented.
 
 ### Report placement
 
-Chapter 4.6 (V5). Forecast/scenario validation also supports Chapter 5.
+Chapter 4.6 — uncertainty implementation and module verification.
 
 ---
 
-# Documentation
-
 ## Task 50 — Write Chapter 4 - V5 uncertainty implementation
 
+**Phase:** Documentation  
 **Start:** 12/11/2026  
 **Deadline:** 12/16/2026  
 **Priority:** High  
@@ -1089,14 +1111,13 @@ Chapter 4 V5 subsection draft.
 
 ### Report placement
 
-Chapter 4.6 (V5). Forecast/scenario validation also supports Chapter 5.
+Chapter 4.6 — uncertainty implementation and module verification.
 
 ---
 
-# V6 - Software
-
 ## Task 51 — Sketch the simple UI
 
+**Phase:** V6 - Software  
 **Start:** 12/1/2026  
 **Deadline:** 12/4/2026  
 **Priority:** Medium  
@@ -1112,12 +1133,13 @@ Simple UI sketch/workflow.
 
 ### Report placement
 
-Chapter 4.7–4.9 (V6 software integration).
+Chapter 4.7/4.9 — software integration and final system.
 
 ---
 
 ## Task 52 — Build network / data input UI
 
+**Phase:** V6 - Software  
 **Start:** 12/4/2026  
 **Deadline:** 12/8/2026  
 **Priority:** High  
@@ -1133,12 +1155,13 @@ Input screen working.
 
 ### Report placement
 
-Chapter 4.7–4.9 (V6 software integration).
+Chapter 4.7/4.9 — software integration and final system.
 
 ---
 
 ## Task 53 — Connect baseline simulation to UI
 
+**Phase:** V6 - Software  
 **Start:** 12/7/2026  
 **Deadline:** 12/10/2026  
 **Priority:** High  
@@ -1154,12 +1177,13 @@ Baseline run works from UI.
 
 ### Report placement
 
-Chapter 4.7–4.9 (V6 software integration).
+Chapter 4.7/4.9 — software integration and final system.
 
 ---
 
 ## Task 54 — Connect optimization and results to UI
 
+**Phase:** V6 - Software  
 **Start:** 12/10/2026  
 **Deadline:** 12/14/2026  
 **Priority:** Critical  
@@ -1175,12 +1199,13 @@ Optimization works from UI.
 
 ### Report placement
 
-Chapter 4.7–4.9 (V6 software integration).
+Chapter 4.7/4.9 — software integration and final system.
 
 ---
 
 ## Task 55 — Add progress, errors and save results
 
+**Phase:** V6 - Software  
 **Start:** 12/13/2026  
 **Deadline:** 12/16/2026  
 **Priority:** High  
@@ -1196,12 +1221,13 @@ Basic software usability completed.
 
 ### Report placement
 
-Chapter 4.7–4.9 (V6 software integration).
+Chapter 4.7/4.9 — software integration and final system.
 
 ---
 
 ## Task 56 — Run one full end-to-end test
 
+**Phase:** V6 - Software  
 **Start:** 12/15/2026  
 **Deadline:** 12/18/2026  
 **Priority:** Critical  
@@ -1217,14 +1243,13 @@ V6 full workflow works.
 
 ### Report placement
 
-Chapter 4.7–4.9 (V6 software integration).
+Chapter 4.7/4.9 — software integration and final system.
 
 ---
 
-# Documentation
-
 ## Task 57 — Write Chapter 4 - V6 software integration
 
+**Phase:** Documentation  
 **Start:** 12/16/2026  
 **Deadline:** 12/20/2026  
 **Priority:** High  
@@ -1240,14 +1265,13 @@ Chapter 4 V6 subsection draft.
 
 ### Report placement
 
-Chapter 4.7–4.9 (V6 software integration).
+Chapter 4.7/4.9 — software integration and final system.
 
 ---
 
-# Validation
+## Task 58 — Test final performance requirements
 
-## Task 58 — Compare no BESS vs optimized BESS
-
+**Phase:** Validation  
 **Start:** 12/17/2026  
 **Deadline:** 12/20/2026  
 **Priority:** Critical  
@@ -1255,20 +1279,21 @@ Chapter 4.7–4.9 (V6 software integration).
 
 ### What to do
 
-Use the same network/data and compare voltage, losses, cost, curtailment and shedding before and after BESS.
+Using the final system and the same baseline/optimized case, measure the Term 1 performance requirements such as load-shedding reduction, renewable-curtailment reduction, operational-cost reduction, voltage limits and SOC limits. Save the exact measured values for Chapter 5.
 
 ### Done when
 
-Main before/after results.
+Measured results for the Term 1 performance requirements.
 
 ### Report placement
 
-Chapter 5 validation evidence and final reproducible results.
+Chapter 5 — validation against Term 1 requirements.
 
 ---
 
-## Task 59 — Run sensitivity checks
+## Task 59 — Run sensitivity and robustness checks
 
+**Phase:** Implementation Verification  
 **Start:** 12/18/2026  
 **Deadline:** 12/22/2026  
 **Priority:** Critical  
@@ -1276,20 +1301,21 @@ Chapter 5 validation evidence and final reproducible results.
 
 ### What to do
 
-Test the items reviewers questioned: scenario count, GWO population/iterations and WSM weights. Change only if results show a real need.
+Check reviewer concerns such as scenario count, GWO population/iterations and WSM weights. Use this to understand whether the implementation result is stable and whether any design change is justified. Keep these checks mainly with Chapter 4, not as the main Chapter 5 validation.
 
 ### Done when
 
-Sensitivity results and any justified change.
+Sensitivity/robustness evidence and any justified implementation change.
 
 ### Report placement
 
-Chapter 5 validation evidence and final reproducible results.
+Chapter 4.8 — implementation verification / robustness.
 
 ---
 
-## Task 60 — Run the IEEE 33-bus case
+## Task 60 — Test network-size / scalability requirement
 
+**Phase:** Validation  
 **Start:** 12/20/2026  
 **Deadline:** 12/24/2026  
 **Priority:** Critical  
@@ -1297,20 +1323,21 @@ Chapter 5 validation evidence and final reproducible results.
 
 ### What to do
 
-Move the stable framework to the IEEE 33-bus system and run the baseline and optimized case.
+Run the stable framework on the IEEE 33-bus system to show the final implementation satisfies the Term 1 network-size/scalability requirement and is not limited to the 5-bus development case.
 
 ### Done when
 
-IEEE 33-bus final case results.
+IEEE 33-bus evidence for the network-size/scalability requirement.
 
 ### Report placement
 
-Chapter 5 validation evidence and final reproducible results.
+Chapter 5 — validation against Term 1 requirements.
 
 ---
 
-## Task 61 — Validate against Term 1 requirements
+## Task 61 — Validate all Term 1 requirements
 
+**Phase:** Validation  
 **Start:** 12/23/2026  
 **Deadline:** 12/27/2026  
 **Priority:** Critical  
@@ -1318,22 +1345,21 @@ Chapter 5 validation evidence and final reproducible results.
 
 ### What to do
 
-Create the final requirement-validation matrix. For every Term 1 requirement, show the target, test used, measured result and status: Met, Partially Met or Not Met. Do not change the original requirement just to make it pass.
+Create the final Chapter 5 validation matrix. For every Term 1 requirement, keep the original target and show the test used, measured result, evidence and status: Met, Partially Met or Not Met. Do not change a requirement just to make it pass.
 
 ### Done when
 
-Completed Term 1 requirement validation matrix.
+Complete Term 1 requirement-validation matrix.
 
 ### Report placement
 
-Chapter 5 validation evidence and final reproducible results.
+Chapter 5 — validation against Term 1 requirements.
 
 ---
 
-# Software Testing
+## Task 62 — Test common software failure cases
 
-## Task 62 — Test common failure cases
-
+**Phase:** Implementation Verification  
 **Start:** 12/21/2026  
 **Deadline:** 12/25/2026  
 **Priority:** High  
@@ -1341,22 +1367,21 @@ Chapter 5 validation evidence and final reproducible results.
 
 ### What to do
 
-Try bad files, missing data, disconnected network, invalid BESS limits and failed optimization. Fix the important cases.
+Try bad files, missing data, disconnected network, invalid BESS limits and failed optimization. Fix important problems and record expected/actual behavior. This is software verification and should be documented with the implementation, not treated as final requirement validation unless a Term 1 requirement directly covers it.
 
 ### Done when
 
-Software failure test record.
+Software failure-case verification record.
 
 ### Report placement
 
-Chapter 5 validation evidence and final reproducible results.
+Chapter 4.8 — implementation verification / robustness.
 
 ---
 
-# Final Results
-
 ## Task 63 — Freeze final cases and outputs
 
+**Phase:** Final Results  
 **Start:** 12/24/2026  
 **Deadline:** 12/26/2026  
 **Priority:** Critical  
@@ -1372,14 +1397,13 @@ Reproducible final results package.
 
 ### Report placement
 
-Chapter 5 validation evidence and final reproducible results.
+Final reproducible evidence package for Chapters 4–5.
 
 ---
 
-# Documentation
-
 ## Task 64 — Merge and polish Chapter 4
 
+**Phase:** Documentation  
 **Start:** 12/20/2026  
 **Deadline:** 12/28/2026  
 **Priority:** Critical  
@@ -1395,12 +1419,13 @@ Complete Chapter 4 ready for final review.
 
 ### Report placement
 
-Final Chapter 4 merge/polish.
+Final Chapter 4 merge and polish.
 
 ---
 
 ## Task 65 — Finish Chapter 5, Chapter 6 and ethics
 
+**Phase:** Documentation  
 **Start:** 12/23/2026  
 **Deadline:** 12/30/2026  
 **Priority:** Critical  
@@ -1408,22 +1433,21 @@ Final Chapter 4 merge/polish.
 
 ### What to do
 
-Fill the prepared Chapter 5 format with final validation results, complete the Term 1 requirement matrix discussion, update Chapter 6 conclusions/limitations and finish Appendix D ethics material.
+Fill Chapter 5 only with the final Term 1 requirement-validation experiments and matrix. Use Chapter 6 to discuss what the results mean, limitations and conclusions. Finish Appendix D ethics material.
 
 ### Done when
 
-Chapters 5–6 + ethics material ready.
+Chapter 5 requirement validation + Chapter 6 discussion + ethics ready.
 
 ### Report placement
 
-Finish Chapters 5–6 and Appendix D ethics.
+Finish Chapter 5, Chapter 6 and ethics.
 
 ---
 
-# Finalization
-
 ## Task 66 — Prepare demo and final QA
 
+**Phase:** Finalization  
 **Start:** 12/27/2026  
 **Deadline:** 12/31/2026  
 **Priority:** Critical  
@@ -1439,7 +1463,7 @@ Demo + submission-ready project.
 
 ### Report placement
 
-Presentation/demo/reproducibility/final QA.
+Demo and final QA.
 
 ---
 
