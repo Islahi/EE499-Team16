@@ -1,252 +1,63 @@
 # Term 2 Gantt Schedule — How to Use
 
-## Primary schedule
+## Main working files
 
-The working Term 2 schedule is here:
+- Google Sheet schedule: https://docs.google.com/spreadsheets/d/1HE7RNvaZ-VkVMlozWfkfPbe23hywnEdOzuaI1CfAEcY/edit
+- Report writing map (Google Doc): https://docs.google.com/document/d/1raGucOGbKPVh9FvsIZkMzoAT2raXHNQTlgHec9KbwGo/edit
+- `TERM2_SHADOW_DESIGN.md` — starting implementation baseline for Tasks 9–17.
+- `TERM2_DETAILED_TASK_GUIDE.md` — detailed explanation of all current tasks.
+- `EE499_Team16_Term2_Task_Register.csv` — version-controlled snapshot of the live Task Register.
 
-https://docs.google.com/spreadsheets/d/1HE7RNvaZ-VkVMlozWfkfPbe23hywnEdOzuaI1CfAEcY/edit
+The internal target is to finish by **31 December 2026**.
 
-The target is to finish the internal project plan by **31 December 2026**.
+## Main rule
 
-The Google Sheet is the main working copy.  
-`EE499_Team16_Term2_Task_Register.csv` is the repo snapshot.
+Chapters 1–3 stay frozen. Start from the Term 1 design, implement it, validate it, and only change a method when implementation evidence or advisor feedback gives a clear reason. Important changes are explained in Chapter 4.
 
-For a simple detailed explanation of every task, use:
+## Writing while implementing
 
-- `TERM2_DETAILED_TASK_GUIDE.md` — start date, deadline, what to do, deliverable, dependencies, report connection, and important notes for Tasks 1–58.
+Do not wait until the end to start Chapter 4.
 
-## Main idea
+Each implementation stage now has a matching writing task:
 
-We are not doing another long design phase before coding.
+- Task 19 → write V1 network implementation.
+- Task 26 → write V2 BESS implementation.
+- Task 31 → write V3 manual comparison.
+- Task 40 → write V4 GWO implementation.
+- Task 50 → write V5 uncertainty implementation.
+- Task 57 → write V6 software integration.
+- Task 64 → merge and polish the complete Chapter 4.
 
-Chapters 1–3 are treated as frozen. We use the Term 1 design as the starting baseline, then fill the missing details through the shadow design while we implement the program.
+Task 41 prepares the Chapter 5 format before the final tests. Tasks 58–62 generate the main validation evidence. Task 61 is the final **Term 1 requirement-validation matrix**.
 
-The rule is simple:
+## Final validation rule
 
-```text
-Term 1 design
-    ↓
-Implement it
-    ↓
-Test it
-    ↓
-Keep it if it works
-    ↓
-Change only when there is a clear reason
-```
+The original Term 1 requirements remain the reference. Do not rewrite a requirement to make it easier to pass.
 
-If we change something important, the reason should be written in Chapter 4.
+For each requirement, report:
 
-The current shadow design is:
+`Requirement → Target → Test → Measured result → Met / Partially Met / Not Met → Evidence`
 
-- `TERM2_SHADOW_DESIGN.md`
+Examples include network size, PV penetration, scenario count, load-shedding reduction, optimizer iteration limit, curtailment reduction, cost reduction, voltage limits and SOC limits.
 
-## Development path
+## Current schedule structure
 
-The project is built in six versions:
+| Tasks | Main work |
+|---|---|
+| 1–7 | Data |
+| 8 | Ethics / responsibility |
+| 9–11 | Shadow baseline + code setup |
+| 12–19 | V1 network + Chapter 4 writing |
+| 20–26 | V2 fixed BESS + Chapter 4 writing |
+| 27–31 | V3 manual comparison + Chapter 4 writing |
+| 32–40 | V4 WSM/GWO + Chapter 4 writing |
+| 41 | Prepare Chapter 5 validation structure |
+| 42–50 | V5 uncertainty + Chapter 4 writing |
+| 51–57 | V6 software + Chapter 4 writing |
+| 58–63 | Final validation/testing/results |
+| 64–65 | Final Chapter 4–6 + ethics |
+| 66 | Demo and final QA |
 
-1. **V1 — Network simulator**
-2. **V2 — Fixed BESS**
-3. **V3 — Manual sizing / placement comparison**
-4. **V4 — Automatic optimization**
-5. **V5 — Uncertainty-aware optimization**
-6. **V6 — Final decision-support software**
+## Weekly use
 
-The point is to understand and validate each layer before adding the next one.
-
-## Schedule summary
-
-| Tasks | Stage | Dates | Main result |
-|---|---|---|---|
-| 1–7 | Data | 20–27 Sep | Load, PV/weather and network data ready |
-| 8 | Ethics | 27 Sep–3 Oct | Working ethics/responsibility note |
-| 9–11 | Shadow baseline + setup | 27 Sep–4 Oct | Initial implementation structure ready |
-| 12–18 | V1 — Network | 2–21 Oct | Validated 5-bus FBS network simulator |
-| 19–24 | V2 — Fixed BESS | 18 Oct–2 Nov | Fixed BESS model working and validated |
-| 25–28 | V3 — Manual comparison | 1–9 Nov | Understand effect of BESS location, P and E |
-| 29–36 | V4 — GWO optimization | 7–29 Nov | Term 1 WSM + GWO implemented and checked |
-| 37–44 | V5 — Uncertainty | 22 Nov–14 Dec | ARIMA + Monte Carlo + 45-scenario workflow working |
-| 45–50 | V6 — Software | 1–18 Dec | Simple end-to-end decision-support UI |
-| 51–55 | Final validation | 17–26 Dec | Before/after, sensitivity, IEEE 33-bus and final outputs |
-| 56–58 | Documentation + finalization | 18–31 Dec | Chapter 4/5 updates, final discussion, demo and QA |
-
-Some stages overlap on purpose. For example, the UI can start while V5 is finishing, and report writing starts before all final testing is complete.
-
-## What each version means
-
-### V1 — Network simulator
-
-Build the small 5-bus radial network using the **Forward-Backward Sweep (FBS)** method from Term 1.
-
-Done when:
-
-- power flow runs,
-- bus voltage is shown,
-- line/current/loading is shown,
-- losses and power balance are available,
-- load/PV time series can be simulated,
-- the result has been checked against a trusted/reference result.
-
-### V2 — Fixed BESS
-
-Add one battery with manually selected:
-
-- bus (B),
-- power (P),
-- energy (E).
-
-Done when SOC, charging/discharging, efficiency and limits work correctly and the BESS changes the network power flow correctly.
-
-### V3 — Manual comparison
-
-Before using GWO, manually try a few:
-
-- bus locations,
-- power ratings,
-- energy capacities.
-
-The goal is to understand what should happen and create a reference for the optimizer.
-
-### V4 — Automatic optimization
-
-Implement the Term 1 baseline:
-
-- cost / curtailment / load shedding metrics,
-- WSM with the initial 0.50 / 0.25 / 0.25 weights,
-- GWO using (B,P,E).
-
-Then compare GWO with exhaustive search on the small case.
-
-Do not replace GWO before this test unless there is a clear technical/advisor reason.
-
-### V5 — Uncertainty
-
-Implement the Term 1 uncertainty path first:
-
-```text
-Historical data
-    ↓
-ARIMA
-    ↓
-Monte Carlo
-    ↓
-100 scenarios
-    ↓
-15 best + 15 worst + 15 random
-    ↓
-45 scenarios
-    ↓
-GWO / WSM
-```
-
-Then validate:
-
-- ARIMA using RMSE/MAPE,
-- scenario realism,
-- whether the 45-scenario workflow gives a clear usable BESS result.
-
-Only change the method after a real problem is found.
-
-### V6 — Final software
-
-Put the working backend into a simple UI.
-
-Minimum flow:
-
-```text
-Load network/data
-    ↓
-Run baseline
-    ↓
-Run BESS optimization
-    ↓
-Show selected B, P, E
-    ↓
-Show before/after results
-```
-
-The UI does not need to be fancy. The engineering model is more important.
-
-## Final validation
-
-Tasks 51–55 answer the questions reviewers previously raised:
-
-- Does BESS actually improve the system?
-- Does changing scenario count affect the result?
-- Do GWO population/iterations matter?
-- Do WSM weights strongly change the recommendation?
-- Does the program still work on IEEE 33-bus?
-- Can the result be reproduced?
-
-These results mainly belong in **Chapter 5**.
-
-## Report connection
-
-Because Chapters 1–3 are frozen:
-
-- **Task 8** → Appendix D / ethics material and Chapter 6.2 where useful.
-- **Tasks 9–17 shadow design** → internal implementation support; do not rewrite Chapters 1–3.
-- **V1–V6 implementation** → Chapter 4.
-- **Validation tasks** → Chapter 5.
-- **Evaluation/discussion** → Chapter 6.
-- Important changes from Term 1 → explain and justify in Chapter 4.
-
-## Google Sheet structure
-
-### Task Register
-
-This is the main tab to edit.
-
-Update:
-
-- **Owner**
-- **Status**
-- **Progress**
-- **Start / End**
-- **Dependency**
-
-The task wording is intentionally short and simple.  
-The `Task Explanation` column tells you what you actually need to do.  
-The `Deliverable / Definition of Done` column tells you when the task is finished.
-
-### Semester Gantt
-
-Do not manually draw the bars.
-
-The Gantt reads the Task Register automatically.
-
-Status colors:
-
-- **Not Started** — gray
-- **In Progress** — blue
-- **Blocked** — red
-- **Done** — green
-- **TBA** — yellow
-
-The current weekly window ends with the week of **27 December**, which covers the internal finish date of **31 December 2026**.
-
-### Instructions
-
-Contains the short version of this workflow inside the Google Sheet.
-
-## Weekly routine
-
-Once a week:
-
-1. Check the active tasks.
-2. Update owner.
-3. Update status and progress.
-4. Move dates if reality changed.
-5. Check blocked tasks.
-6. Check the Gantt for later tasks that are affected.
-7. Save evidence of completed work: code, plots, test results, or notes.
-
-## Important rule
-
-The schedule is not the permanent technical decision record.
-
-Confirmed major project changes should still be recorded in `DECISIONS.md`.
-
-The schedule tells us **what to work on and when**.  
-The shadow design tells us **how we currently plan to build it**.  
-Chapter 4 later records **what we actually built and what changed**.
+Update the **Task Register**, not the Gantt bars directly. Update Owner, Status, Progress, Start/End dates and dependencies. The Semester Gantt updates automatically.
