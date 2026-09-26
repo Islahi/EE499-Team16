@@ -105,3 +105,12 @@ Log items such as confirmed decisions, important advisor guidance, meaningful re
 - Updated the live Google Sheet Task Register so Tasks 10–23, selected V4/V5 tasks, and UI-integration tasks implement/reference the predefined design contracts instead of redefining architecture or data formats during coding.
 - Two design gates remain explicit before later implementation: confirm the WSM normalization method before Task 33 and confirm the best/worst scenario ranking rule before Task 45; implementation code must not silently invent either rule.
 - Related files: `02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md`, `02_Reports/Working/Planning/TERM2_SHADOW_DESIGN.md`, `02_Reports/Working/Planning/README.md`.
+
+## 2026-09-26 — Software implementation handoff contracts made explicit
+
+- Strengthened `TERM2_SOFTWARE_DESIGN_SPEC.md` so implementation ownership no longer includes unresolved architecture/interface/numerical choices for the initial modules.
+- Added explicit module/object ownership, a proposed `network_cases.py` boundary, independent-test rules, a detailed one-step FBS algorithm/convergence/result contract, profile completeness/timestamp rules, and exact BESS charge/discharge clipping equations.
+- Refined `TERM2_SHADOW_DESIGN.md` so the high-level design hierarchy and change-control rule are explicit: design is documented first; implementation codes/tests/debugs that design; required changes feed back into the design documents before modules diverge.
+- Reviewed the live Task Register. Its implementation tasks already reference the software design specification and avoid redefining architecture/file-format/interface decisions, so no unnecessary schedule rewrite was made in this pass.
+- Software choices not established by existing project material remain explicitly labeled **proposed design decisions** and were not added to `DECISIONS.md`.
+- Related files: `02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md`, `02_Reports/Working/Planning/TERM2_SHADOW_DESIGN.md`.
