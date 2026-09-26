@@ -1,13 +1,11 @@
 # Term 2 Technical Design Baseline
 
 **Status:** Finalized high-level design reference  
-**Purpose:** Preserve the project/Term 1 technical baseline and map it to the detailed software design and current implementation tasks.  
+**Purpose:** Preserve the project/Term 1 technical baseline, identify proposed design decisions where the baseline was incomplete, and map the design to the detailed software implementation-handoff specification.  
 **Detailed software contracts:** `TERM2_SOFTWARE_DESIGN_SPEC.md`  
 **Schedule source of truth:** live Task Register / Gantt
 
 ## 1. Design hierarchy
-
-The project now uses three levels:
 
 ```text
 Official project requirements + Term 1 baseline
@@ -23,15 +21,30 @@ Official project requirements + Term 1 baseline
       Chapter 4 evidence / Chapter 5 validation
 ```
 
-This file defines the **technical baseline**. `TERM2_SOFTWARE_DESIGN_SPEC.md` defines exact software architecture, module responsibilities, data structures, file formats, interfaces, units and required outputs so implementation owners do not design incompatible local solutions.
+This file owns the **high-level technical design**. `TERM2_SOFTWARE_DESIGN_SPEC.md` owns the exact software architecture, module responsibilities, data structures, file formats, public interfaces, units, sign conventions and numerical contracts.
 
 ### Design vs implementation rule
 
-**Design work includes:** mathematical model, architecture, interfaces, data flow, algorithms, data structures, file formats, units, sign conventions, numerical configuration and validation plan.
+**DESIGN work includes:**
 
-**Implementation work includes:** coding the defined design, running it, debugging, unit/integration testing, collecting results and validating behavior.
+- mathematical/physical assumptions,
+- architecture and module boundaries,
+- algorithms/numerical contracts,
+- interfaces and data flow,
+- data structures/file formats,
+- units/sign conventions,
+- validation strategy.
 
-If implementation reveals that a design choice must change, update the design documentation and record the reason before allowing different modules to diverge.
+**IMPLEMENTATION work includes:**
+
+- coding the documented design,
+- unit/integration testing,
+- debugging,
+- verification against known/reference cases,
+- running trials/experiments,
+- collecting evidence/results.
+
+An implementation owner should not make a new architecture/interface/file-format choice locally. If a design gap is discovered, update the design documentation first or in the same reviewed change.
 
 ---
 
@@ -63,7 +76,7 @@ Where:
 ## Network scope
 
 - use a small **5-bus radial system** for development/debugging,
-- later run the same framework on the **IEEE 33-bus radial distribution system**,
+- later use the same framework on the **IEEE 33-bus radial distribution system**,
 - the 5-bus system is not the final product limit.
 
 ## Renewable source
@@ -83,11 +96,6 @@ Unless later required/approved:
 - no detailed degradation model initially,
 - no transmission-system optimization.
 
-### Implementation mapping
-
-- Tasks 51–57 integrate the decision-support software.
-- Task 60 demonstrates scalability on IEEE 33-bus.
-
 ---
 
 # SD-2 — User Workflow and Software Requirements
@@ -95,38 +103,30 @@ Unless later required/approved:
 ## Baseline workflow
 
 ```text
-Start
-  ↓
 Load/create network
-  ↓
-Load load profile
-  ↓
-Load PV profile
-  ↓
+      ↓
+Load load/PV profiles
+      ↓
 Validate inputs
-  ↓
-Run baseline simulation
-  ↓
-Inspect network results
-  ↓
-Configure BESS planning bounds
-  ↓
-Run deterministic optimization
-  ↓
-Run uncertainty-aware optimization
-  ↓
-View recommended BESS
-  ↓
+      ↓
+Run baseline FBS simulation
+      ↓
+Add/configure BESS
+      ↓
+Manual/automatic BESS evaluation
+      ↓
+Uncertainty-aware evaluation
+      ↓
 Compare baseline vs BESS
-  ↓
-Save/export results
+      ↓
+Display/export results
 ```
 
 ## Required input families
 
 - network topology/equipment/base values,
 - time-series load and PV,
-- BESS planning bounds,
+- BESS planning bounds/parameters,
 - economic coefficients used by the retained objective.
 
 ## Required output families
@@ -136,71 +136,62 @@ Save/export results
 - losses,
 - source/grid power,
 - power balance,
-- BESS SOC and power,
+- BESS SOC/power,
 - selected `[B,P,E]`,
 - cost,
 - curtailment,
 - load shedding,
 - voltage violations,
 - improvements relative to baseline,
-- computation/convergence information where useful.
+- convergence/computation information where useful.
 
-The exact software objects, fields, file formats and units are defined in `TERM2_SOFTWARE_DESIGN_SPEC.md`.
-
-### Implementation mapping
-
-- Task 10 creates the predefined module skeleton.
-- Task 11 implements the predefined I/O structures/sample fixtures.
-- Tasks 51–57 integrate the final workflow/UI.
-- Task 62 checks common software failure cases.
+Exact objects/fields/units are defined in `TERM2_SOFTWARE_DESIGN_SPEC.md`.
 
 ---
 
 # SD-3 — Software Architecture
 
-## Architecture decision
+The software architecture is a **design decision**, not an implementation-task decision.
 
-The detailed architecture is now defined **before implementation** in `TERM2_SOFTWARE_DESIGN_SPEC.md`.
+Main modules are defined before coding:
 
-Main modules:
-
-- `network_model.py` — static network representation and validation,
+- `network_model.py` — static network entities/topology/validation,
+- `network_cases.py` — named 5-bus/IEEE-33 case construction,
 - `data_loader.py` — standardized load/PV import,
 - `fbs.py` — one-step radial Forward/Backward Sweep,
 - `bess.py` — BESS configuration/state/limits,
 - `simulation.py` — orchestration layer,
-- `metrics.py` — performance/economic metrics,
-- `uncertainty.py` — future ARIMA/Monte Carlo scenario interface,
-- `optimizer.py` — future GWO/WSM optimization interface,
+- `metrics.py` — technical/economic metrics,
+- `uncertainty.py` — later ARIMA/Monte Carlo scenario interface,
+- `optimizer.py` — later GWO/WSM interface,
 - `results.py` — result tables/plots/export,
 - `ui.py` — final user interface.
 
-## Independence rule
+### Independence rule
 
-Each module should be independently testable and should interact through documented public data objects/functions rather than shared mutable globals.
+- modules exchange documented public data objects/functions,
+- no shared mutable global engineering state,
+- FBS does not read CSV files,
+- BESS logic does not solve network power flow,
+- optimizer does not duplicate FBS/BESS physics,
+- UI does not contain engineering calculations.
 
-The optimizer must not duplicate FBS/BESS physics. The UI must not contain engineering calculations. FBS must not read CSV files directly.
-
-### Implementation mapping
-
-- Tasks 10–11 create the code/interface skeleton from the design.
-- Tasks 12–50 implement backend modules.
-- Tasks 51–57 integrate them.
+The exact dependency direction and object ownership are defined in `TERM2_SOFTWARE_DESIGN_SPEC.md` Section 2.
 
 ---
 
 # SD-4 — Interfaces, Data Flow and Units
-
-Detailed public interfaces are defined in `TERM2_SOFTWARE_DESIGN_SPEC.md`.
 
 ## Deterministic data flow
 
 ```text
 NetworkModel + ProfileData
           ↓
-     OperatingPoint
+      ProfileSlice
           ↓
 optional BESS step/injection
+          ↓
+     OperatingPoint
           ↓
         fbs.py
           ↓
@@ -208,13 +199,13 @@ optional BESS step/injection
           ↓
       metrics.py
           ↓
-  evaluator / optimizer
+ evaluator / optimizer
 ```
 
 ## Uncertainty data flow
 
 ```text
-Historical / prepared profiles
+Historical/prepared profiles
             ↓
       ARIMA / error model
             ↓
@@ -232,45 +223,33 @@ Historical / prepared profiles
 - active power: kW,
 - reactive power: kVAR,
 - energy: kWh,
-- input/base voltage: kV line-line,
+- base/nominal voltage: kV line-line,
 - solved voltage: p.u.,
 - branch impedance: ohm/phase,
 - current: A,
 - SOC: fraction 0–1 internally,
 - time step: hours.
 
-## Standard power signs
+## Standard signs
 
 - load = positive consumption,
 - PV = positive generation,
 - BESS `P > 0` = discharge/injection,
-- BESS `P < 0` = charge/consumption.
+- BESS `P < 0` = charge/absorption,
+- slack `P > 0` = grid supplies the modeled network.
 
-## Proposed design decision — reactive load profile when Q is not measured
+## Proposed design decision — reactive load when Q is absent
 
-The simulator must receive both active and reactive demand. If the prepared source profile provides only active load, do **not** ask the implementation owner to invent a reactive-load model.
-
-Proposed rule:
-
-1. Use each bus's base-load `P_base` and `Q_base` from `NetworkModel`.
-2. For each time step, calculate the active-load multiplier relative to that bus's base active load.
-3. Scale reactive load by the same multiplier:
+If the prepared load profile contains only active power, the implementation owner must not invent a Q model. Use the bus base-load P/Q ratio:
 
 ```text
 m_i(t) = P_i(t) / P_base,i
 Q_i(t) = m_i(t) * Q_base,i
 ```
 
-This preserves each bus's base power factor over time. If the final prepared dataset already contains measured/defined `q_kvar`, use that instead.
+If measured/defined `q_kvar` exists, use it instead.
 
-This is a **proposed design decision**, not a new project requirement. If the team selects another justified reactive-load model, update the design specification before Task 16 implementation diverges.
-
-### Implementation mapping
-
-- Task 11 implements these data contracts.
-- Task 16 implements the predefined profile loader.
-- Tasks 20–23 implement the predefined BESS interface.
-- Tasks 32–35 connect metrics/optimizer to the same public simulation interface.
+This is a **proposed design decision**, not a new project requirement.
 
 ---
 
@@ -292,51 +271,38 @@ For IEEE 33-bus, bus 1 is the source/slack unless the benchmark data requires ot
 
 ## Solver baseline
 
-The **Forward-Backward Sweep (FBS)** method remains the initial radial power-flow solver.
+Forward/Backward Sweep remains the initial radial power-flow solver. A trusted external solver may be used only as an independent verification reference unless evidence justifies a documented method change.
 
-A trusted external solver may be used as a verification reference but should not silently replace FBS.
+## Detailed design already fixed before coding
 
-## Software design contract
+`TERM2_SOFTWARE_DESIGN_SPEC.md` Sections 3–4 define:
 
-`TERM2_SOFTWARE_DESIGN_SPEC.md` now specifies before coding:
-
-- `Bus`, `Line`, `Load`, `PVUnit`, `NetworkModel`,
+- `Bus`, `Line`, `Load`, `PVUnit`, `NetworkModel`, `RadialOrder`,
+- 5-bus case construction boundary,
 - network validation/radial ordering,
-- engineering-unit/base-value convention,
+- engineering-unit/per-unit conversion rules,
 - `OperatingPoint`,
-- `FBSConfig`,
+- exact FBS backward/forward sequence,
+- `FBSConfig`, convergence and failure behavior,
 - `PowerFlowResult`,
-- FBS sign conventions,
 - required/optional outputs,
-- one-step public `run_fbs()` interface,
-- proposed convergence tolerance/defaults.
+- one-step public `run_fbs()` interface.
 
-These are no longer decisions left to Tasks 12–13.
-
-### Implementation mapping
-
-- Task 12 builds the 5-bus case using the documented `NetworkModel`.
-- Task 13 implements `fbs.py` to the documented contract.
-- Task 14 verifies it.
-- Task 15 presents required outputs.
-- Task 16 implements profile import.
-- Task 17 adds the hourly orchestration loop.
-- Task 18 verifies V1.
-- Task 60 later applies the same design to IEEE 33-bus.
+These are DESIGN decisions and are not left to Tasks 12–13.
 
 ---
 
 # SD-6 — BESS Baseline
 
-## Existing BESS requirements/baseline
+## Existing baseline
 
 Planning variables remain distinct:
 
-- `E_max` — energy capacity [kWh],
-- `P_max` — power rating [kW],
+- `E` — energy capacity [kWh],
+- `P` — power rating [kW],
 - `B` — installation bus.
 
-State of charge:
+State:
 
 `SOC_t = E_t / E_max`
 
@@ -348,51 +314,32 @@ Discharging:
 
 `E_(t+1) = E_t - P_dis,t * Delta_t / eta_d`
 
-Initial SOC constraint retained from Term 1:
+Initial SOC constraint:
 
 `0.10 <= SOC_t <= 0.90`
 
-Power constraints:
-
-`0 <= P_ch,t <= P_max`
-
-`0 <= P_dis,t <= P_max`
-
-Other baseline assumptions:
+Other retained assumptions:
 
 - no simultaneous charging/discharging,
 - fixed efficiency initially,
-- Term 1 efficiency value is a starting assumption until verified/refined,
-- initial SOC may start at 50% where no case-specific value is required,
-- cyclic final SOC may be retained where the study requires it,
+- initial SOC may use 50% where no case-specific value is required,
+- cyclic end SOC may be retained where the study requires it,
 - detailed degradation is initially outside scope and must be stated as a limitation if omitted.
 
-## Software design contract
+## Detailed design already fixed before coding
 
-`TERM2_SOFTWARE_DESIGN_SPEC.md` now defines before coding:
+`TERM2_SOFTWARE_DESIGN_SPEC.md` Section 6 defines:
 
-- `BESSConfig`,
-- `BESSState`,
-- `BESSStepResult`,
+- `BESSConfig`, `BESSState`, `BESSStepResult`,
 - common BESS/network sign convention,
-- `step_bess()` interface,
-- limit handling,
+- exact one-step charge/discharge clipping equations,
+- `step_bess()` public interface,
 - separation between BESS state logic and FBS,
-- BESS injection path through `simulation.py`.
+- injection path through `simulation.py`.
 
-## Proposed design decision — efficiency representation
+## Efficiency design gate
 
-The software model will store **directional efficiencies separately** as `eta_charge` and `eta_discharge`; the BESS equations therefore do not depend on an ambiguous single `efficiency` variable.
-
-The approximately 85% value appearing in the existing baseline should **not be silently interpreted** by the implementer as either round-trip efficiency or as both directional efficiencies. The numeric case configuration must use explicitly documented directional values. Until that interpretation/value source is confirmed, Task 20 should implement the fields and validation but should not hard-code an unverified mapping of 85% into both directions.
-
-This is a software design clarification, not a new performance requirement.
-
-### Implementation mapping
-
-- Tasks 20–23 implement the documented BESS contract.
-- Tasks 24–25 run/verify it over time.
-- Tasks 27–30 compare BESS location and P/E choices manually.
+The approximately 85% value in the baseline is ambiguous. The software uses separate `eta_charge` and `eta_discharge`; an implementer must not silently assign 0.85 to both directions. Numeric values require a documented interpretation/source/team decision.
 
 ---
 
@@ -414,58 +361,23 @@ Starting Term 1 WSM priority:
 
 `J = 0.50*C + 0.25*E_curt + 0.25*E_shed`
 
-Main constraints:
+Main constraints include voltage/SOC/BESS bounds/allowed buses/network feasibility.
 
-- voltage limits,
-- SOC limits,
-- BESS P/E bounds,
-- allowed buses,
-- network feasibility.
-
-GWO remains the starting optimizer. Limited exhaustive search on the small system is used as an independent verification reference.
-
-## Predefined software interface
-
-`TERM2_SOFTWARE_DESIGN_SPEC.md` reserves:
-
-- `BESSCandidate`,
-- `OptimizationResult`,
-- optimizer public interface,
-- rule that optimizer calls simulation/evaluator instead of duplicating network/BESS physics.
+GWO remains the starting optimizer. Limited exhaustive search on the small case is an independent verification reference.
 
 ## Proposed design decision — WSM normalization
 
-Term 1 fixes the three criteria and baseline weights but does not fully define their common numerical scale.
-
-To avoid an implementer selecting an arbitrary normalization during Task 33, the proposed default is **fixed no-BESS baseline-relative normalization** for the same study case/scenario:
+Term 1 does not fully define a common numerical scale. The current proposed default remains fixed no-BESS baseline-relative normalization:
 
 ```text
-C_norm    = C_candidate    / max(|C_baseline|, eps)
+C_norm    = C_candidate     / max(|C_baseline|, eps)
 Curt_norm = Ecurt_candidate / max(|Ecurt_baseline|, eps)
 Shed_norm = Eshed_candidate / max(|Eshed_baseline|, eps)
 
 J = 0.50*C_norm + 0.25*Curt_norm + 0.25*Shed_norm
 ```
 
-where `eps` is a small positive numerical guard used only to prevent division by zero.
-
-Reasons for this proposal:
-
-- the scale is fixed for all wolves/iterations,
-- criteria become dimensionless,
-- the result is interpretable relative to the no-BESS baseline,
-- normalization does not change when the GWO population changes.
-
-If a baseline criterion is exactly zero, that case must be reported explicitly during verification because the corresponding ratio becomes dominated by the numerical guard. The team may replace this proposal with a better justified fixed reference scale before V4; if so, update the design documentation first.
-
-This is a **proposed design decision**, not an added customer requirement and not a change to the Term 1 weights.
-
-### Implementation mapping
-
-- Task 32 implements metrics using the defined interface.
-- Task 33 implements this proposed normalization unless the team records a revised design before coding.
-- Tasks 34–35 implement the documented candidate/evaluator connection.
-- Tasks 36–39 run and verify GWO.
+This is proposed, not a new customer requirement. If changed, update the design before Task 33 implementation.
 
 ---
 
@@ -493,60 +405,41 @@ WSM result
 
 ARIMA should be checked with RMSE/MAPE. Generated scenarios should be checked against historical behavior and physical limits.
 
-## Predefined software interface
+## Interface rule
 
-`TERM2_SOFTWARE_DESIGN_SPEC.md` reserves `Scenario` and `ScenarioSet` so future scenarios reuse the same `ProfileData` and simulation pipeline.
+Future `Scenario`/`ScenarioSet` reuse the exact same `ProfileData`/simulation path; uncertainty code does not create a second network model or solver.
 
-## Proposed design decision — best/worst scenario ranking
+## Proposed design decision — best/worst ranking
 
-The retained **15 best + 15 worst + 15 random** structure does not by itself define how a scenario is ranked.
-
-To prevent Task 45 from inventing a local rule, the proposed scenario stress score is the total positive net-demand energy before BESS:
+Until replaced by a team/advisor-approved rule, the proposed scenario stress score is:
 
 ```text
 Stress_s = sum_t max(P_load,total,s(t) - P_PV,total,s(t), 0) * Delta_t
 ```
 
-Selection rule:
+Selection:
 
-1. rank all 100 scenarios by `Stress_s`,
-2. **worst** = 15 highest-stress scenarios,
-3. **best** = 15 lowest-stress scenarios,
-4. **random** = 15 uniformly sampled scenarios from the remaining 70,
-5. use a fixed recorded random seed (proposed default `42`) for reproducibility.
+1. 15 highest stress = worst,
+2. 15 lowest stress = best,
+3. 15 random from remaining 70,
+4. fixed recorded seed (proposed default 42) for reproducibility.
 
-This proposal uses load/PV conditions only and therefore avoids ranking scenarios based on a BESS design that has not yet been selected.
-
-If the team/advisor prefers another scenario-severity metric, record the replacement in the design documentation before Task 45. Do not choose it inside the selection implementation.
-
-This is a **proposed design decision**, not a new Term 1 requirement.
-
-### Implementation mapping
-
-- Task 42 implements ARIMA behind the uncertainty interface.
-- Task 43 verifies forecast accuracy.
-- Task 44 generates `ScenarioSet`.
-- Task 45 applies this proposed selection rule unless a revised design is recorded beforehand.
-- Task 46 verifies scenario realism.
-- Tasks 47–49 connect scenarios to the normal optimization/simulation pipeline.
+This is a proposed design decision, not a new Term 1 requirement.
 
 ---
 
 # SD-9 — Verification and Validation Baseline
 
-Use two evidence levels.
-
 ## A. Implementation verification / trials
 
-Question answered: **Did we implement the defined design correctly?**
+Question: **Did we implement the documented design correctly?**
 
 Examples:
 
-- network-model validation,
-- FBS manual/trusted-reference comparison,
+- network validation,
+- FBS reference comparison,
 - power-balance checks,
-- SOC hand calculations,
-- BESS limit tests,
+- SOC hand calculations/limit tests,
 - manual BESS location/size trials,
 - GWO vs exhaustive search,
 - GWO population/iteration tests,
@@ -558,67 +451,56 @@ This evidence primarily supports Chapter 4.
 
 ## B. Formal validation experiments
 
-Question answered: **Does the implemented final product satisfy the Term 1 design specifications?**
+Question: **Does the implemented product satisfy the Term 1 design specifications?**
 
-Each formal Chapter 5 experiment should contain:
+Each Chapter 5 experiment should include objective, background, detailed steps, tools, organized data/figures/tables, and analysis/conclusion.
 
-1. objective,
-2. relevant background,
-3. detailed work plan/steps,
-4. tools,
-5. organized data/figures/tables,
-6. analysis/conclusion.
-
-Final requirement evidence should be summarized as:
+Requirement evidence is summarized as:
 
 `Requirement -> Target -> Experiment/direct check -> Measured result -> Evidence -> Status`
 
-with status:
+with status `Met`, `Partially Met`, or `Not Met`.
 
-- Met,
-- Partially Met,
-- Not Met.
-
-Do not alter a requirement merely to make it pass.
+Do not alter a requirement to make it pass.
 
 ---
 
-# Current Gantt mapping summary
+# Current Gantt implementation mapping
 
-| Technical section | Main current tasks |
+| Design section | Main current implementation tasks |
 |---|---|
 | SD-1 Product scope | 51–57, 60 |
 | SD-2 Workflow/requirements | 10–11, 51–57, 62 |
-| SD-3 Architecture | 10–11, 12–50, 51–57 |
-| SD-4 Interfaces/data flow | 11, 16, 20–23, 32–35, 42–45, 52–54 |
+| SD-3 Architecture | 10–11, then all backend/UI modules |
+| SD-4 Interfaces/data flow | 11, 16–17, 20–23, 32–35, 42–45, 52–54 |
 | SD-5 Network/FBS | 12–19, 60 |
 | SD-6 BESS | 20–31 |
 | SD-7 Objective/GWO | 32–40 |
 | SD-8 ARIMA/MC/scenarios | 42–50 |
 | SD-9 Verification/validation | verification tasks throughout + 41, 58–61 |
 
+Task numbers/dates/status live in the Task Register/Gantt. Design contracts live here and in `TERM2_SOFTWARE_DESIGN_SPEC.md`.
+
 ---
 
 # Change-control rule
-
-The default sequence is:
 
 ```text
 Existing baseline
       ↓
 Document detailed design
       ↓
-Implement the documented design
+Implement documented design
       ↓
 Test / verify
       ↓
-Keep it if it works
-      ↓
-Change only with evidence / team-advisor decision
+If change is needed, show evidence
       ↓
 Update design documentation
+      ↓
+Implement the revised contract consistently
       ↓
 Document implementation change in Chapter 4
 ```
 
-The detailed software contracts belong in `TERM2_SOFTWARE_DESIGN_SPEC.md`; task numbers/dates belong in the live Task Register/Gantt.
+The intent is simple: **team members should implement an agreed specification, not independently design their module while coding it.**
