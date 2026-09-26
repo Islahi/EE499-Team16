@@ -8,21 +8,57 @@ The early preparation stage is finished.
 - Task 9: **Done** — the implementation baseline is finalized.
 - No separate advisor data presentation/package is planned.
 - Task 8 Ethics runs **in parallel** with implementation and does not block coding.
-- Current main work starts with **Task 10 — Set up the code structure** and then V1/V2 implementation.
+- Current main work starts with **Task 10 — Set up the code structure from the design spec** and then V1/V2 implementation.
 
 ## Main working files
 
 - Google Sheet schedule: https://docs.google.com/spreadsheets/d/1HE7RNvaZ-VkVMlozWfkfPbe23hywnEdOzuaI1CfAEcY/edit
 - Chapters 4–6 Writing Map: https://docs.google.com/document/d/1raGucOGbKPVh9FvsIZkMzoAT2raXHNQTlgHec9KbwGo/edit
+- `TERM2_SOFTWARE_DESIGN_SPEC.md` — **implementation handoff specification** for software architecture, module responsibilities, data structures, interfaces, file formats, units and required/optional outputs.
+- `TERM2_SHADOW_DESIGN.md` — finished high-level technical baseline using stable `SD-1` to `SD-9` section IDs.
 - `TERM2_DETAILED_TASK_GUIDE.md` — detailed explanation of the current tasks.
 - `EE499_Team16_Term2_Task_Register.csv` — repo snapshot of the live Task Register.
-- `TERM2_SHADOW_DESIGN.md` — **finished technical implementation baseline**. It now uses stable `SD-1` to `SD-9` section IDs and explicitly maps each technical section to the current Gantt tasks.
 
-The technical baseline is a reference, not a separate scheduled phase. The **live Task Register/Gantt is the source of truth for task numbers, dates, status and dependencies**.
+The **live Task Register/Gantt is the source of truth for task numbers, dates, status and dependencies**.
+
+## Design → implementation rule
+
+The technical design documents define **what must be implemented**. Implementation tasks should not independently choose software architecture, module boundaries, data formats, sign conventions or public interfaces.
+
+Use this sequence:
+
+```text
+Term 1 / project baseline
+        ↓
+TERM2_SHADOW_DESIGN.md
+        ↓
+TERM2_SOFTWARE_DESIGN_SPEC.md
+        ↓
+Current Gantt implementation task
+        ↓
+Coding + testing + debugging
+        ↓
+Implementation evidence / validation
+```
+
+The software design specification explicitly distinguishes:
+
+- **existing baseline requirements**, and
+- **proposed design decisions** where the existing requirements did not determine a software detail.
+
+If the team rejects a proposed design decision, update the design specification first so different implementation owners do not create incompatible local solutions.
+
+Examples of implementation handoff:
+
+- `network_model.py` structure/fields/units are defined before Task 12.
+- `fbs.py` inputs, outputs and convergence interface are defined before Task 13.
+- load/PV CSV format and `ProfileData` interface are defined before Task 16.
+- BESS structures, sign convention and step interface are defined before Tasks 20–23.
+- future scenario and optimizer interfaces are reserved before V4/V5 implementation.
 
 ## Technical baseline ↔ Gantt relationship
 
-The schedule implements the technical baseline; the old shadow-design task numbering is no longer used.
+The schedule implements the technical baseline; old design-task numbering is not used.
 
 Examples:
 
@@ -32,7 +68,7 @@ Examples:
 - `SD-8 Uncertainty` → Tasks **42–50**.
 - `SD-9 Verification / Validation` → verification tasks throughout implementation plus formal Tasks **41, 58–61**.
 
-If implementation produces a real design change, update the technical baseline decision and justify the change in Chapter 4. Do **not** renumber the technical baseline sections to match future Gantt edits.
+If implementation produces a real design change, update the technical design reference and justify the change in Chapter 4. Do **not** renumber technical-design sections to match future Gantt edits.
 
 ## Official Term 2 deadlines
 
