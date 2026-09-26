@@ -13,12 +13,28 @@
 - Task 8 Ethics runs **in parallel** and does not block implementation.
 - Main implementation starts now with Task 10.
 
+## Design handoff rule
+
+Before coding, use:
+
+- `TERM2_SHADOW_DESIGN.md` for the high-level technical baseline.
+- `TERM2_SOFTWARE_DESIGN_SPEC.md` for exact software architecture, module responsibilities, data structures, file formats, interfaces, units/sign conventions and required/optional outputs.
+
+Implementation tasks should focus on **coding, testing, debugging and integration**. Do not independently redesign module boundaries, profile formats, sign conventions or public interfaces inside an implementation task.
+
+Where `TERM2_SOFTWARE_DESIGN_SPEC.md` labels a choice as a **proposed design decision**, it is an explicit proposal rather than a new project requirement. If the team changes it, update the design specification before implementations diverge.
+
+Two later design gates remain open:
+
+- confirm WSM normalization before Task 33,
+- confirm the best/worst scenario ranking metric before Task 45.
+
 ## How to read this guide
 
 For each task:
 - **Start / Deadline** = internal working dates.
-- **What to do** = actual work.
-- **Done when** = what must exist before marking it complete.
+- **What to do** = implementation/work activity.
+- **Done when** = required artifact/result.
 
 ---
 
@@ -28,57 +44,49 @@ For each task:
 **Start:** 20 Sep 2026  
 **Deadline:** 21 Sep 2026  
 **Status:** Done  
-**What to do:** List the required load, PV/weather, network and BESS/economic data.  
+**What to do:** List required load, PV/weather, network and BESS/economic data.  
 **Done when:** One clear data checklist exists.
 
 ## Task 2 — Get load data
 **Start:** 20 Sep 2026  
 **Deadline:** 23 Sep 2026  
 **Status:** Done  
-**What to do:** Find a usable historical load profile and record source, unit, time step and date range.  
-**Done when:** Load dataset is ready.
+**Done when:** Load dataset is ready with source/unit/time-step notes.
 
 ## Task 3 — Get PV / weather data
 **Start:** 20 Sep 2026  
 **Deadline:** 23 Sep 2026  
 **Status:** Done  
-**What to do:** Find irradiance/weather/PV data that can be aligned with the load data.  
 **Done when:** PV/weather dataset is ready.
 
 ## Task 4 — Get network data
 **Start:** 21 Sep 2026  
 **Deadline:** 23 Sep 2026  
 **Status:** Done  
-**What to do:** Prepare the small 5-bus development case and IEEE 33-bus data.  
-**Done when:** Both network datasets are ready.
+**Done when:** Development 5-bus and IEEE 33-bus network data are ready.
 
 ## Task 5 — Check the selected data
 **Start:** 23 Sep 2026  
 **Deadline:** 24 Sep 2026  
 **Status:** Done  
-**What to do:** Check sources, units, timestamps, missing values and compatibility.  
-**Done when:** Short data-quality note exists.
+**Done when:** Sources, units, timestamps, missing values and compatibility are checked.
 
 ## Task 6 — Clean and align the data
 **Start:** 24 Sep 2026  
 **Deadline:** 25 Sep 2026  
 **Status:** Done  
-**What to do:** Fix missing values where needed and align load/PV data to common time steps and units.  
-**Done when:** Simulation-ready profiles exist.
+**Done when:** Simulation-ready load/PV profiles exist.
 
 ## Task 7 — Finalize simulation-ready data package
-**Start:** 25 Sep 2026  
-**Deadline:** 25 Sep 2026  
+**Start / Deadline:** 25 Sep 2026  
 **Status:** Done  
-**What to do:** Store the cleaned load, PV/weather and network data with source and unit notes. No advisor presentation is required.  
-**Done when:** Final simulation-ready data package is stored.
+**Done when:** Cleaned load, PV/weather and network data are stored with source/unit notes.
 
 ## Task 9 — Finalize implementation baseline
 **Start:** 24 Sep 2026  
 **Deadline:** 25 Sep 2026  
 **Status:** Done  
-**What to do:** Confirm the Term 1 implementation choices and the minimum module/interface definitions needed to start coding.  
-**Done when:** Implementation baseline is finalized.
+**Done when:** High-level implementation baseline is finalized.
 
 ---
 
@@ -88,123 +96,127 @@ For each task:
 **Start:** 26 Sep 2026  
 **Internal draft target:** 7 Oct 2026  
 **Priority:** Medium  
-**What to do:** Each member prepares the required individual 3–5 page ethical analysis using the SCE Engineer Charter 2025. Cover project context, stakeholders, two ethical issues, alternatives/decision-making, safety/risk/compliance, data/privacy/security, broader impacts, professional integrity, IP/attribution, mitigation and reflection.  
-**Done when:** Each member has a usable individual draft/outline and the team has material reusable in Chapter 6.2 and Appendix D.  
-**Important:** This task runs in parallel with Tasks 10 onward and should not stop implementation.
+**What to do:** Each member prepares the required individual 3–5 page ethical analysis using the SCE Engineer Charter 2025, including two distinct ethical issues and the required stakeholder/safety/privacy/impact/integrity/IP/mitigation/reflection content.  
+**Done when:** Each member has a usable draft/outline and the team has material reusable in Chapter 6.2 and Appendix D.  
+**Important:** Runs in parallel with Tasks 10 onward.
 
 ---
 
-# Setup
+# Setup — implement the predefined design
 
-## Task 10 — Set up the code structure
+## Task 10 — Set up the code structure from the design spec
 **Start:** 26 Sep 2026  
 **Deadline:** 29 Sep 2026  
-**What to do:** Create simple folders/modules for data, network, BESS, optimization, uncertainty and results.  
-**Done when:** Runnable project structure exists.
+**Design reference:** `TERM2_SOFTWARE_DESIGN_SPEC.md` §2  
+**What to do:** Create the predefined module/file skeleton for network, data loading, FBS, BESS, simulation, metrics, future uncertainty/optimizer, results and UI. Do not redesign module responsibilities here.  
+**Done when:** Runnable module skeleton matches the design specification.
 
-## Task 11 — Define basic input / output formats
+## Task 11 — Implement the agreed I/O structures and sample fixtures
 **Start:** 27 Sep 2026  
 **Deadline:** 30 Sep 2026  
-**What to do:** Decide how network data, time-series data, BESS settings and simulation results move between modules.  
-**Done when:** Simple interface/data-format note exists.
+**Design reference:** `TERM2_SOFTWARE_DESIGN_SPEC.md` §§3–8  
+**What to do:** Create the specified dataclasses/data objects, interface skeletons and small sample fixtures. Do not choose new data formats in this task.  
+**Done when:** I/O structures and sample fixtures match the design specification.
 
 ---
 
 # V1 — Network simulator
 
-## Task 12 — Prepare the 5-bus test case
+## Task 12 — Build the 5-bus NetworkModel case
 **Start:** 28 Sep 2026  
 **Deadline:** 1 Oct 2026  
-**What to do:** Create one small radial network that is easy to understand and debug.  
-**Done when:** 5-bus case is ready for power flow.
+**Design reference:** `TERM2_SOFTWARE_DESIGN_SPEC.md` §§3, 9  
+**What to do:** Represent the prepared 5-bus radial case with the specified `Bus`, `Line`, `Load`, `PVUnit` and `NetworkModel` structures.  
+**Done when:** Validated 5-bus `NetworkModel` is ready for FBS.
 
-## Task 13 — Implement FBS for one time step
+## Task 13 — Implement `fbs.py` for one time step
 **Start:** 1 Oct 2026  
 **Deadline:** 6 Oct 2026  
-**What to do:** Implement the Term 1 Forward-Backward Sweep method for one static network condition.  
-**Done when:** FBS runs on the 5-bus case.
+**Design reference:** `TERM2_SOFTWARE_DESIGN_SPEC.md` §4  
+**What to do:** Implement the documented `NetworkModel + OperatingPoint + FBSConfig -> PowerFlowResult` contract. No CSV loading or BESS/optimizer logic belongs in `fbs.py`.  
+**Done when:** One-step FBS runs on the 5-bus case and returns all required outputs/convergence fields.
 
 ## Task 14 — Verify the FBS result
 **Start:** 5 Oct 2026  
 **Deadline:** 8 Oct 2026  
-**What to do:** Compare voltages, power balance and losses with a trusted/reference result or simple manual checks.  
+**What to do:** Compare voltage, power balance and losses with trusted/manual reference checks; test convergence behavior.  
 **Done when:** FBS result is verified for the small case.
 
 ## Task 15 — Show basic network results
 **Start:** 7 Oct 2026  
 **Deadline:** 10 Oct 2026  
-**What to do:** Create simple tables/plots for voltage, line loading/current, losses and source power.  
-**Done when:** V1 result output is readable.
+**What to do:** Present required `PowerFlowResult` outputs such as bus voltage, branch current/power, losses and source power.  
+**Done when:** V1 output is readable and traceable to the documented result contract.
 
-## Task 16 — Import load and PV profiles
+## Task 16 — Implement load and PV profile import
 **Start:** 30 Sep 2026  
 **Deadline:** 3 Oct 2026  
-**What to do:** Read the cleaned load/PV files and check timestamp, length, unit and scaling.  
-**Done when:** Profiles load correctly.
+**Design reference:** `TERM2_SOFTWARE_DESIGN_SPEC.md` §5  
+**What to do:** Implement `data_loader.py` using the predefined long-format load/PV CSV fields and `ProfileData`. Validate timestamps, units, bus IDs and missing/duplicate rows.  
+**Done when:** Prepared files load into valid `ProfileData` without redefining the format.
 
 ## Task 17 — Add the hourly simulation loop
 **Start:** 9 Oct 2026  
 **Deadline:** 13 Oct 2026  
-**What to do:** Run the network over the full time series.  
-**Done when:** Time-series 5-bus simulation works.
+**Design reference:** `TERM2_SOFTWARE_DESIGN_SPEC.md` §7  
+**What to do:** Use the orchestration interface to build an `OperatingPoint` for each timestamp and call the same one-step FBS contract repeatedly.  
+**Done when:** Time-series 5-bus simulation works without changing `fbs.py`'s public interface.
 
 ## Task 18 — Verify V1 network implementation
 **Start:** 12 Oct 2026  
 **Deadline:** 15 Oct 2026  
-**What to do:** Check time-series outputs and power balance and fix implementation problems.  
-**Done when:** V1 is stable enough to build the battery on top of it.
+**What to do:** Check time-series outputs, power balance, data-interface behavior and error handling; fix implementation problems.  
+**Done when:** V1 is stable enough for BESS integration.
 
 ## Task 19 — Write Chapter 4: V1 network implementation
 **Start:** 14 Oct 2026  
 **Deadline:** 17 Oct 2026  
-**What to do:** Write the 5-bus setup, FBS implementation, time-series loop, outputs, trials/problems and checks.  
-**Done when:** Chapter 4 V1 draft exists.
+**Done when:** Chapter 4 V1 draft documents the implemented design, trials/problems and verification evidence.
 
 ---
 
 # V2 — Fixed BESS
 
-## Task 20 — Set the starting BESS parameters
+## Task 20 — Implement the BESS configuration/state structures
 **Start:** 3 Oct 2026  
 **Deadline:** 5 Oct 2026  
-**What to do:** Use the Term 1 BESS baseline: P, E, SOC limits, efficiency and initial/final SOC rules.  
-**Done when:** BESS settings are in code/config.
+**Design reference:** `TERM2_SOFTWARE_DESIGN_SPEC.md` §6  
+**What to do:** Implement the specified `BESSConfig` and `BESSState` structures using the retained BESS baseline.  
+**Done when:** Configuration/state objects match the design contract.
 
-## Task 21 — Implement SOC update
+## Task 21 — Implement the BESS SOC/energy step
 **Start:** 4 Oct 2026  
 **Deadline:** 7 Oct 2026  
-**What to do:** Code battery energy/SOC update for charge and discharge.  
-**Done when:** SOC changes correctly for simple checks.
+**What to do:** Implement the documented `step_bess()` energy/SOC update and sign convention.  
+**Done when:** `BESSStepResult` is correct for simple charge/discharge checks.
 
-## Task 22 — Add charge/discharge limits
+## Task 22 — Implement BESS operating limits
 **Start:** 6 Oct 2026  
 **Deadline:** 8 Oct 2026  
-**What to do:** Enforce SOC, power, efficiency and no simultaneous charge/discharge.  
-**Done when:** Battery limits are enforced.
+**What to do:** Enforce SOC/power/efficiency/no-simultaneous-charge-discharge behavior through the documented interface and report clipping/limit reason.  
+**Done when:** BESS limits are enforced without hidden state changes.
 
-## Task 23 — Connect a fixed BESS to the network
+## Task 23 — Connect the fixed BESS through `simulation.py`
 **Start:** 9 Oct 2026  
 **Deadline:** 11 Oct 2026  
-**What to do:** Place one fixed BESS at a chosen bus and make its power affect network injection.  
-**Done when:** BESS changes the network simulation correctly.
+**Design reference:** `TERM2_SOFTWARE_DESIGN_SPEC.md` §§6–7  
+**What to do:** Follow the defined flow: requested action → feasible BESS injection/state → `OperatingPoint` → `fbs.py`.  
+**Done when:** BESS changes network injection through the public simulation interface.
 
 ## Task 24 — Run fixed-BESS time series
 **Start:** 11 Oct 2026  
 **Deadline:** 13 Oct 2026  
-**What to do:** Run the time series with one fixed BESS and save SOC/network results.  
-**Done when:** Full V2 simulation completes.
+**Done when:** Full V2 time-series simulation completes with SOC and network results.
 
 ## Task 25 — Verify V2 BESS implementation
 **Start:** 13 Oct 2026  
 **Deadline:** 15 Oct 2026  
-**What to do:** Hand-check SOC and test SOC/power limits and network interaction.  
-**Done when:** V2 BESS implementation is verified.
+**Done when:** Hand SOC/energy checks, operating-limit tests and network interaction checks pass.
 
 ## Task 26 — Write Chapter 4: V2 BESS implementation
 **Start:** 15 Oct 2026  
 **Deadline:** 17 Oct 2026  
-**What to do:** Write battery parameters, SOC update, limits, network connection, time-series behavior and fixes.  
-**Done when:** Chapter 4 V2 draft exists.
+**Done when:** Chapter 4 V2 draft documents the implemented BESS contract, trials and fixes.
 
 ---
 
@@ -212,32 +224,28 @@ For each task:
 
 ## Task 27 — Choose manual test cases
 **Start / Deadline:** 16 Oct 2026  
-**What to do:** Pick a small set of buses, power ratings and energy capacities.  
+**What to do:** Pick a small test set within the already-defined candidate/bounds rules.  
 **Done when:** Manual comparison table is planned.
 
 ## Task 28 — Compare BESS locations
 **Start:** 16 Oct 2026  
 **Deadline:** 18 Oct 2026  
-**What to do:** Keep P and E fixed and move the BESS between selected buses.  
-**Done when:** Location-comparison results exist.
+**Done when:** Location-comparison results exist using the same public simulator/evaluator.
 
 ## Task 29 — Compare BESS P and E sizes
 **Start:** 16 Oct 2026  
 **Deadline:** 18 Oct 2026  
-**What to do:** Keep location controlled and compare different P/E values.  
 **Done when:** Size-comparison results exist.
 
 ## Task 30 — Summarize what changes the result
 **Start:** 18 Oct 2026  
 **Deadline:** 20 Oct 2026  
-**What to do:** Explain how location, power and energy affect voltage, cost, curtailment or shedding.  
-**Done when:** V3 reference results are ready.
+**Done when:** V3 reference results explain the observed effects of B, P and E.
 
 ## Task 31 — Write Chapter 4 V3 + prepare Progress Update content
 **Start:** 20 Oct 2026  
 **Deadline:** 22 Oct 2026  
-**What to do:** Document V3 trials and prepare current implementation status, working results, problems, next steps and figures for the Progress Update.  
-**Done when:** Chapter 4 V3 draft + Progress Update content are ready.
+**Done when:** V3 Chapter 4 draft and Progress Update technical content are ready.
 
 ---
 
@@ -246,22 +254,29 @@ For each task:
 ## Task 32 — Implement cost / curtailment / shedding metrics
 **Start:** 22 Oct 2026  
 **Deadline:** 25 Oct 2026  
-**Done when:** Evaluator returns all main metrics.
+**Design reference:** `TERM2_SOFTWARE_DESIGN_SPEC.md` §7  
+**What to do:** Implement `metrics.py` against standardized simulation results; keep metric calculation separate from optimizer search logic.  
+**Done when:** Evaluator returns all required main metrics through the documented interface.
 
 ## Task 33 — Implement the Term 1 WSM objective
 **Start:** 24 Oct 2026  
 **Deadline:** 27 Oct 2026  
-**Done when:** Working WSM fitness value exists using the Term 1 baseline weights.
+**Design gate:** Confirm/document normalization before coding it.  
+**What to do:** Apply the existing Term 1 weights through the evaluator using an explicit confirmed normalization method. Do not hide an arbitrary normalization rule in code.  
+**Done when:** Working WSM fitness uses a documented normalization method.
 
 ## Task 34 — Implement GWO candidate variables
 **Start:** 25 Oct 2026  
 **Deadline:** 29 Oct 2026  
-**Done when:** GWO creates valid B, P and E candidates.
+**Design reference:** `TERM2_SOFTWARE_DESIGN_SPEC.md` §7  
+**What to do:** Use the predefined `BESSCandidate` / `[B,P,E]` interface; do not duplicate BESS/network equations.  
+**Done when:** GWO creates valid candidates.
 
 ## Task 35 — Connect GWO to the simulator
 **Start:** 28 Oct 2026  
 **Deadline:** 1 Nov 2026  
-**Done when:** Each candidate can be simulated and scored.
+**What to do:** Evaluate each candidate using the same public simulation/evaluator path used by manual trials.  
+**Done when:** GWO scores real simulation results without duplicated physics.
 
 ## Task 36 — Run deterministic GWO
 **Start:** 31 Oct 2026  
@@ -276,7 +291,7 @@ For each task:
 ## Task 38 — Compare GWO with exhaustive search
 **Start:** 2 Nov 2026  
 **Deadline:** 4 Nov 2026  
-**Done when:** GWO result quality and runtime are compared with the reference.
+**Done when:** GWO result quality/runtime are compared with the reference.
 
 ## Task 39 — Test GWO population and iterations
 **Start:** 3 Nov 2026  
@@ -305,7 +320,9 @@ For each task:
 ## Task 42 — Implement ARIMA
 **Start:** 27 Oct 2026  
 **Deadline:** 1 Nov 2026  
-**Done when:** ARIMA forecast runs on the selected historical data.
+**Design reference:** `TERM2_SOFTWARE_DESIGN_SPEC.md` §7  
+**What to do:** Implement the retained ARIMA method behind the future uncertainty/scenario interface rather than coupling it directly to optimizer internals.  
+**Done when:** Forecast is produced through the planned uncertainty interface.
 
 ## Task 43 — Verify ARIMA forecast accuracy
 **Start:** 1 Nov 2026  
@@ -315,22 +332,26 @@ For each task:
 ## Task 44 — Generate 100 Monte Carlo scenarios
 **Start:** 2 Nov 2026  
 **Deadline:** 4 Nov 2026  
-**Done when:** 100 scenarios are generated reproducibly.
+**Design reference:** `TERM2_SOFTWARE_DESIGN_SPEC.md` §7  
+**What to do:** Generate the retained 100 scenarios and store them using `Scenario/ScenarioSet` so they reuse `ProfileData` and the normal simulation pipeline.  
+**Done when:** 100 reproducible scenarios are in the standard scenario structure.
 
 ## Task 45 — Select the 45 Term 1 scenarios
 **Start:** 4 Nov 2026  
 **Deadline:** 5 Nov 2026  
-**Done when:** 15 best + 15 worst + 15 random scenarios are selected.
+**Design gate:** Confirm/document the best/worst ranking metric before coding the selector.  
+**What to do:** Apply the retained 15 best + 15 worst + 15 random method to `ScenarioSet` using the confirmed explicit rule.  
+**Done when:** 45 retained scenarios are available through the standard interface.
 
 ## Task 46 — Verify scenario realism
 **Start:** 5 Nov 2026  
 **Deadline:** 6 Nov 2026  
-**Done when:** Generated scenarios are checked against historical range/shape/variation and PV limits.
+**Done when:** Scenario range/shape/variation/PV-limit checks are recorded.
 
 ## Task 47 — Run GWO for the 45 scenarios
 **Start:** 5 Nov 2026  
 **Deadline:** 9 Nov 2026  
-**Done when:** Scenario optimization results exist.
+**Done when:** Scenario optimization results exist through the same public optimizer/simulator contracts.
 
 ## Task 48 — Apply WSM to the scenario results
 **Start:** 8 Nov 2026  
@@ -340,7 +361,7 @@ For each task:
 ## Task 49 — Verify V5 uncertainty workflow
 **Start:** 10 Nov 2026  
 **Deadline:** 11 Nov 2026  
-**Done when:** Full ARIMA → MC → 45 scenarios → GWO/WSM workflow is verified or a real issue is documented.
+**Done when:** Full ARIMA → MC → ScenarioSet selection → GWO/WSM workflow is verified or a real issue is documented.
 
 ## Task 50 — Write Chapter 4: V5 uncertainty implementation
 **Start:** 11 Nov 2026  
@@ -354,22 +375,27 @@ For each task:
 ## Task 51 — Sketch the simple UI
 **Start:** 5 Nov 2026  
 **Deadline:** 7 Nov 2026  
-**Done when:** Minimum screen/workflow sketch exists.
+**Design reference:** `TERM2_SOFTWARE_DESIGN_SPEC.md` §2  
+**What to do:** Create a UI wireframe that calls public backend interfaces only; no engineering calculations should be moved into UI code.  
+**Done when:** Minimum UI workflow is consistent with backend architecture.
 
 ## Task 52 — Build network / data input UI
 **Start:** 7 Nov 2026  
 **Deadline:** 10 Nov 2026  
-**Done when:** User can load/enter the main data without editing code.
+**What to do:** Build input controls around predefined `NetworkModel`/`ProfileData` loaders.  
+**Done when:** UI supplies the documented backend inputs without source-code edits.
 
 ## Task 53 — Connect baseline simulation to UI
 **Start:** 9 Nov 2026  
 **Deadline:** 11 Nov 2026  
-**Done when:** Baseline simulation runs from the UI.
+**What to do:** Call the public baseline simulation interface and display required result fields; do not call FBS internals directly.  
+**Done when:** Baseline simulation runs from UI through the documented backend interface.
 
 ## Task 54 — Connect optimization and results to UI
 **Start:** 11 Nov 2026  
 **Deadline:** 14 Nov 2026  
-**Done when:** UI runs optimization and shows selected B, P, E and main results.
+**What to do:** Call the public optimizer/result interfaces and display B, P, E and main metrics.  
+**Done when:** Optimization works from UI without embedding backend engineering logic.
 
 ## Task 55 — Add progress, errors and save results
 **Start:** 14 Nov 2026  
@@ -403,7 +429,7 @@ For each task:
 ## Task 60 — Experiment 3: Network scalability
 **Start:** 19 Nov 2026  
 **Deadline:** 22 Nov 2026  
-**Done when:** IEEE 33-bus scalability experiment is complete.
+**Done when:** IEEE 33-bus scalability experiment is complete using the same generic `NetworkModel`/FBS interfaces.
 
 ## Task 61 — Complete Chapter 5 validation results
 **Start:** 22 Nov 2026  
@@ -417,7 +443,7 @@ For each task:
 ## Task 62 — Test common software failure cases
 **Start:** 15 Nov 2026  
 **Deadline:** 18 Nov 2026  
-**Done when:** Bad files, missing data, invalid bounds, disconnected network and failed optimization are handled/recorded.
+**Done when:** Bad files, missing data, invalid bounds, disconnected network and failed optimization are handled/recorded through the documented module boundaries.
 
 ## Task 63 — Freeze final cases and outputs
 **Start:** 24 Nov 2026  
@@ -427,7 +453,7 @@ For each task:
 ## Task 64 — Merge and polish Chapter 4 to template
 **Start:** 18 Nov 2026  
 **Deadline:** 26 Nov 2026  
-**Done when:** Chapter 4 contains practical implementation details, trials, design calculations, justified changes and final screenshots/images.
+**Done when:** Chapter 4 contains practical implementation details, trials, design calculations, justified design changes and final screenshots/images.
 
 ## Task 65 — Finish Chapter 5, Chapter 6 and Appendix D
 **Start:** 26 Nov 2026  
