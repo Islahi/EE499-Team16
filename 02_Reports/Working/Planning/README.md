@@ -16,8 +16,23 @@ The early preparation stage is finished.
 - Chapters 4–6 Writing Map: https://docs.google.com/document/d/1raGucOGbKPVh9FvsIZkMzoAT2raXHNQTlgHec9KbwGo/edit
 - `TERM2_DETAILED_TASK_GUIDE.md` — detailed explanation of the current tasks.
 - `EE499_Team16_Term2_Task_Register.csv` — repo snapshot of the live Task Register.
+- `TERM2_SHADOW_DESIGN.md` — **finished technical implementation baseline**. It now uses stable `SD-1` to `SD-9` section IDs and explicitly maps each technical section to the current Gantt tasks.
 
-The earlier implementation-baseline working document is kept only as a historical/reference file. It is no longer a scheduled planning task.
+The technical baseline is a reference, not a separate scheduled phase. The **live Task Register/Gantt is the source of truth for task numbers, dates, status and dependencies**.
+
+## Technical baseline ↔ Gantt relationship
+
+The schedule implements the technical baseline; the old shadow-design task numbering is no longer used.
+
+Examples:
+
+- `SD-5 Network / FBS` → Tasks **12–19** and **60**.
+- `SD-6 BESS` → Tasks **20–31**.
+- `SD-7 Objective / GWO` → Tasks **32–40**.
+- `SD-8 Uncertainty` → Tasks **42–50**.
+- `SD-9 Verification / Validation` → verification tasks throughout implementation plus formal Tasks **41, 58–61**.
+
+If implementation produces a real design change, update the technical baseline decision and justify the change in Chapter 4. Do **not** renumber the technical baseline sections to match future Gantt edits.
 
 ## Official Term 2 deadlines
 
@@ -91,4 +106,4 @@ Use the exact template headings:
 
 ## Weekly use
 
-Update the **Task Register**. The Semester Gantt updates automatically. Work in parallel where dependencies allow, especially Ethics, report writing, UI work and later validation preparation.
+Update the **Task Register**. The Semester Gantt, Monthly Calendar and Weekly Schedule update automatically. Work in parallel where dependencies allow, especially Ethics, report writing, UI work and later validation preparation.
