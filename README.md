@@ -20,13 +20,26 @@ Student IDs remain in the original official/submitted documents and are intentio
 
 ## Current state
 
-As of **2026-09-20**, the team is just starting **Term 2**. Term 2 is primarily the implementation and validation phase, but important Term 1 design gaps must still be repaired when they affect implementation, validation, or academic quality.
+As of **2026-09-26**, the team is in **Term 2 implementation/validation**.
+
+Data acquisition and preprocessing are complete, and the implementation baseline is finalized. The immediate work is to implement the predefined software design beginning with the module skeleton, 5-bus `NetworkModel`, one-step FBS, data-profile loader and BESS model. Ethics work runs in parallel.
 
 The latest authoritative submitted project document is the **Term 1 final report** in `02_Reports/Submitted/Term_1_Final/`.
 
-The formal Term 2 assignment deadlines are still **TBD** in the available official schedule. The approximate end of the term is **January 7, 2027**; treat that as planning context, not an official submission deadline.
+Official Term 2 timing currently recorded in the repository:
 
-See `PROJECT_STATE.md` for the short current-state record, `02_Reports/Working/Planning/TERM2_WORKING_CONTEXT.md` for the current Term 2 discussion/working direction, and `KNOWN_GAPS.md` for issues that need attention when relevant to the user's task.
+- **22 Oct 2026** — Progress Update submission
+- **25–29 Oct 2026** — Progress Update presentation window
+- **30 Nov 2026** — Final Term 2 report submission
+- **6–10 Dec 2026** — Final presentation window
+
+See:
+
+- `PROJECT_STATE.md` — short current-state record,
+- `02_Reports/Working/Planning/TERM2_WORKING_CONTEXT.md` — current Term 2 working direction,
+- `02_Reports/Working/Planning/TERM2_SHADOW_DESIGN.md` — high-level technical design baseline,
+- `02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md` — detailed software implementation-handoff specification,
+- `KNOWN_GAPS.md` — issues that need attention when relevant.
 
 ## How the AI should work with this repository
 
@@ -42,9 +55,19 @@ Read in this order:
 6. `KNOWN_GAPS.md`
 7. `DECISIONS.md`
 8. `USER_PREFERENCES.md` when working with the primary repository user
-8. Then inspect the original files relevant to the current chat request.
+9. When the task involves implementation/design, read `02_Reports/Working/Planning/TERM2_SHADOW_DESIGN.md` and `02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md` before implementation artifacts.
+10. Then inspect the original files relevant to the current chat request.
 
 When the user only says **“check the repository”** or equivalent, do not start project work. Give a short summary containing: project, phase, current focus, latest submitted work, deadline status, important open issues, and confirmation that the repository was read. Then wait for the user's task.
+
+## Design vs implementation rule
+
+The current software design is deliberately separated from coding:
+
+- **Design documentation** owns architecture, module responsibilities, data structures, file formats, interfaces, units/sign conventions and algorithm/numerical contracts.
+- **Implementation tasks** should code, test, debug and integrate those contracts rather than independently redesign them.
+- Software choices that are not fixed by existing requirements are explicitly marked **proposed design decisions** in `TERM2_SOFTWARE_DESIGN_SPEC.md`; they are not automatically confirmed team decisions.
+- If implementation reveals a needed design change, update the design documentation and record the reason rather than allowing different modules to diverge silently.
 
 ## Repository access modes
 
@@ -81,4 +104,4 @@ Submitted reports are historical evidence of what the team previously proposed. 
 
 ## Immediate tasks
 
-There is intentionally **no permanent AI-generated task list**. The current task is supplied by the user in chat. Repository files preserve context, history, known gaps, and decisions so the AI can advise effectively.
+There is intentionally **no permanent AI-generated task list**. The current task is supplied by the user in chat. Repository files preserve context, history, known gaps, decisions and design contracts so the AI can advise effectively.
