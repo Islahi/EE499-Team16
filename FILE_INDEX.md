@@ -4,6 +4,8 @@ This index is a navigation layer. `MIGRATION_MAP.csv` contains the exact origina
 
 Original files preserved: **46**.
 
+Files added after the original repository migration are listed in a separate section below the migration table and are not included in this count.
+
 | Organized path | Category | Description | Original path |
 |---|---|---|---|
 | `06_Notes/Text/A quick recap from yesterday presen.txt` | 06_Notes | Informal project/study note unless separately classified above. | `A quick recap from yesterday presen.txt` |
@@ -52,3 +54,14 @@ Original files preserved: **46**.
 | `01_Official/Project_Description/Project Description.docx` | 01_Official | Official Project 36 description and technical/final-product requirements. | `Sources/Project Description.docx` |
 | `06_Notes/Text/What topic we need to study.txt` | 06_Notes | Informal project/study note unless separately classified above. | `What topic we need to study.txt` |
 | `03_Feedback/General_Guidance/WhatsApp Image 2026-09-20 at 12.28.32.jpeg` | 03_Feedback | Photo of classroom slide distinguishing engineering design from implementation. | `WhatsApp Image 2026-09-20 at 12.28.32.jpeg` |
+
+## Post-migration additions
+
+| Repository path | Description | Source |
+|---|---|---|
+| `04_Research/Working_Data/Jeddah_Weather_PV/Jeddah_Weather_PV_Data_for_BESS_Research.pdf` | Supplied Jeddah weather and PV-resource research summary. | User-provided file, 2026-09-26 |
+| `04_Research/Working_Data/Jeddah_Weather_PV/NASA_POWER_Jeddah_2024_Hourly.csv` | Complete 2024 hourly temperature, humidity, wind and solar-resource data in Local Solar Time. | NASA POWER Hourly API |
+| `04_Research/Working_Data/Jeddah_Weather_PV/OpenMeteo_Jeddah_2024_Hourly.csv` | Complete 2024 hourly temperature, humidity, wind and solar-radiation data in Asia/Riyadh time. | Open-Meteo Historical Archive API |
+| `04_Research/Working_Data/Network_Data/EE499_Team16_5Bus_Network_Data.pdf` | Published-parameter summary for the five-bus development feeder. | User-provided file, 2026-09-26 |
+| `04_Research/Working_Data/Network_Data/PJM_5Bus_Network_Data.xlsx` | MATPOWER/PJM looped five-bus power-flow and OPF reference case. | User-provided file, 2026-09-26 |
+| `04_Research/Working_Data/Network_Data/IEEE_33Bus_Network_Data.xlsx` | IEEE 33-bus bus and branch data for a larger validation case. | User-provided file, 2026-09-26 |

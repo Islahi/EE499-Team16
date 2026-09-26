@@ -87,3 +87,11 @@ Log items such as confirmed decisions, important advisor guidance, meaningful re
 - Machine transcripts and summaries remain drafts until a team member verifies names, technical terms, numerical values, decisions, owners, and deadlines against the recording.
 - Added the repository-wide commands “write meeting minutes” and “write MM,” with safeguards against inventing missing meeting facts. The commands now use the official `EE499MeetingMinutes.docx` Word form as the authoritative template and preserve its section/table structure.
 - Added `tools/VideoCompressor/`, a local Streamlit interface for extracting transcription-ready M4A audio or compressing meeting video with FFmpeg without overwriting the source.
+
+## 2026-09-26 — Weather, PV and network datasets added
+
+- Added the supplied Jeddah weather/PV summary, five-bus network reference and IEEE 33-bus workbook under `04_Research/Working_Data/`.
+- Downloaded complete 2024 hourly Jeddah datasets from NASA POWER and Open-Meteo using the APIs identified in the supplied weather/PV summary.
+- Verified 8,784 hourly records in each source (2024 is a leap year), with no missing values in the requested variables.
+- Documented time standards, units, wind-height differences, source limitations and the distinction between published network data and project assumptions.
+- Added the MATPOWER/PJM five-bus workbook as a complementary power-flow/OPF reference, explicitly distinguishing its looped 230 kV topology from the radial 11 kV development feeder.
