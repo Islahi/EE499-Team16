@@ -95,3 +95,13 @@ Log items such as confirmed decisions, important advisor guidance, meaningful re
 - Verified 8,784 hourly records in each source (2024 is a leap year), with no missing values in the requested variables.
 - Documented time standards, units, wind-height differences, source limitations and the distinction between published network data and project assumptions.
 - Added the MATPOWER/PJM five-bus workbook as a complementary power-flow/OPF reference, explicitly distinguishing its looped 230 kV topology from the radial 11 kV development feeder.
+
+## 2026-09-26 — Software design separated from implementation
+
+- Added `02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md` as the software implementation-handoff specification.
+- Moved module architecture, `network_model.py` representation, `fbs.py` interface/convergence/result contract, load/PV file formats, BESS data/interface, shared units/sign conventions, and future optimizer/scenario interfaces out of implementation tasks and into design documentation.
+- Reworked `TERM2_SHADOW_DESIGN.md` into a high-level technical design baseline that points to the detailed software specification rather than asking implementation owners to invent local architecture/interfaces.
+- The new specification explicitly separates existing baseline requirements from **proposed design decisions** where the existing project material did not determine a software detail. These proposals are not recorded as confirmed team decisions in `DECISIONS.md`.
+- Updated the live Google Sheet Task Register so Tasks 10–23, selected V4/V5 tasks, and UI-integration tasks implement/reference the predefined design contracts instead of redefining architecture or data formats during coding.
+- Two design gates remain explicit before later implementation: confirm the WSM normalization method before Task 33 and confirm the best/worst scenario ranking rule before Task 45; implementation code must not silently invent either rule.
+- Related files: `02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md`, `02_Reports/Working/Planning/TERM2_SHADOW_DESIGN.md`, `02_Reports/Working/Planning/README.md`.
