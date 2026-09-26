@@ -14,7 +14,7 @@ The early preparation stage is finished.
 - No separate advisor data-presentation/package task is needed.
 - The implementation baseline is finalized and is no longer an active planning task.
 - Task 8 Ethics is a **parallel task** and must not block implementation.
-- Current active work starts with Task 10: code structure, then V1/V2 implementation.
+- Current active work starts with Task 10: code structure from the software design specification, then V1/V2 implementation.
 
 ## 2. Project direction
 
@@ -72,7 +72,7 @@ Do **not** replace FBS, GWO, ARIMA, the 45-scenario method or the WSM baseline s
 
 The current staged implementation is:
 
-1. **Setup** — code structure + basic interfaces
+1. **Setup** — implement the predefined code structure + interfaces
 2. **V1 — Network simulator**
 3. **V2 — Fixed BESS**
 4. **V3 — Manual BESS sizing/placement trials**
@@ -84,6 +84,37 @@ The current staged implementation is:
 10. **Final presentation/demo**
 
 The implementation baseline is already finalized. Current planning should not describe it as an unfinished design phase.
+
+## 4A. Software design handoff before coding
+
+A detailed implementation-handoff design now exists at:
+
+`02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md`
+
+The purpose is to stop architecture/interface decisions from being made independently during coding.
+
+The design specification defines before implementation:
+
+- main Python modules and responsibilities,
+- module interaction and independence rules,
+- `network_model.py` data structures and validation contract,
+- `fbs.py` one-step interface, required inputs/outputs and convergence configuration,
+- load/PV CSV format and `ProfileData` interface,
+- BESS configuration/state/result structures and sign convention,
+- `simulation.py` orchestration boundary,
+- shared units and required/optional output rules,
+- future scenario/uncertainty and optimizer interface placeholders.
+
+Implementation tasks should therefore focus on **coding, testing, debugging and integration of the documented design**, not redesigning module boundaries or file formats.
+
+The specification explicitly labels software choices not fixed by existing requirements as **proposed design decisions**. These are not automatically recorded as confirmed team decisions in `DECISIONS.md`.
+
+Two later design gates remain open and must be resolved before the relevant code is written:
+
+1. **WSM normalization method** before Task 33 — Term 1 gives weights/priorities but does not fully determine the normalization implementation.
+2. **Scenario best/worst ranking rule** before Task 45 — the 15 best + 15 worst + 15 random structure is retained, but the exact ranking metric must be explicit before selection code is implemented.
+
+If another unresolved architecture/interface issue appears, update the design specification first rather than letting an individual implementation owner silently choose a local solution.
 
 ## 5. Parallel Ethics work
 
@@ -269,11 +300,11 @@ https://docs.google.com/document/d/1raGucOGbKPVh9FvsIZkMzoAT2raXHNQTlgHec9KbwGo/
 Current repository planning files:
 
 - `README.md`
+- `TERM2_SHADOW_DESIGN.md`
+- `TERM2_SOFTWARE_DESIGN_SPEC.md`
 - `TERM2_DETAILED_TASK_GUIDE.md`
 - `EE499_Team16_Term2_Task_Register.csv`
 - `TERM2_WORKING_CONTEXT.md`
-
-The earlier implementation-baseline working document is retained only as historical/reference material and is not an active scheduled task.
 
 Official/reference additions:
 
@@ -283,8 +314,8 @@ Official/reference additions:
 
 ## 15. Overall current interpretation
 
-The project is now in implementation mode:
+The project is now in implementation mode, but implementation begins from a defined software design rather than making architecture decisions while coding:
 
-> **data ready → code setup → V1/V2/V3 → optimization/uncertainty/UI → formal validation → final report by 30 Nov → final presentation/demo in Dec.**
+> **data ready → design contracts defined → code setup → V1/V2/V3 → optimization/uncertainty/UI → formal validation → final report by 30 Nov → final presentation/demo in Dec.**
 
 Ethics runs in parallel. The live Google Sheet is the primary schedule. If an older discussion/file conflicts with the current sheet or official schedule, use the current sheet and official schedule.
