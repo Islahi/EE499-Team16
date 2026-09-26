@@ -246,6 +246,25 @@ Historical / prepared profiles
 - BESS `P > 0` = discharge/injection,
 - BESS `P < 0` = charge/consumption.
 
+## Proposed design decision — reactive load profile when Q is not measured
+
+The simulator must receive both active and reactive demand. If the prepared source profile provides only active load, do **not** ask the implementation owner to invent a reactive-load model.
+
+Proposed rule:
+
+1. Use each bus's base-load `P_base` and `Q_base` from `NetworkModel`.
+2. For each time step, calculate the active-load multiplier relative to that bus's base active load.
+3. Scale reactive load by the same multiplier:
+
+```text
+m_i(t) = P_i(t) / P_base,i
+Q_i(t) = m_i(t) * Q_base,i
+```
+
+This preserves each bus's base power factor over time. If the final prepared dataset already contains measured/defined `q_kvar`, use that instead.
+
+This is a **proposed design decision**, not a new project requirement. If the team selects another justified reactive-load model, update the design specification before Task 16 implementation diverges.
+
 ### Implementation mapping
 
 - Task 11 implements these data contracts.
@@ -361,6 +380,14 @@ Other baseline assumptions:
 - separation between BESS state logic and FBS,
 - BESS injection path through `simulation.py`.
 
+## Proposed design decision — efficiency representation
+
+The software model will store **directional efficiencies separately** as `eta_charge` and `eta_discharge`; the BESS equations therefore do not depend on an ambiguous single `efficiency` variable.
+
+The approximately 85% value appearing in the existing baseline should **not be silently interpreted** by the implementer as either round-trip efficiency or as both directional efficiencies. The numeric case configuration must use explicitly documented directional values. Until that interpretation/value source is confirmed, Task 20 should implement the fields and validation but should not hard-code an unverified mapping of 85% into both directions.
+
+This is a software design clarification, not a new performance requirement.
+
 ### Implementation mapping
 
 - Tasks 20–23 implement the documented BESS contract.
@@ -406,19 +433,37 @@ GWO remains the starting optimizer. Limited exhaustive search on the small syste
 - optimizer public interface,
 - rule that optimizer calls simulation/evaluator instead of duplicating network/BESS physics.
 
-## Remaining design gate before V4
+## Proposed design decision — WSM normalization
 
-The Term 1 material does not fully determine every implementation detail of objective normalization. Therefore:
+Term 1 fixes the three criteria and baseline weights but does not fully define their common numerical scale.
 
-- Task 33 must **not silently invent a normalization rule in code**.
-- Before/at the start of V4, the team must confirm the normalization method and update the design specification.
+To avoid an implementer selecting an arbitrary normalization during Task 33, the proposed default is **fixed no-BESS baseline-relative normalization** for the same study case/scenario:
 
-This is a design decision, not an implementation-owner choice.
+```text
+C_norm    = C_candidate    / max(|C_baseline|, eps)
+Curt_norm = Ecurt_candidate / max(|Ecurt_baseline|, eps)
+Shed_norm = Eshed_candidate / max(|Eshed_baseline|, eps)
+
+J = 0.50*C_norm + 0.25*Curt_norm + 0.25*Shed_norm
+```
+
+where `eps` is a small positive numerical guard used only to prevent division by zero.
+
+Reasons for this proposal:
+
+- the scale is fixed for all wolves/iterations,
+- criteria become dimensionless,
+- the result is interpretable relative to the no-BESS baseline,
+- normalization does not change when the GWO population changes.
+
+If a baseline criterion is exactly zero, that case must be reported explicitly during verification because the corresponding ratio becomes dominated by the numerical guard. The team may replace this proposal with a better justified fixed reference scale before V4; if so, update the design documentation first.
+
+This is a **proposed design decision**, not an added customer requirement and not a change to the Term 1 weights.
 
 ### Implementation mapping
 
 - Task 32 implements metrics using the defined interface.
-- Task 33 implements the confirmed WSM formula/normalization.
+- Task 33 implements this proposed normalization unless the team records a revised design before coding.
 - Tasks 34–35 implement the documented candidate/evaluator connection.
 - Tasks 36–39 run and verify GWO.
 
@@ -452,18 +497,36 @@ ARIMA should be checked with RMSE/MAPE. Generated scenarios should be checked ag
 
 `TERM2_SOFTWARE_DESIGN_SPEC.md` reserves `Scenario` and `ScenarioSet` so future scenarios reuse the same `ProfileData` and simulation pipeline.
 
-## Remaining design gate before scenario selection
+## Proposed design decision — best/worst scenario ranking
 
-The baseline states **15 best + 15 worst + 15 random**, but the ranking/classification rule must be explicit before Task 45. If the Term 1 submission does not uniquely define the metric, the team must confirm one and record it in the design specification before implementation.
+The retained **15 best + 15 worst + 15 random** structure does not by itself define how a scenario is ranked.
 
-Task 45 should apply a documented rule, not invent one during coding.
+To prevent Task 45 from inventing a local rule, the proposed scenario stress score is the total positive net-demand energy before BESS:
+
+```text
+Stress_s = sum_t max(P_load,total,s(t) - P_PV,total,s(t), 0) * Delta_t
+```
+
+Selection rule:
+
+1. rank all 100 scenarios by `Stress_s`,
+2. **worst** = 15 highest-stress scenarios,
+3. **best** = 15 lowest-stress scenarios,
+4. **random** = 15 uniformly sampled scenarios from the remaining 70,
+5. use a fixed recorded random seed (proposed default `42`) for reproducibility.
+
+This proposal uses load/PV conditions only and therefore avoids ranking scenarios based on a BESS design that has not yet been selected.
+
+If the team/advisor prefers another scenario-severity metric, record the replacement in the design documentation before Task 45. Do not choose it inside the selection implementation.
+
+This is a **proposed design decision**, not a new Term 1 requirement.
 
 ### Implementation mapping
 
 - Task 42 implements ARIMA behind the uncertainty interface.
 - Task 43 verifies forecast accuracy.
 - Task 44 generates `ScenarioSet`.
-- Task 45 applies the confirmed selection rule.
+- Task 45 applies this proposed selection rule unless a revised design is recorded beforehand.
 - Task 46 verifies scenario realism.
 - Tasks 47–49 connect scenarios to the normal optimization/simulation pipeline.
 
