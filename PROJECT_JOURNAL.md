@@ -114,3 +114,11 @@ Log items such as confirmed decisions, important advisor guidance, meaningful re
 - Reviewed the live Task Register. Its implementation tasks already reference the software design specification and avoid redefining architecture/file-format/interface decisions, so no unnecessary schedule rewrite was made in this pass.
 - Software choices not established by existing project material remain explicitly labeled **proposed design decisions** and were not added to `DECISIONS.md`.
 - Related files: `02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md`, `02_Reports/Working/Planning/TERM2_SHADOW_DESIGN.md`.
+
+## 2026-09-28 — Progress Update presentation guidance preserved
+
+- Added the Blackboard Progress Update presentation instructions and visible grading rubric to `01_Official/Course_Guidance/Progress_Update_Presentation_Instructions_2026.md`.
+- The required presentation content is Problem Statement, Product Design Requirements, Baseline Design, Implementation, Validation Experiments, and Work Plan; presentation duration is 10 minutes, submission is due 22 Oct 2026, and the presentation window is 25–29 Oct 2026.
+- The supplied Blackboard screenshots show a scoring discrepancy: the assignment body lists Implementation/Validation/Work Plan as 2/2/1 points, while the visible rubric shows 1.67 points (33.33%) for each of the three scored categories. The repository now flags this rather than silently reconciling it.
+- The visible submission filename pattern is `EE499_S26_ProgressUpdate_Team-XX`; for Team 16 this becomes `EE499_S26_ProgressUpdate_Team-16.pdf`.
+- `README.md` now links directly to the preserved Progress Update guidance.
