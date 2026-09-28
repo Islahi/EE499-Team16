@@ -35,6 +35,7 @@ Official Term 2 timing currently recorded in the repository:
 
 See:
 
+- `01_Official/Course_Guidance/Progress_Update_Presentation_Instructions_2026.md` — Blackboard Progress Update presentation requirements and visible grading rubric,
 - `PROJECT_STATE.md` — short current-state record,
 - `02_Reports/Working/Planning/TERM2_WORKING_CONTEXT.md` — current Term 2 working direction,
 - `02_Reports/Working/Planning/TERM2_SHADOW_DESIGN.md` — high-level technical design baseline,
