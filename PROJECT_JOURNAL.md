@@ -95,4 +95,34 @@ Log items such as confirmed decisions, important advisor guidance, meaningful re
 - Verified 8,784 hourly records in each source (2024 is a leap year), with no missing values in the requested variables.
 - Documented time standards, units, wind-height differences, source limitations and the distinction between published network data and project assumptions.
 - Added the MATPOWER/PJM five-bus workbook as a complementary power-flow/OPF reference, explicitly distinguishing its looped 230 kV topology from the radial 11 kV development feeder.
+<<<<<<< HEAD
 - Added Ali, Shaaban and Sindi (2022), a CC BY 4.0 paper on nested RES/HESS planning and operation under uncertainty with IEEE 33-bus case studies.
+=======
+
+## 2026-09-26 — Software design separated from implementation
+
+- Added `02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md` as the software implementation-handoff specification.
+- Moved module architecture, `network_model.py` representation, `fbs.py` interface/convergence/result contract, load/PV file formats, BESS data/interface, shared units/sign conventions, and future optimizer/scenario interfaces out of implementation tasks and into design documentation.
+- Reworked `TERM2_SHADOW_DESIGN.md` into a high-level technical design baseline that points to the detailed software specification rather than asking implementation owners to invent local architecture/interfaces.
+- The new specification explicitly separates existing baseline requirements from **proposed design decisions** where the existing project material did not determine a software detail. These proposals are not recorded as confirmed team decisions in `DECISIONS.md`.
+- Updated the live Google Sheet Task Register so Tasks 10–23, selected V4/V5 tasks, and UI-integration tasks implement/reference the predefined design contracts instead of redefining architecture or data formats during coding.
+- Two design gates remain explicit before later implementation: confirm the WSM normalization method before Task 33 and confirm the best/worst scenario ranking rule before Task 45; implementation code must not silently invent either rule.
+- Related files: `02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md`, `02_Reports/Working/Planning/TERM2_SHADOW_DESIGN.md`, `02_Reports/Working/Planning/README.md`.
+
+## 2026-09-26 — Software implementation handoff contracts made explicit
+
+- Strengthened `TERM2_SOFTWARE_DESIGN_SPEC.md` so implementation ownership no longer includes unresolved architecture/interface/numerical choices for the initial modules.
+- Added explicit module/object ownership, a proposed `network_cases.py` boundary, independent-test rules, a detailed one-step FBS algorithm/convergence/result contract, profile completeness/timestamp rules, and exact BESS charge/discharge clipping equations.
+- Refined `TERM2_SHADOW_DESIGN.md` so the high-level design hierarchy and change-control rule are explicit: design is documented first; implementation codes/tests/debugs that design; required changes feed back into the design documents before modules diverge.
+- Reviewed the live Task Register. Its implementation tasks already reference the software design specification and avoid redefining architecture/file-format/interface decisions, so no unnecessary schedule rewrite was made in this pass.
+- Software choices not established by existing project material remain explicitly labeled **proposed design decisions** and were not added to `DECISIONS.md`.
+- Related files: `02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md`, `02_Reports/Working/Planning/TERM2_SHADOW_DESIGN.md`.
+
+## 2026-09-28 — Progress Update presentation guidance preserved
+
+- Added the Blackboard Progress Update presentation instructions and visible grading rubric to `01_Official/Course_Guidance/Progress_Update_Presentation_Instructions_2026.md`.
+- The required presentation content is Problem Statement, Product Design Requirements, Baseline Design, Implementation, Validation Experiments, and Work Plan; presentation duration is 10 minutes, submission is due 22 Oct 2026, and the presentation window is 25–29 Oct 2026.
+- The supplied Blackboard screenshots show a scoring discrepancy: the assignment body lists Implementation/Validation/Work Plan as 2/2/1 points, while the visible rubric shows 1.67 points (33.33%) for each of the three scored categories. The repository now flags this rather than silently reconciling it.
+- The visible submission filename pattern is `EE499_S26_ProgressUpdate_Team-XX`; for Team 16 this becomes `EE499_S26_ProgressUpdate_Team-16.pdf`.
+- `README.md` now links directly to the preserved Progress Update guidance.
+>>>>>>> 38ed5b6f70424fac2273c44bc536eabb48bfddd4

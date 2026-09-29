@@ -35,6 +35,10 @@ Ali, A.; Shaaban, M. F.; Sindi, H. F. *Sustainability* 2022, 14, 13209. DOI: `10
 
 Team literature-review notes. Treat as secondary/internal notes and verify claims against the actual source papers before citing.
 
+### `Literature_Notes/Software_GUI_and_Library_References.md`
+
+Reference list of GUI programs and software libraries/frameworks relevant to the project, including GLOW, OpenDSS Designer, GridCal, PowerFactory, ETAP, CYME, PowerWorld, pandapower, PyPSA, OpenDSS, OpenDSSDirect.py, MATPOWER and GridLAB-D. Intended for GUI/workflow inspiration, architecture references, distribution-system modelling and result-validation ideas; inclusion does not mean the team has adopted those tools.
+
 ### `Working_Data/My Project.xlsx`
 
 Internal project workbook. It is not categorized as an external academic source. Inspect its contents for the current task before relying on it as data/evidence.

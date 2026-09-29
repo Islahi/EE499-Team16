@@ -88,3 +88,16 @@ The classroom guidance preserved under `03_Feedback/General_Guidance/` distingui
 - **Implementation:** running simulations, collecting outputs, checking behavior.
 
 This is why Term 2 should not merely “run code” if the design/model definition remains incomplete. Missing design elements that affect implementation or validation still need repair.
+
+A detailed software handoff specification now exists at `02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md`. Architecture, module boundaries, network/FBS/BESS data structures, profile format, interfaces, units and future module placeholders should be resolved there before implementation owners code them independently.
+
+### Remaining design gates before later tasks
+
+The following are still design questions and must not be silently decided inside implementation code:
+
+1. **WSM normalization method** — Term 1 establishes the WSM criteria/weights, but the exact normalization method is not yet clearly fixed. Confirm and record it in the design specification before Task 33 implements the objective.
+2. **Scenario best/worst ranking metric** — Term 1 retains 15 best + 15 worst + 15 random scenarios, but the exact ranking/classification metric must be explicit before Task 45 implements scenario selection.
+3. **Interpretation of the approximately 85% BESS efficiency value** — verify whether the retained value is intended as a directional charge/discharge efficiency, a round-trip efficiency, or another convention before assigning `eta_charge` and `eta_discharge` numerically. Do not silently assume one interpretation.
+4. **Reactive-load profile handling when source data lacks time-varying Q** — the simulation boundary requires active/reactive demand, but the source load data may not directly provide both. If Q is not present, confirm/document the preprocessing assumption (for example a justified power-factor rule) before producing final simulation profile files.
+
+These are design gates, not new customer requirements. Once confirmed, update the design specification and then implement them consistently.

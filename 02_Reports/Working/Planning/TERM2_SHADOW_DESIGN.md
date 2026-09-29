@@ -1,97 +1,91 @@
-# Term 2 Shadow Design — Initial Implementation Baseline
+# Term 2 Technical Design Baseline
 
-**Status:** Working / provisional  
-**Purpose:** Initial technical baseline for Tasks 9–17 and V1–V6 implementation  
-**Important:** This document does **not** revise submitted Chapters 1–3. It starts from the **Term 1 baseline design** and fills missing implementation details such as software architecture, interfaces, control flow, and validation. Term 1 design choices remain the default implementation choices unless implementation, validation, unavailable data, or advisor feedback provides a clear reason to change them. Any implementation-driven change must be documented and justified in Chapter 4.
+**Status:** Finalized high-level design reference  
+**Purpose:** Preserve the project/Term 1 technical baseline, identify proposed design decisions where the baseline was incomplete, and map the design to the detailed software implementation-handoff specification.  
+**Detailed software contracts:** `TERM2_SOFTWARE_DESIGN_SPEC.md`  
+**Schedule source of truth:** live Task Register / Gantt
 
-## 1. Why this document exists
-
-Chapters 1–3 from Term 1 are treated as frozen. The team still needs enough technical definition to begin implementation without repeating a full design phase.
-
-Therefore, Tasks 9–17 are treated as a **shadow design**:
-
-- preserve the Term 1 baseline as the starting point,
-- fill design details that were unclear or missing in Term 1,
-- define the minimum technical information needed to start coding,
-- implement the system incrementally,
-- validate the Term 1 choices during implementation,
-- change a baseline choice only when there is a clear technical/advisor reason,
-- record and justify any important change in Chapter 4,
-- validate the final implementation in Chapter 5.
-
-## Baseline-preservation rule
-
-The default sequence is:
+## 1. Design hierarchy
 
 ```text
-Term 1 baseline
-    ↓
-Implement as written
-    ↓
-Validate / test
-    ↓
-Keep it if it works
-    ↓
-Change only if evidence shows a need
+Official project requirements + Term 1 baseline
+                    ↓
+        This technical design baseline
+                    ↓
+      TERM2_SOFTWARE_DESIGN_SPEC.md
+                    ↓
+         Current Gantt implementation tasks
+                    ↓
+        Coding + testing + debugging
+                    ↓
+      Chapter 4 evidence / Chapter 5 validation
 ```
 
-The shadow design must not silently replace a Term 1 method simply because another method may appear better before implementation.
+This file owns the **high-level technical design**. `TERM2_SOFTWARE_DESIGN_SPEC.md` owns the exact software architecture, module responsibilities, data structures, file formats, public interfaces, units, sign conventions and numerical contracts.
 
-The implementation path is:
+### Design vs implementation rule
 
-1. **V1 — Network simulator**
-2. **V2 — Fixed BESS**
-3. **V3 — Manual sizing/placement comparison**
-4. **V4 — Automatic optimization**
-5. **V5 — Uncertainty-aware optimization**
-6. **V6 — Final decision-support software**
+**DESIGN work includes:**
+
+- mathematical/physical assumptions,
+- architecture and module boundaries,
+- algorithms/numerical contracts,
+- interfaces and data flow,
+- data structures/file formats,
+- units/sign conventions,
+- validation strategy.
+
+**IMPLEMENTATION work includes:**
+
+- coding the documented design,
+- unit/integration testing,
+- debugging,
+- verification against known/reference cases,
+- running trials/experiments,
+- collecting evidence/results.
+
+An implementation owner should not make a new architecture/interface/file-format choice locally. If a design gap is discovered, update the design documentation first or in the same reviewed change.
 
 ---
 
-# Task 9 — Confirm Term 2 Product Scope and Minimum Capabilities
+# SD-1 — Product Scope
 
-## Initial product definition
+## Existing baseline
 
 The Term 2 product is a **software-based decision-support tool for BESS planning in renewable-integrated radial distribution networks**.
 
-The program should eventually allow a user to:
+The final program should support:
 
-1. define or load a radial distribution network,
-2. load time-series electrical demand,
-3. load PV generation or solar-resource data,
-4. simulate the network without BESS,
-5. add and simulate a BESS,
-6. evaluate different BESS locations and sizes,
-7. automatically determine a suitable BESS:
-   [
-   x = [B, P, E]
-   ]
-8. evaluate the recommended BESS under uncertain load/PV conditions,
-9. compare the system before and after BESS installation,
-10. display technical and economic results.
+1. loading/defining a radial network,
+2. loading time-series load data,
+3. loading PV generation / solar-resource data,
+4. baseline simulation without BESS,
+5. simulation with BESS,
+6. manual comparison of BESS locations/sizes,
+7. automatic BESS planning using decision vector `[B,P,E]`,
+8. evaluation under uncertain load/PV conditions,
+9. baseline-vs-BESS comparison,
+10. technical/economic result display/export.
 
 Where:
 
-- (B) = BESS bus/location,
-- (P) = BESS power rating,
-- (E) = BESS energy capacity.
+- `B` = installation bus,
+- `P` = BESS power rating,
+- `E` = BESS energy capacity.
 
-## Initial network scope
+## Network scope
 
-- Start with an approximately **5-bus radial test system** for debugging and validation.
-- Later test the same framework on the **IEEE 33-bus radial distribution system**.
-
-The 5-bus system is an implementation and validation case, not the final product limit.
+- use a small **5-bus radial system** for development/debugging,
+- later use the same framework on the **IEEE 33-bus radial distribution system**,
+- the 5-bus system is not the final product limit.
 
 ## Renewable source
 
-- Implement **solar PV** as the renewable source for the Term 2 case study.
-- The architecture may later support other generation profiles.
-- Wind is not required unless explicitly requested by the advisors.
+Solar PV is the implemented renewable source for the case study.
 
-## Initial scope exclusions
+## Initial scope limits
 
-Unless later required:
+Unless later required/approved:
 
 - one BESS installation at a time,
 - stationary BESS,
@@ -99,849 +93,414 @@ Unless later required:
 - grid-connected operation,
 - no real-time physical grid control,
 - no detailed thermal/electrochemical battery model,
-- no detailed battery degradation model initially,
+- no detailed degradation model initially,
 - no transmission-system optimization.
 
 ---
 
-# Task 10 — Define Software Requirements and User Workflow
+# SD-2 — User Workflow and Software Requirements
 
-## Initial user workflow
+## Baseline workflow
 
 ```text
-Start
-  ↓
-Create/load network
-  ↓
-Load load profile
-  ↓
-Load PV profile
-  ↓
-Check input data
-  ↓
-Run baseline simulation
-  ↓
-Inspect network results
-  ↓
-Configure BESS planning bounds
-  ↓
-Run deterministic optimization
-  ↓
-Optional: run uncertainty-aware optimization
-  ↓
-View recommended BESS
-  ↓
+Load/create network
+      ↓
+Load load/PV profiles
+      ↓
+Validate inputs
+      ↓
+Run baseline FBS simulation
+      ↓
+Add/configure BESS
+      ↓
+Manual/automatic BESS evaluation
+      ↓
+Uncertainty-aware evaluation
+      ↓
 Compare baseline vs BESS
-  ↓
-Save/export results
+      ↓
+Display/export results
 ```
 
-## Required inputs
+## Required input families
 
-### Network
+- network topology/equipment/base values,
+- time-series load and PV,
+- BESS planning bounds/parameters,
+- economic coefficients used by the retained objective.
 
-- buses,
-- lines,
-- line parameters,
-- loads,
-- slack/source bus,
-- base values.
-
-### Time series
-
-- timestamp,
-- load profile,
-- PV profile or source data used to calculate PV generation.
-
-### BESS planning bounds
-
-Eventually define:
-
-- allowed candidate buses,
-- (P_{min}, P_{max}),
-- (E_{min}, E_{max}).
-
-### Economic inputs
-
-Eventually include, if retained by the final objective:
-
-- battery energy cost,
-- battery power-conversion cost,
-- grid-energy price,
-- fixed O&M,
-- load-shedding penalty,
-- curtailment penalty.
-
-## Required outputs
-
-### Baseline/network outputs
+## Required output families
 
 - bus voltage,
-- line loading/current,
-- system losses,
-- grid import/export,
-- power balance.
-
-### BESS outputs
-
-- SOC,
-- charging/discharging power.
-
-### Optimization outputs
-
-- selected bus (B^*),
-- selected power (P^*),
-- selected energy (E^*).
-
-### Performance outputs
-
-- cost,
-- renewable curtailment,
-- load shedding,
-- voltage violations,
+- branch current/loading,
 - losses,
-- percentage improvement relative to baseline,
-- computation time where useful.
-
-## Initial software error handling
-
-The application should eventually handle:
-
-- missing data,
-- invalid files,
-- inconsistent timestamps,
-- invalid units,
-- impossible BESS bounds,
-- disconnected networks,
-- failed power flow,
-- optimization non-convergence.
-
----
-
-# Task 11 — Design Initial Software Architecture and Module Boundaries
-
-## Shadow architecture
-
-```text
-                      ┌────────────────┐
-                      │ User Interface │
-                      └───────┬────────┘
-                              │
-                     ┌────────▼────────┐
-                     │  Data Manager   │
-                     └────────┬────────┘
-                              │
-              ┌───────────────┴───────────────┐
-              │                               │
-      ┌───────▼────────┐             ┌────────▼─────────┐
-      │ Network Model  │             │ Uncertainty      │
-      │ + Power Flow   │             │ Module           │
-      └───────┬────────┘             └────────┬─────────┘
-              │                               │
-              └───────────────┬───────────────┘
-                              │
-                     ┌────────▼────────┐
-                     │   BESS Model    │
-                     └────────┬────────┘
-                              │
-                     ┌────────▼────────┐
-                     │   Evaluator     │
-                     │ cost/technical  │
-                     │ metrics         │
-                     └────────┬────────┘
-                              │
-                     ┌────────▼────────┐
-                     │   Optimizer     │
-                     └────────┬────────┘
-                              │
-                     ┌────────▼────────┐
-                     │ Results /       │
-                     │ Validation      │
-                     └─────────────────┘
-```
-
-The exact code structure may change during implementation.
-
-## Initial responsibilities
-
-### Data Manager
-
-- read files,
-- check timestamps,
-- convert/check units,
-- resample and align profiles,
-- provide clean data to the simulation.
-
-### Network Model / Power Flow
-
-- represent buses, lines, loads, PV and grid source,
-- run power flow,
-- return electrical network results.
-
-### BESS Model
-
-- represent power and energy ratings,
-- track SOC/stored energy,
-- enforce charge/discharge and efficiency limits,
-- inject/absorb power at the selected bus.
-
-### Evaluator
-
-Calculate:
-
+- source/grid power,
+- power balance,
+- BESS SOC/power,
+- selected `[B,P,E]`,
 - cost,
-- losses,
-- voltage violations,
 - curtailment,
 - load shedding,
-- objective/fitness value.
+- voltage violations,
+- improvements relative to baseline,
+- convergence/computation information where useful.
 
-### Optimizer
-
-- choose (B,P,E),
-- request candidate evaluations from the simulation/evaluator,
-- search for an acceptable/best design.
-
-The optimizer should not duplicate the electrical physics.
-
-### Uncertainty Module
-
-- forecasting or error modelling,
-- Monte Carlo scenario generation,
-- scenario selection/reduction,
-- scenario probabilities if used.
-
-### User Interface
-
-- collect user inputs,
-- start simulation/optimization,
-- show errors/progress,
-- display results.
-
-### Results / Validation
-
-- plots,
-- tables,
-- baseline-vs-BESS comparisons,
-- validation/benchmark outputs,
-- exportable results.
+Exact objects/fields/units are defined in `TERM2_SOFTWARE_DESIGN_SPEC.md`.
 
 ---
 
-# Task 12 — Define Initial Module Interfaces and Data Flow
+# SD-3 — Software Architecture
 
-## Main deterministic data flow
+The software architecture is a **design decision**, not an implementation-task decision.
+
+Main modules are defined before coding:
+
+- `network_model.py` — static network entities/topology/validation,
+- `network_cases.py` — named 5-bus/IEEE-33 case construction,
+- `data_loader.py` — standardized load/PV import,
+- `fbs.py` — one-step radial Forward/Backward Sweep,
+- `bess.py` — BESS configuration/state/limits,
+- `simulation.py` — orchestration layer,
+- `metrics.py` — technical/economic metrics,
+- `uncertainty.py` — later ARIMA/Monte Carlo scenario interface,
+- `optimizer.py` — later GWO/WSM interface,
+- `results.py` — result tables/plots/export,
+- `ui.py` — final user interface.
+
+### Independence rule
+
+- modules exchange documented public data objects/functions,
+- no shared mutable global engineering state,
+- FBS does not read CSV files,
+- BESS logic does not solve network power flow,
+- optimizer does not duplicate FBS/BESS physics,
+- UI does not contain engineering calculations.
+
+The exact dependency direction and object ownership are defined in `TERM2_SOFTWARE_DESIGN_SPEC.md` Section 2.
+
+---
+
+# SD-4 — Interfaces, Data Flow and Units
+
+## Deterministic data flow
 
 ```text
-Network data ─┐
-              │
-Load data ────┼──> Data Manager
-              │
-PV data ──────┘
-                    ↓
-              Prepared Inputs
-                    ↓
-             Network Simulator
-                    ↓
-               + BESS Model
-                    ↓
-             Technical Results
-                    ↓
-                Evaluator
-                    ↓
-               Fitness/Metrics
-                    ↓
-                Optimizer
-                    ↓
-             Recommended BESS
+NetworkModel + ProfileData
+          ↓
+      ProfileSlice
+          ↓
+optional BESS step/injection
+          ↓
+     OperatingPoint
+          ↓
+        fbs.py
+          ↓
+   PowerFlowResult
+          ↓
+      metrics.py
+          ↓
+ evaluator / optimizer
 ```
 
 ## Uncertainty data flow
 
 ```text
-Historical load/PV
-        ↓
-Forecast / Error Model
-        ↓
-Scenario Generator
-        ↓
-Representative Scenario Set
-        ↓
-Simulation + Evaluator
-        ↓
-Uncertainty-aware Optimizer
+Historical/prepared profiles
+            ↓
+      ARIMA / error model
+            ↓
+ Monte Carlo ScenarioSet
+            ↓
+      scenario selection
+            ↓
+ same simulation/evaluator path
+            ↓
+       optimizer / WSM
 ```
 
-## Initial conceptual data structures
+## Standard units at module boundaries
 
-### NetworkData
+- active power: kW,
+- reactive power: kVAR,
+- energy: kWh,
+- base/nominal voltage: kV line-line,
+- solved voltage: p.u.,
+- branch impedance: ohm/phase,
+- current: A,
+- SOC: fraction 0–1 internally,
+- time step: hours.
 
-- buses,
-- lines,
-- loads,
-- slack/source,
-- PV locations.
+## Standard signs
 
-### TimeSeriesData
+- load = positive consumption,
+- PV = positive generation,
+- BESS `P > 0` = discharge/injection,
+- BESS `P < 0` = charge/absorption,
+- slack `P > 0` = grid supplies the modeled network.
 
-- timestamp,
-- load,
-- PV.
+## Proposed design decision — reactive load when Q is absent
 
-### BESSConfig
+If the prepared load profile contains only active power, the implementation owner must not invent a Q model. Use the bus base-load P/Q ratio:
 
-- bus,
-- power rating,
-- energy capacity,
-- initial SOC,
-- efficiency,
-- SOC minimum,
-- SOC maximum.
+```text
+m_i(t) = P_i(t) / P_base,i
+Q_i(t) = m_i(t) * Q_base,i
+```
 
-### SimulationResult
+If measured/defined `q_kvar` exists, use it instead.
 
-- bus voltages,
-- line loading,
-- losses,
-- grid power,
-- BESS power,
-- BESS SOC,
-- curtailment,
-- load shedding.
-
-## Initial evaluation interface
-
-Conceptually:
-
-[
-evaluate(B,P,E,scenario)
-]
-
-returns metrics such as:
-
-[
-[J, C, E_{curt}, E_{shed}, V_{viol}, Loss]
-]
-
-The final Python function signatures and classes can change during implementation.
+This is a **proposed design decision**, not a new project requirement.
 
 ---
 
-# Task 13 — Initial Network and Power-Flow Assumptions
+# SD-5 — Network and FBS Baseline
 
-## Network
+## Existing network assumptions
 
 - balanced radial distribution network,
 - one grid/slack source,
-- IEEE 33-bus bus 1 used as the source/slack unless the benchmark implementation requires otherwise.
+- PQ loads,
+- time-varying PV active-power injection,
+- hourly resolution initially.
 
-## Loads
-
-- initial representation: PQ loads,
-- active/reactive demand may vary with time-series profiles.
-
-## PV
-
-- time-varying active-power injection,
-- reactive-power operation can initially be simplified unless later required.
+For IEEE 33-bus, bus 1 is the source/slack unless the benchmark data requires otherwise.
 
 ## Voltage criterion
 
-Initial operating limit:
+`0.95 <= V_i <= 1.05 pu`
 
-[
-0.95 leq V_i leq 1.05 	ext{pu}
-]
+## Solver baseline
 
-## Solver
+Forward/Backward Sweep remains the initial radial power-flow solver. A trusted external solver may be used only as an independent verification reference unless evidence justifies a documented method change.
 
-The **Forward-Backward Sweep (FBS)** method selected in the Term 1 baseline remains the initial power-flow method to implement.
+## Detailed design already fixed before coding
 
-Implementation should therefore begin by reproducing the Term 1 FBS-based radial power-flow approach.
+`TERM2_SOFTWARE_DESIGN_SPEC.md` Sections 3–4 define:
 
-A trusted external solver such as pandapower may still be used as a **validation/reference tool** to compare results, but it should not replace FBS by default.
+- `Bus`, `Line`, `Load`, `PVUnit`, `NetworkModel`, `RadialOrder`,
+- 5-bus case construction boundary,
+- network validation/radial ordering,
+- engineering-unit/per-unit conversion rules,
+- `OperatingPoint`,
+- exact FBS backward/forward sequence,
+- `FBSConfig`, convergence and failure behavior,
+- `PowerFlowResult`,
+- required/optional outputs,
+- one-step public `run_fbs()` interface.
 
-If FBS later creates a verified technical problem, cannot support a required feature, or the advisors request a different solver, the change should be documented and justified in Chapter 4.
-
-## Time step
-
-Initial common resolution:
-
-[
-Delta t = 1 	ext{hour}
-]
-
-This is provisional and may be revised based on the selected datasets.
-
-## Infeasible cases
-
-If a candidate causes:
-
-- power-flow non-convergence,
-- invalid/disconnected operation,
-- unacceptable technical violations,
-
-it should be marked infeasible and handled through constraints or penalties during optimization.
-
-Exact penalty handling will be finalized during V4.
+These are DESIGN decisions and are not left to Tasks 12–13.
 
 ---
 
-# Task 14 — Initial BESS Mathematical Model
+# SD-6 — BESS Baseline
 
-## Planning variables
+## Existing baseline
 
-- (E_{max}): energy capacity [kWh],
-- (P_{max}): power rating [kW],
-- (B): installation bus.
+Planning variables remain distinct:
 
-Power and energy capacity must remain distinct.
+- `E` — energy capacity [kWh],
+- `P` — power rating [kW],
+- `B` — installation bus.
 
-## State variable
+State:
 
-Use stored energy (E_t) and/or:
-
-[
-SOC_t = rac{E_t}{E_{max}}
-]
-
-## Initial energy update
+`SOC_t = E_t / E_max`
 
 Charging:
 
-[
-E_{t+1}=E_t+eta_c P_{ch,t}Delta t
-]
+`E_(t+1) = E_t + eta_c * P_ch,t * Delta_t`
 
 Discharging:
 
-[
-E_{t+1}=E_t-rac{P_{dis,t}Delta t}{eta_d}
-]
+`E_(t+1) = E_t - P_dis,t * Delta_t / eta_d`
 
-## Initial SOC constraint
+Initial SOC constraint:
 
-Retain the Term 1 baseline initially:
+`0.10 <= SOC_t <= 0.90`
 
-[
-0.10 leq SOC_t leq 0.90
-]
+Other retained assumptions:
 
-The exact range can later be replaced by a selected BESS/datasheet requirement.
+- no simultaneous charging/discharging,
+- fixed efficiency initially,
+- initial SOC may use 50% where no case-specific value is required,
+- cyclic end SOC may be retained where the study requires it,
+- detailed degradation is initially outside scope and must be stated as a limitation if omitted.
 
-## Power constraints
+## Detailed design already fixed before coding
 
-[
-0 leq P_{ch,t} leq P_{max}
-]
+`TERM2_SOFTWARE_DESIGN_SPEC.md` Section 6 defines:
 
-[
-0 leq P_{dis,t} leq P_{max}
-]
+- `BESSConfig`, `BESSState`, `BESSStepResult`,
+- common BESS/network sign convention,
+- exact one-step charge/discharge clipping equations,
+- `step_bess()` public interface,
+- separation between BESS state logic and FBS,
+- injection path through `simulation.py`.
 
-## Operating assumptions
+## Efficiency design gate
 
-- charging and discharging cannot occur simultaneously,
-- use a fixed BESS efficiency initially,
-- the Term 1 value of approximately 85% is a starting assumption, not a final immutable value,
-- initial SOC can start at 50% unless the case study requires another value,
-- retain a cyclic end condition initially:
-  [
-  E(0)=E(T)
-  ]
-  where appropriate.
-
-## Degradation
-
-Detailed degradation is initially **out of scope** unless required by the advisors.
-
-If omitted, this must be listed as a model limitation rather than implied to be included.
+The approximately 85% value in the baseline is ambiguous. The software uses separate `eta_charge` and `eta_discharge`; an implementer must not silently assign 0.85 to both directions. Numeric values require a documented interpretation/source/team decision.
 
 ---
 
-# Task 15 — Initial Objective Function, Constraints, and Metrics
+# SD-7 — Objective and Optimization Baseline
 
-## Decision vector
+## Existing baseline
 
-[
-x=[B,P,E]
-]
+Decision vector:
 
-with:
+`x = [B,P,E]`
 
-- (B) restricted to allowed candidate buses,
-- (P) restricted to selected bounds,
-- (E) restricted to selected bounds.
-
-## Initial objective components
-
-Retain the three main Term 1 concerns:
+Objective components:
 
 - economic cost,
 - renewable curtailment,
 - load shedding.
 
-Use:
+Starting Term 1 WSM priority:
 
-[
-min J(x)
-]
+`J = 0.50*C + 0.25*E_curt + 0.25*E_shed`
 
-where (J) aggregates appropriately normalized/weighted versions of:
+Main constraints include voltage/SOC/BESS bounds/allowed buses/network feasibility.
 
-[
-C(x),quad E_{curt}(x),quad E_{shed}(x)
-]
+GWO remains the starting optimizer. Limited exhaustive search on the small case is an independent verification reference.
 
-The initial weighting follows the Term 1 baseline:
+## Proposed design decision — WSM normalization
 
-[
-J = 0.50,C + 0.25,E_{curt} + 0.25,E_{shed}
-]
-
-or the equivalent Term 1 Weighted Sum Method implementation.
-
-These weights are the **starting implementation values**. Task 32 sensitivity testing will later check how strongly the result depends on them. They should only be changed if sensitivity results, normalization requirements, implementation evidence, or advisor feedback shows a need.
-
-Because the three criteria have different units/scales, implementation must clearly define how the Weighted Sum Method makes them comparable. If the Term 1 report did not fully specify normalization, this is an implementation detail that must be clarified without changing the intended 0.50/0.25/0.25 priority unless necessary.
-
-## Initial technical constraints
-
-[
-0.95 leq V_i(t) leq 1.05
-]
-
-[
-SOC_{min} leq SOC(t) leq SOC_{max}
-]
-
-[
-0 leq P_{ch/dis}(t) leq P_{max}
-]
-
-[
-0 leq E(t) leq E_{max}
-]
-
-[
-Binmathcal{B}_{allowed}
-]
-
-## Initial economic components
-
-Potentially include:
-
-- BESS CAPEX,
-- BESS fixed O&M,
-- grid electricity purchase,
-- load-shedding penalty / Value of Lost Load,
-- curtailment penalty if retained and justified.
-
-Exact values remain an input/data task.
-
-## Metrics to report
-
-Even if not every metric is optimized directly, report:
-
-- selected bus,
-- power rating,
-- energy capacity,
-- total/annualized cost,
-- curtailed energy,
-- unserved/load-shed energy,
-- network losses,
-- minimum/maximum bus voltage,
-- voltage violations,
-- computation time.
-
----
-
-# Task 16 — Initial Uncertainty and Scenario Methodology
-
-This task follows the Term 1 uncertainty baseline first. Validation in V5 determines whether refinement is necessary.
-
-## Uncertain variables
-
-Initial:
-
-- load demand,
-- PV generation.
-
-## Initial uncertainty concept
-
-Represent historical behavior as:
-
-[
-	ext{expected / forecast profile} + 	ext{forecast error / uncertainty}
-]
-
-Use an error/statistical model to generate possible trajectories.
-
-## Initial pipeline
+Term 1 does not fully define a common numerical scale. The current proposed default remains fixed no-BESS baseline-relative normalization:
 
 ```text
-Historical data
-      ↓
-Expected / Forecast Profile
-      ↓
-Forecast Residual / Error Model
-      ↓
-Monte Carlo Sampling
-      ↓
-Large Scenario Set
-      ↓
-Representative Scenario Selection
-      ↓
-Uncertainty-aware BESS Optimization
+C_norm    = C_candidate     / max(|C_baseline|, eps)
+Curt_norm = Ecurt_candidate / max(|Ecurt_baseline|, eps)
+Shed_norm = Eshed_candidate / max(|Eshed_baseline|, eps)
+
+J = 0.50*C_norm + 0.25*Curt_norm + 0.25*Shed_norm
 ```
 
-## ARIMA status
-
-ARIMA remains a candidate because it was used in Term 1, but it is **not automatically mandatory**.
-
-Retain it only if it is appropriate for the selected data and can be validated.
-
-## Scenario count
-
-Do not treat 45 scenarios as a final scientific requirement.
-
-Initial approach:
-
-1. generate a larger candidate scenario set,
-2. validate statistical/physical realism,
-3. reduce the set if computationally necessary,
-4. perform sensitivity to the retained scenario count.
-
-The final scenario count should be justified experimentally.
-
-## Scenario reduction
-
-Do not automatically retain the Term 1 “15 best + 15 worst + 15 random” method.
-
-Candidate approaches include:
-
-- k-medoids or another clustering method,
-- representative quantile selection,
-- probability-distance/forward selection.
-
-The final method will be selected during V5.
-
-## Scenario probabilities
-
-Equal scenario probabilities are acceptable for an initial implementation if no better probabilistic weighting is justified.
-
-## How uncertainty enters planning
-
-Use a common planning decision:
-
-[
-x=[B,P,E]
-]
-
-across scenarios (s=1,ldots,N_s).
-
-A simple initial expected-performance formulation is:
-
-[
-J(x)=sum_{s=1}^{N_s} p_s J_s(x)
-]
-
-with technical/SOC constraints checked across the scenario evaluations.
-
-This is preferred over independently optimizing a different BESS for every scenario and selecting one afterward.
+This is proposed, not a new customer requirement. If changed, update the design before Task 33 implementation.
 
 ---
 
-# Task 17 — Initial Validation and Software Test Plan
+# SD-8 — Uncertainty Baseline
 
-Validation should be developed alongside implementation, but the following baseline tests are defined now.
-
-## V1 — Network simulator
-
-### Test objectives
-
-Check:
-
-- power-flow convergence,
-- bus voltages,
-- power balance,
-- losses.
-
-### Reference
-
-Compare against:
-
-- trusted/reference solver results,
-- benchmark data,
-- hand calculations for simple cases where practical.
-
-### Acceptance
-
-No unexplained numerical mismatch beyond a defined tolerance.
-
-The exact tolerance will be selected with the solver/reference.
-
----
-
-## V2 — Fixed BESS
-
-Validate:
-
-- one-step SOC/energy calculations against manual calculations,
-- charging efficiency,
-- discharging efficiency,
-- SOC minimum,
-- SOC maximum,
-- power limit,
-- no simultaneous charge/discharge.
-
----
-
-## V3 — Manual Sizing / Placement Comparison
-
-Vary manually:
-
-- BESS bus,
-- power rating,
-- energy capacity.
-
-Check that model responses are physically and logically explainable.
-
-Use these controlled cases as references for V4.
-
----
-
-## V4 — Optimizer
-
-Implement **Grey Wolf Optimization (GWO)** as selected in the Term 1 baseline.
-
-Use a deliberately small 5-bus search case to independently enumerate every valid BESS option and establish a reference optimum.
-
-Then compare GWO against the exhaustive-search reference.
-
-Report:
-
-- selected solution,
-- objective difference,
-- runtime,
-- convergence behavior,
-- repeatability across multiple GWO runs,
-- effect of population size and iteration count where tested.
-
-GWO remains the main optimizer unless this validation exposes a technical problem or the advisors approve a change.
-
----
-
-## V5 — Forecast / Uncertainty Model
-
-### Forecast or error model
-
-Use held-out historical data and appropriate metrics such as:
-
-[
-RMSE
-]
-
-[
-MAPE
-]
-
-where suitable.
-
-### Scenario realism
-
-Compare generated scenarios with historical data using:
-
-- mean,
-- standard deviation,
-- percentiles,
-- min/max,
-- daily/temporal profile,
-- distribution behavior.
-
-For PV also check physical rules such as no unrealistic nighttime generation.
-
-### Scenario-count sensitivity
-
-Start from the Term 1 baseline of **45 retained scenarios**.
-
-Then test additional scenario counts as a sensitivity study to determine whether the final recommendation/performance is stable. This test is evidence for whether the Term 1 choice should be retained or changed; it is not a reason to replace 45 before implementation.
-
----
-
-## V5 — Uncertainty-aware Planning
-
-First reproduce the Term 1 ARIMA → Monte Carlo → 45-scenario → GWO → WSM workflow.
-
-After the baseline workflow works, evaluate its result against deterministic planning and on unseen/out-of-sample conditions where practical.
-
-Compare:
-
-- cost,
-- voltage violations,
-- load shedding,
-- curtailment,
-- constraint pass rate / robustness.
-
-If this validation reveals that the Term 1 scenario-by-scenario/WSM workflow does not produce a technically defensible single BESS deployment, document that finding before changing the formulation.
-
----
-
-## V6 — Software Testing
-
-Test:
-
-- valid workflow,
-- invalid/missing files,
-- bad units,
-- empty time series,
-- invalid BESS bounds,
-- disconnected network,
-- power-flow failure,
-- optimizer non-convergence.
-
-The software should handle expected user errors in a controlled way rather than simply crashing.
-
----
-
-## IEEE 33-bus Scalability Test
-
-After the small system is stable:
-
-- run the same framework on the IEEE 33-bus network,
-- verify no hard-coded 5-bus assumptions,
-- compare benchmark behavior,
-- document runtime/scalability issues.
-
----
-
-# Shadow Design Change Rule
-
-The **Term 1 baseline is the default implementation target**.
-
-A baseline design choice should not be changed merely because another method appears more attractive before testing.
-
-When implementation reveals that a Term 1 assumption or design choice is unsuitable:
-
-1. implement/test the baseline far enough to identify the actual problem,
-2. record the affected Term 1 design choice,
-3. record the implementation/validation evidence,
-4. discuss the change with the team/advisor when consequential,
-5. update the shadow design,
-6. implement the revised approach,
-7. validate the revised behavior,
-8. describe the important change and justification in Chapter 4.
-
-The preferred engineering history is:
+## Existing Term 1 workflow
 
 ```text
-Term 1 design
-    ↓
-Baseline implementation
-    ↓
-Validation evidence
-    ↓
-Retain OR justified revision
+Historical load/PV
+      ↓
+ARIMA
+      ↓
+Monte Carlo generation
+      ↓
+100 scenarios
+      ↓
+15 best + 15 worst + 15 random
+      ↓
+45 retained scenarios
+      ↓
+GWO / simulation
+      ↓
+WSM result
 ```
 
-The shadow design mainly exists to **fill missing implementation detail and make the Term 1 design executable**, not to redesign the project in advance.
+ARIMA should be checked with RMSE/MAPE. Generated scenarios should be checked against historical behavior and physical limits.
+
+## Interface rule
+
+Future `Scenario`/`ScenarioSet` reuse the exact same `ProfileData`/simulation path; uncertainty code does not create a second network model or solver.
+
+## Proposed design decision — best/worst ranking
+
+Until replaced by a team/advisor-approved rule, the proposed scenario stress score is:
+
+```text
+Stress_s = sum_t max(P_load,total,s(t) - P_PV,total,s(t), 0) * Delta_t
+```
+
+Selection:
+
+1. 15 highest stress = worst,
+2. 15 lowest stress = best,
+3. 15 random from remaining 70,
+4. fixed recorded seed (proposed default 42) for reproducibility.
+
+This is a proposed design decision, not a new Term 1 requirement.
+
+---
+
+# SD-9 — Verification and Validation Baseline
+
+## A. Implementation verification / trials
+
+Question: **Did we implement the documented design correctly?**
+
+Examples:
+
+- network validation,
+- FBS reference comparison,
+- power-balance checks,
+- SOC hand calculations/limit tests,
+- manual BESS location/size trials,
+- GWO vs exhaustive search,
+- GWO population/iteration tests,
+- ARIMA RMSE/MAPE,
+- scenario realism,
+- software input/failure tests.
+
+This evidence primarily supports Chapter 4.
+
+## B. Formal validation experiments
+
+Question: **Does the implemented product satisfy the Term 1 design specifications?**
+
+Each Chapter 5 experiment should include objective, background, detailed steps, tools, organized data/figures/tables, and analysis/conclusion.
+
+Requirement evidence is summarized as:
+
+`Requirement -> Target -> Experiment/direct check -> Measured result -> Evidence -> Status`
+
+with status `Met`, `Partially Met`, or `Not Met`.
+
+Do not alter a requirement to make it pass.
+
+---
+
+# Current Gantt implementation mapping
+
+| Design section | Main current implementation tasks |
+|---|---|
+| SD-1 Product scope | 51–57, 60 |
+| SD-2 Workflow/requirements | 10–11, 51–57, 62 |
+| SD-3 Architecture | 10–11, then all backend/UI modules |
+| SD-4 Interfaces/data flow | 11, 16–17, 20–23, 32–35, 42–45, 52–54 |
+| SD-5 Network/FBS | 12–19, 60 |
+| SD-6 BESS | 20–31 |
+| SD-7 Objective/GWO | 32–40 |
+| SD-8 ARIMA/MC/scenarios | 42–50 |
+| SD-9 Verification/validation | verification tasks throughout + 41, 58–61 |
+
+Task numbers/dates/status live in the Task Register/Gantt. Design contracts live here and in `TERM2_SOFTWARE_DESIGN_SPEC.md`.
+
+---
+
+# Change-control rule
+
+```text
+Existing baseline
+      ↓
+Document detailed design
+      ↓
+Implement documented design
+      ↓
+Test / verify
+      ↓
+If change is needed, show evidence
+      ↓
+Update design documentation
+      ↓
+Implement the revised contract consistently
+      ↓
+Document implementation change in Chapter 4
+```
+
+The intent is simple: **team members should implement an agreed specification, not independently design their module while coding it.**

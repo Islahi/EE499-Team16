@@ -1,23 +1,36 @@
 # Project State
 
-**Last context update:** 2026-09-21
+**Last context update:** 2026-09-26
 
 ## Snapshot
 
 - **Project:** Optimizing Battery Storage Deployment for Renewable Energy Integration Under Uncertainty
 - **Team:** EE499 Team 16, Spring 2026 intake
-- **Phase:** Beginning Term 2
-- **Main Term 2 emphasis:** Implementation and validation of the project, while repairing Term 1 design gaps that are necessary for a credible implementation
+- **Phase:** Term 2 — implementation/validation
+- **Main Term 2 emphasis:** Implement and validate the project while repairing design gaps necessary for a credible implementation.
 - **Latest authoritative submitted document:** `02_Reports/Submitted/Term_1_Final/EE499-S26_Report-Term_1_Team-16.docx`
-- **Formal Term 2 deadlines in supplied schedule:** TBD
-- **Approximate end of term:** January 7, 2027 (planning estimate supplied by the user; not an official deadline)
-- **Current Term 2 working context:** See `02_Reports/Working/Planning/TERM2_WORKING_CONTEXT.md` for the software-product direction, uncertainty-planning concept, data priority, planning workflow, and open decisions developed in recent team/project discussions.
-- **Immediate advisor-driven priority:** Obtain and evaluate the required project data before the next advisor meeting (date TBA).
-- **Current chat task policy:** Immediate work is assigned by the user in chat; planning artifacts preserve the semester workflow but do not turn unconfirmed technical recommendations into decisions.
+- **Official Progress Update submission:** 22 Oct 2026
+- **Official Progress Update presentation window:** 25–29 Oct 2026
+- **Official final Term 2 report submission:** 30 Nov 2026
+- **Official final presentation window:** 6–10 Dec 2026
+- **Current Term 2 working context:** `02_Reports/Working/Planning/TERM2_WORKING_CONTEXT.md`
+- **Current high-level technical design baseline:** `02_Reports/Working/Planning/TERM2_SHADOW_DESIGN.md`
+- **Current software implementation-handoff specification:** `02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md`
+- **Live schedule:** https://docs.google.com/spreadsheets/d/1HE7RNvaZ-VkVMlozWfkfPbe23hywnEdOzuaI1CfAEcY/edit
+
+## Current status
+
+- Data acquisition, checking, cleaning/alignment and the simulation-ready data package are complete as of 25 Sep 2026.
+- The high-level implementation baseline is complete.
+- Ethics/professional-responsibility work runs in parallel and should not block coding.
+- Current implementation starts with the predefined software module/interface structure, then V1 network/FBS and V2 BESS work.
+- Architecture, module responsibilities, data structures, file formats, sign conventions and public interfaces have been moved into `TERM2_SOFTWARE_DESIGN_SPEC.md` so implementation owners should not redesign them independently while coding.
+- Choices in that document not fixed by existing project material are explicitly labeled **proposed design decisions**, not confirmed team decisions.
+- Two later design gates remain open: WSM normalization before Task 33 and the best/worst scenario ranking metric before Task 45.
 
 ## Official Term 2 course expectations
 
-The supplied EE499 guidelines state that the team should:
+The EE499 guidelines require the team to:
 
 - continue meeting with documented meeting minutes (minimum six meetings),
 - continue with the baseline design developed in Term 1,
@@ -41,9 +54,9 @@ From the preserved gradebook screenshot:
 
 See `03_Feedback/FEEDBACK_INDEX.md` and the original screenshot in `03_Feedback/Term_1/`.
 
-## Submitted Term 1 baseline — historical, not automatically binding
+## Submitted Term 1 baseline — historical starting point
 
-The final Term 1 report currently describes/proposes items including:
+The final Term 1 report describes/proposes:
 
 - IEEE 33-bus radial distribution system,
 - solar PV integration,
@@ -56,12 +69,12 @@ The final Term 1 report currently describes/proposes items including:
 - Weighted Sum Method criteria for cost, curtailment, and load shedding,
 - hourly simulation over a limited period with a stated minimum of three months.
 
-These describe the submitted baseline and prior team work. **Do not treat them as permanent team decisions solely because they appear in the report.** Revisit them when the user's task requires it and check alignment with the official project description.
+These are the submitted baseline and current starting implementation choices unless implementation evidence, validation, unavailable data or advisor feedback gives a reason to revise them. They should not be presented as permanent requirements solely because they appeared in Term 1.
 
 Source: `02_Reports/Submitted/Term_1_Final/EE499-S26_Report-Term_1_Team-16.docx`.
 
 ## Implementation artifacts
 
-The supplied project snapshot did not contain a dedicated Term 2 program/codebase or a completed implementation package. `07_Implementation/` has therefore been created as an organized location for future code, data, model definitions, results, and validation artifacts.
+`07_Implementation/` is the designated location for Term 2 code, data interfaces/model definitions, results and validation artifacts.
 
-This statement describes the supplied snapshot only; update this section once implementation work begins.
+Implementation should follow the contracts in `TERM2_SOFTWARE_DESIGN_SPEC.md`; major interface/design changes should be reflected in design documentation before modules diverge.
