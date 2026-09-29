@@ -24,6 +24,11 @@ IEEE Systems Journal, 2017. Relevant to microgrid energy management, uncertainty
 **Title:** *Potentials and opportunities of solar PV and wind energy sources in Saudi Arabia: Land suitability, techno-socio-economic feasibility, and future variability*  
 DOI visible in the saved page: `10.1016/j.rineng.2024.101785`. Relevant to Saudi renewable-energy context and resource feasibility.
 
+### `Papers/sustainability-14-13209.pdf`
+
+**Title:** *Optimal Operational Planning of RES and HESS in Smart Grids Considering Demand Response and DSTATCOM Functionality of the Interfacing Inverters*
+Ali, A.; Shaaban, M. F.; Sindi, H. F. *Sustainability* 2022, 14, 13209. DOI: `10.3390/su142013209`. Open access under CC BY 4.0. Relevant to joint renewable-resource and hybrid-storage allocation under uncertainty, nested planning/operation optimization, demand response, inverter reactive-power support and IEEE 33-bus validation. The reported case studies show a 30.4% cost reduction and 19% voltage-profile improvement for the proposed approach.
+
 ## Internal research material
 
 ### `Literature_Notes/Paper Reviews.docx`

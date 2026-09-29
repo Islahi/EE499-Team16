@@ -95,3 +95,4 @@ Log items such as confirmed decisions, important advisor guidance, meaningful re
 - Verified 8,784 hourly records in each source (2024 is a leap year), with no missing values in the requested variables.
 - Documented time standards, units, wind-height differences, source limitations and the distinction between published network data and project assumptions.
 - Added the MATPOWER/PJM five-bus workbook as a complementary power-flow/OPF reference, explicitly distinguishing its looped 230 kV topology from the radial 11 kV development feeder.
+- Added Ali, Shaaban and Sindi (2022), a CC BY 4.0 paper on nested RES/HESS planning and operation under uncertainty with IEEE 33-bus case studies.

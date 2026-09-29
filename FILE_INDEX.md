@@ -65,3 +65,4 @@ Files added after the original repository migration are listed in a separate sec
 | `04_Research/Working_Data/Network_Data/EE499_Team16_5Bus_Network_Data.pdf` | Published-parameter summary for the five-bus development feeder. | User-provided file, 2026-09-26 |
 | `04_Research/Working_Data/Network_Data/PJM_5Bus_Network_Data.xlsx` | MATPOWER/PJM looped five-bus power-flow and OPF reference case. | User-provided file, 2026-09-26 |
 | `04_Research/Working_Data/Network_Data/IEEE_33Bus_Network_Data.xlsx` | IEEE 33-bus bus and branch data for a larger validation case. | User-provided file, 2026-09-26 |
+| `04_Research/Papers/sustainability-14-13209.pdf` | Open-access paper on joint RES/HESS planning and operation under uncertainty using the IEEE 33-bus system. | User-provided file, 2026-09-26 |
