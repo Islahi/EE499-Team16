@@ -28,3 +28,97 @@ A numerical recommendation can appear authoritative even when the network model,
 ## Related issue reserved for Section 3.9
 
 **Software licensing, intellectual property, and attribution** remain relevant for libraries, datasets, algorithms, and copied code. The assignment explicitly addresses them in **Section 3.9**; SCE **Rule 6** is the related charter rule. They are not one of the two main issues selected above.
+
+
+
+# Structure
+
+## Project Context and System Overview
+System 
+	Purpose: **Helping engineer to decide the placement and size of BESS** 
+	Functionality: **Calculating the optimal solution for BESS size and placement in an RDS taking consideration of PV output uncertainty**
+Intended users: **Power engineering working on electrical distribution center connected to PV grid**
+Operating environment: **Office setting in planning an RDS stage**
+Key components: **GUI based program for easy usage with optimization algorithm embedded in the program**
+Methods used: **GWO optimization and uncertainty modelling based on Monte Carlo simulation**
+Potential unintended use: **Use for non radial system, use with other renewable source except for photovoltaic solar panel**
+## Stakeholder Identification and Interests
+Primary stakeholders: **Planning engineer**
+Secondary stakeholders: **Regulators, client/government, energy storage companies**
+Indirect stakeholders: **Public, environment**
+Stakeholder interests, risks, benefits, and possible harms:
+$$
+\begin{array}{|l|l|l|}
+\hline
+\text{Stakeholder Level}& \text{Stakeholders} & \text{Interests} & \text{Risks} & \text{Benefits} & \text{Possible harms} \\
+\hline
+\text{Primary} & \text{Engineers} & \text{Simplify planning stage} & \text{Too reliant to the program without second check and verification} & \text{Less time spent planning, fewer manual calculations, reduced workload} & \text{?} \\
+\text{Secondary} & \text{Regulators} & \text{?} & \text{?} & \text{?} & \text{?} \\
+\text{Secondary} & \text{Client/government} & \text{?} & \text{?} & \text{Reduce the outcome due to building optimal plans} & \text{?} \\
+\text{Secondary} & \text{ES companies} & \text{Promote their product} & \text{Promote competitors product} & \text{Increasing their revenue} & \text{?} \\
+\text{Indirect} & \text{Public} & \text{?} & \text{?} & \text{?} & \text{?} \\
+\text{Indirect} & \text{Environtment} & \text{Promote greener future} & \text{Promote rare metal extraction} & \text{Cleaner energy source implementation} & \text{Overextracting rare metal and other horrible things happen on third world countries where the mine located} \\
+\hline
+\end{array}
+$$
+## Ethical Issue Identification
+
+Identify 2 distinct ethical issues:
+* **Confidentiality and security of power-system data**
+* **Reliability and responsible use of optimization results**
+## Ethical Analysis and Decision-Making
+**Confidentiality and security of power-system data**
+	Dilemma: for the program to predict correctly the distribution system configuration must be given to the program.
+	Course of action:
+		Saving data on local device
+		Locked data behind encryption if possible
+	Alternatives: ?
+**Reliability and responsible use of optimization results**
+	Dilemma: The program facilitates engineers to work faster but could result wrong answers due to multitude of reasons such as wrong inputs
+	Course of action:
+		Clearly define program limitation
+		Suggest the engineers to double and triple check the results
+	Alternatives: ?
+## Safety, Risk, and Compliance Analysis
+?
+Key hazards: The program gives wrong answers
+Qualitative risk assessment: Not very severe, the likelihood to happen is medium to big
+Applicable standards, regulations, approvals, or institutional policies.
+Proposed mitigation measures, including technical and procedural controls.
+## Data, Privacy and Security Considerations
+?
+Data collection, processing, storage, sharing, and retention: All data processed locally
+Consent, notification, and transparency.
+Confidentiality, anonymization, and access control.
+Cybersecurity risks and safeguards.
+Potential misuse or unauthorized access.
+## Broader Impact Analysis
+?
+Global: standards, scalability, international relevance, and responsible innovation.
+Economic: cost, affordability, trade-offs, liability, and long-term value.
+Environmental: energy use, materials, sustainability, waste, and life-cycle impact.
+Societal: privacy, equity, accessibility, public trust, inclusion, and quality of life.
+## Professional Integrity and Communication
+
+?
+Risks of misleading claims, exaggerated performance, or selective reporting.
+Importance of accurate and transparent communication.
+Acknowledgment of system limitations and uncertainty.
+Accountability for errors, failures, or misuse.
+## Intellectual Property and Attribution
+Use of external code, circuits, designs, datasets, algorithms, models, papers, or documentation: Most of the library us is opensource
+Proper citation and acknowledgment: ?
+Licensing considerations, including open-source and proprietary materials: ?
+Ethical boundaries for reuse, modification, and distribution: ?
+## Recommendations and Mitigation Plan
+?
+Preventive actions before testing, demonstration, deployment, or publication.
+Corrective actions in case of failure, harm, error, or misuse.
+Technical, procedural, or policy-based recommendations.
+Prioritization of the most important actions.
+## Reflection and Professional Responsibility
+?
+The most significant ethical challenge in your project.
+Key trade-offs encountered during design.
+Your responsibility as a professional engineer.
+How you would act in a real-world engineering scenario.
