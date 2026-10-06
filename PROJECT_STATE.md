@@ -1,6 +1,6 @@
 # Project State
 
-**Last context update:** 2026-09-26
+**Last context update:** 2026-10-06
 
 ## Snapshot
 
@@ -23,7 +23,7 @@
 - Data acquisition, checking, cleaning/alignment and the simulation-ready data package are complete as of 25 Sep 2026.
 - The high-level implementation baseline is complete.
 - Ethics/professional-responsibility work runs in parallel and should not block coding.
-- Current implementation starts with the predefined software module/interface structure, then V1 network/FBS and V2 BESS work.
+- Tasks 10, 12 and 13 have implementation artifacts: module skeleton, validated five-bus network model and one-step FBS. See `07_Implementation/README.md` for run instructions and scope. Later BESS/time-series modules remain placeholders; the existing profile loader is unchanged.
 - Architecture, module responsibilities, data structures, file formats, sign conventions and public interfaces have been moved into `TERM2_SOFTWARE_DESIGN_SPEC.md` so implementation owners should not redesign them independently while coding.
 - Choices in that document not fixed by existing project material are explicitly labeled **proposed design decisions**, not confirmed team decisions.
 - Two later design gates remain open: WSM normalization before Task 33 and the best/worst scenario ranking metric before Task 45.

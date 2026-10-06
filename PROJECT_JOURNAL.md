@@ -95,9 +95,7 @@ Log items such as confirmed decisions, important advisor guidance, meaningful re
 - Verified 8,784 hourly records in each source (2024 is a leap year), with no missing values in the requested variables.
 - Documented time standards, units, wind-height differences, source limitations and the distinction between published network data and project assumptions.
 - Added the MATPOWER/PJM five-bus workbook as a complementary power-flow/OPF reference, explicitly distinguishing its looped 230 kV topology from the radial 11 kV development feeder.
-<<<<<<< HEAD
 - Added Ali, Shaaban and Sindi (2022), a CC BY 4.0 paper on nested RES/HESS planning and operation under uncertainty with IEEE 33-bus case studies.
-=======
 
 ## 2026-09-26 — Software design separated from implementation
 
@@ -125,4 +123,14 @@ Log items such as confirmed decisions, important advisor guidance, meaningful re
 - The supplied Blackboard screenshots show a scoring discrepancy: the assignment body lists Implementation/Validation/Work Plan as 2/2/1 points, while the visible rubric shows 1.67 points (33.33%) for each of the three scored categories. The repository now flags this rather than silently reconciling it.
 - The visible submission filename pattern is `EE499_S26_ProgressUpdate_Team-XX`; for Team 16 this becomes `EE499_S26_ProgressUpdate_Team-16.pdf`.
 - `README.md` now links directly to the preserved Progress Update guidance.
->>>>>>> 38ed5b6f70424fac2273c44bc536eabb48bfddd4
+
+
+## 2026-10-06 — Tasks 10, 12 and 13 implemented
+
+- Added the user-supplied `FBS_Step_by_Step_Guide.pdf` unchanged under `07_Implementation/Validation/`.
+- Task 10: created the documented Python module skeleton and runnable one-step entry point; preserved the existing `data_loader.py`. Later BESS, simulation, metrics, optimizer, uncertainty, results and UI operations are explicit placeholders.
+- Task 12: implemented static network dataclasses, physical/topology validation and deterministic radial ordering. `build_5_bus_case()` preserves the prepared 11 kV / 10 MVA chain and accepts explicit load/PV inputs because the source does not supply bus demand.
+- Task 13: implemented one-step current-summation FBS with engineering-unit boundaries, complete OperatingPoint validation, complex-voltage convergence, required electrical results and failure diagnostics.
+- Kept the guide's 12.66 kV branched five-bus case separate from the published development feeder. Documented guide rounding/convergence discrepancies in `07_Implementation/Validation/FBS_Verification_Notes.md`.
+- Verification: 12 unittest cases passed; all 12 source modules imported; independent SciPy nonlinear nodal-equation solutions agreed within 1e-10 pu for the two guide cases and a synthetic loaded prepared feeder. This is implementation verification, not completion of Chapter 5 validation.
+- Removed pre-existing merge-conflict delimiter lines in this journal while retaining both sides' entries. No submitted report, live schedule, or major engineering decision was changed.

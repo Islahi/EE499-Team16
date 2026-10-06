@@ -1,0 +1,2 @@
+# Existing profile loader dependency; network/FBS use only the standard library.
+pandas>=2.2,<4
