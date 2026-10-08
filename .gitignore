@@ -34,3 +34,6 @@ Exports/*.zip
 *.tmp
 *.temp
 *.part
+
+.obsidian/
+
