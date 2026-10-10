@@ -143,3 +143,12 @@ Log items such as confirmed decisions, important advisor guidance, meaningful re
 - Kept the guide's 12.66 kV branched five-bus case separate from the published development feeder. Documented guide rounding/convergence discrepancies in `07_Implementation/Validation/FBS_Verification_Notes.md`.
 - Verification: 12 unittest cases passed; all 12 source modules imported; independent SciPy nonlinear nodal-equation solutions agreed within 1e-10 pu for the two guide cases and a synthetic loaded prepared feeder. This is implementation verification, not completion of Chapter 5 validation.
 - Removed pre-existing merge-conflict delimiter lines in this journal while retaining both sides' entries. No submitted report, live schedule, or major engineering decision was changed.
+
+
+## 2026-10-10 - Member 1 PDF material added to Chapters 4-6 Writing Map
+
+- At the user's request, edited the existing native Google Doc in place: https://docs.google.com/document/d/1raGucOGbKPVh9FvsIZkMzoAT2raXHNQTlgHec9KbwGo/edit.
+- Replaced the two user-provided paragraph placeholders with a short Chapter 4 introduction and Sections 4.2.4-4.2.8: branched development case, FBS implementation verification, basic results, hourly trial, and scope/limitations. Added seven editable tables and four reproduced charts from Member 1's supplied implementation report; retained the relevant explanations from the companion PDF without duplicating the existing class/algorithm discussion.
+- Preserved all 276 original non-placeholder paragraphs and all 36 existing inline images. Existing chapter instructions, network/FBS/data-loader explanations, BESS material and references remain intact.
+- Kept new wording close to the PDFs, with necessary corrections: the guide feeder is separate from the prepared 11 kV feeder; prototype and production interfaces differ; hourly multipliers are illustrative and not ProfileData integration; convergence does not establish voltage feasibility; changes to the constant-power model/tap changers need solver extensions.
+- Verified native content and exported PDF layout. Seven tables are populated, four charts/captions render together, the branch-results table is kept on one page, and both insertion placeholders are resolved. This records implementation evidence rather than marking Tasks 17/18 or Chapter 5 validation complete.
