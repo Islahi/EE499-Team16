@@ -21,6 +21,13 @@ It prints convergence, bus voltages, slack power and total losses.
 
 ## Code and status
 
+Member 1's 10 Oct FBS submission is preserved separately with unchanged originals,
+a portable reproduction driver, results, and a task assessment:
+[`Contributions/Member_1/2026-10-10_FBS/README.md`](Contributions/Member_1/2026-10-10_FBS/README.md).
+It supports small-case Tasks 14/15 and a Task 19 draft; Tasks 17/18 still need
+profile/interface integration and failure handling. It does not replace the
+production modules or supply Task 16.
+
 | Module | Current scope |
 |---|---|
 | `src/network_model.py` | Bus/Line/Load/PVUnit dataclasses, network validation, radial ordering |

@@ -1,0 +1,3 @@
+# Small contribution assets stored directly for connected publication.
+*.pdf -filter -diff -merge -text
+*.png -filter -diff -merge -text

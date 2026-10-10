@@ -1,0 +1,3 @@
+# Preserve exact uploaded bytes, including CSV CRLF line endings.
+* -text
+hourly_results.csv whitespace=cr-at-eol

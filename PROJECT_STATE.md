@@ -1,6 +1,6 @@
 # Project State
 
-**Last context update:** 2026-10-06
+**Last context update:** 2026-10-10
 
 ## Snapshot
 
@@ -24,6 +24,7 @@
 - The high-level implementation baseline is complete.
 - Ethics/professional-responsibility work runs in parallel and should not block coding.
 - Tasks 10, 12 and 13 have implementation artifacts: module skeleton, validated five-bus network model and one-step FBS. See `07_Implementation/README.md` for run instructions and scope. Later BESS/time-series modules remain placeholders; the existing profile loader is unchanged.
+- Member 1's 10 Oct submission is archived under `07_Implementation/Contributions/Member_1/2026-10-10_FBS/`. Small-case FBS verification/results support Tasks 14/15, and the report supplies a Task 19 standalone draft. Tasks 17/18 have partial development evidence but still require prepared-profile integration and error handling. Task 16 is absent from this submission and is already Done by Islahi in the live register. Production modules and the live schedule were not replaced or edited; see the contribution README for the assessment and interface differences.
 - Architecture, module responsibilities, data structures, file formats, sign conventions and public interfaces have been moved into `TERM2_SOFTWARE_DESIGN_SPEC.md` so implementation owners should not redesign them independently while coding.
 - Choices in that document not fixed by existing project material are explicitly labeled **proposed design decisions**, not confirmed team decisions.
 - Two later design gates remain open: WSM normalization before Task 33 and the best/worst scenario ranking metric before Task 45.
