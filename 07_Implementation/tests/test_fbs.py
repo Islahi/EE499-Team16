@@ -2,6 +2,12 @@ import cmath
 import unittest
 from dataclasses import replace
 from math import sqrt
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from src.network_model import Bus, Line, Load, NetworkModel
 from src.network_cases import build_5_bus_case, build_guide_3_bus_case, build_guide_5_bus_case
 from src.main import base_operating_point
