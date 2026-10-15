@@ -1,6 +1,6 @@
 # Project State
 
-**Last context update:** 2026-10-10
+**Last context update:** 2026-10-15
 
 ## Snapshot
 
@@ -17,6 +17,12 @@
 - **Current high-level technical design baseline:** `02_Reports/Working/Planning/TERM2_SHADOW_DESIGN.md`
 - **Current software implementation-handoff specification:** `02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md`
 - **Live schedule:** https://docs.google.com/spreadsheets/d/1HE7RNvaZ-VkVMlozWfkfPbe23hywnEdOzuaI1CfAEcY/edit
+
+## Revised schedule
+
+- User-confirmed plan: GWO development 18–24 Oct, uncertainty 25–31 Oct, complete GUI with automatic network drawing 1–7 Nov, full-program testing/bug fixes 8–14 Nov, formal validation/results 15–24 Nov, and report completion by 29 Nov. GWO comparison/tuning continues through 27 Oct.
+- The GUI builds the distribution-system diagram from loaded network data; interactive drag-and-drop editing is outside the agreed scope.
+- The repository task-register CSV was refreshed from the live sheet on 15 Oct; live statuses are copied as recorded, not independently verified completion claims.
 
 ## Current status
 

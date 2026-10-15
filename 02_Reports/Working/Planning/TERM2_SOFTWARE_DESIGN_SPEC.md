@@ -910,6 +910,8 @@ The optimizer evaluates candidates through the public simulation/evaluator inter
 
 `results.py` may format/export standardized results. `ui.py` may collect user choices and call public backend interfaces. Neither module owns engineering equations.
 
+**User-confirmed GUI scope (13 Oct 2026):** Load network data through the existing `NetworkModel` interface and automatically build the distribution-system diagram from bus IDs, line endpoints and connected devices. Display buses, lines, loads, PV and BESS locations; display simulation results and the optimizer-selected BESS location through the existing result interfaces. Loading another network rebuilds the diagram. Manual placement or drag-and-drop network editing is outside this scope. The layout algorithm and GUI library remain implementation/design choices to document before development; this confirmation does not select either library or algorithm.
+
 ---
 
 # 9. Module input/output specification

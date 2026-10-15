@@ -1,6 +1,6 @@
 # Term 2 Planning — How to Use
 
-## Current status — 26 Sep 2026
+## Preparation baseline — 26 Sep 2026
 
 The early preparation stage is finished.
 
@@ -9,6 +9,24 @@ The early preparation stage is finished.
 - No separate advisor data presentation/package is planned.
 - Task 8 Ethics runs **in parallel** with implementation and does not block coding.
 - Current main work starts with **Task 10 — Set up the code structure from the design spec** and then V1/V2 implementation.
+
+## Revised working schedule — confirmed 13 Oct 2026
+
+The live Task Register remains authoritative. This plan moves full-program testing from 15 November to **8 November**.
+
+| Period | Work |
+| --- | --- |
+| 18–24 Oct | Tasks 32–37: metrics, WSM objective, GWO integration, deterministic run and exhaustive-search reference. |
+| 25–31 Oct | Tasks 42–49: ARIMA, Monte Carlo, scenario selection and GWO/WSM integration. GWO comparison/tuning (Tasks 38–39) continues through 27 Oct. |
+| 1–7 Nov | Tasks 51–55: complete GUI, automatic network drawing, backend controls/results, progress/errors and export. |
+| 8–14 Nov | Tasks 56 and 62: complete-program testing, bug fixes and repeated tests; document integration in Task 57. |
+| 15–24 Nov | Tasks 58–61: formal validation, necessary reruns and requirement-evidence results. |
+| 24–29 Nov | Freeze exact final cases/outputs and finish the report; Chapter 4 polishing also runs from 15 Nov. |
+| 1–10 Dec | Prepare/rehearse the demo and deliver during the official 6–10 Dec window. |
+
+The GUI loads network data and automatically builds the distribution-system diagram: buses, line connections, loads, PV and BESS locations. It displays simulation results and the optimized BESS location. Manual placement or drag-and-drop network editing is outside this agreed scope. Engineering calculations stay in the backend.
+
+Implementation writing runs alongside development. Keep the official 22 Oct progress submission, 25–29 Oct presentation window and 30 Nov final-report deadline. These are planned dates, not claims that the tasks are complete.
 
 ## Main working files
 
@@ -20,6 +38,8 @@ The early preparation stage is finished.
 - `EE499_Team16_Term2_Task_Register.csv` — repo snapshot of the live Task Register.
 
 The **live Task Register/Gantt is the source of truth for task numbers, dates, status and dependencies**.
+
+The CSV snapshot was refreshed on **15 Oct 2026**, including owners, statuses and progress as recorded in the live sheet. `Gantt Chart.pdf` is an older static reference and does not reflect the revised dates below.
 
 ## Design → implementation rule
 

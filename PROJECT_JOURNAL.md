@@ -152,3 +152,10 @@ Log items such as confirmed decisions, important advisor guidance, meaningful re
 - Preserved all 276 original non-placeholder paragraphs and all 36 existing inline images. Existing chapter instructions, network/FBS/data-loader explanations, BESS material and references remain intact.
 - Kept new wording close to the PDFs, with necessary corrections: the guide feeder is separate from the prepared 11 kV feeder; prototype and production interfaces differ; hourly multipliers are illustrative and not ProfileData integration; convergence does not establish voltage feasibility; changes to the constant-power model/tap changers need solver extensions.
 - Verified native content and exported PDF layout. Seven tables are populated, four charts/captions render together, the branch-results table is kept on one page, and both insertion placeholders are resolved. This records implementation evidence rather than marking Tasks 17/18 or Chapter 5 validation complete.
+
+## 2026-10-15 — Revised schedule synchronized from live Task Register
+
+- At the user’s request, synchronized the repository CSV snapshot and detailed task guide with all 66 tasks in the live Google Sheet. Preserved live owners, statuses and progress as recorded; no completion assessment was performed.
+- Recorded the 13 Oct confirmed plan: GWO 18–24 Oct (comparison/tuning through 27 Oct), uncertainty 25–31 Oct, GUI 1–7 Nov, complete-program testing and bug fixes 8–14 Nov, formal validation/results 15–24 Nov, and report completion before 30 Nov.
+- GUI tasks now explicitly cover automatic diagram construction from network data, result display and the selected BESS location. Drag-and-drop editing is outside the agreed scope. Updated planning summaries, project state and decision record.
+- Official deadlines and submitted artifacts remain unchanged. The live sheet remains the source of truth; the older Gantt PDF is not the revised schedule.
