@@ -21,15 +21,10 @@ class BESSConfig:
         self.max_charge_kw = max_charge_kw if max_charge_kw is not None else power_rating_kw
         self.max_discharge_kw = max_discharge_kw if max_discharge_kw is not None else power_rating_kw
 
-
-
-
 class BESSState:
     def __init__(self, energy_kwh: float, soc: float):
         self.energy_kwh = energy_kwh
         self.soc = soc
-
-
 
 class BESSStepResult:
     def __init__(self, 
@@ -50,7 +45,10 @@ class BESSStepResult:
         self.limit_reason = limit_reason       
 
 
-def step_bess(config: BESSConfig, state: BESSState, requested_power_kw: float, dt_hours: float):
+def step_bess(config: BESSConfig, 
+              state: BESSState, 
+              requested_power_kw: float, 
+              dt_hours: float):
     energy_before = state.energy_kwh
     soc_before = state.soc
 
@@ -76,39 +74,30 @@ def step_bess(config: BESSConfig, state: BESSState, requested_power_kw: float, d
             actual_power_kw * dt_hours / config.eta_discharge
         )
     elif requested_power_kw < 0:
-
         energy_max = config.soc_max * config.energy_capacity_kwh
-
         power_soc_limit = max(
             0,
             (energy_max - energy_before) / (config.eta_charge * dt_hours)
         )
-
         max_charge = config.max_charge_kw
-
         if max_charge is None:
             max_charge = config.power_rating_kw
-
         actual_power_kw = min(
             abs(requested_power_kw),
             config.power_rating_kw,
             max_charge,
             power_soc_limit
         )
-
         energy_after = energy_before + (
             actual_power_kw * dt_hours * config.eta_charge
         )
-
         actual_power_kw = -actual_power_kw
     else:
         actual_power_kw = 0.0
-        energy_after = energy_before
+        energy_after = energy_before        
         
     soc_after = energy_after / config.energy_capacity_kwh
-
     limited = not abs(actual_power_kw - requested_power_kw) <= 1e-9
-
     if limited:
         limit_reason = "Power or SOC limit reached"
     else:

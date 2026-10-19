@@ -90,6 +90,20 @@ Do not write large report sections from scratch unless the user explicitly reque
 
 The primary user wants to remain involved in implementation. By default, collaborate through architecture discussion, pseudocode, examples, code review, debugging, and explanation. Generate substantial implementation only when explicitly requested, and keep the reasoning/design understandable to the user rather than hiding the engineering behind generated code.
 
+### Qt desktop work
+
+Before implementing or reviewing this project's desktop interface, read
+`07_Implementation/Qt_Desktop_Implementation_Guide.md`. At the user's request,
+the companion `07_Implementation/Qt_Designer_Build_Guide.md` specifies the user's
+manual Designer task and planned control names; keep those forms editable and
+coordinate changes to object names with later Python bindings. For this project,
+follow the beneficial Designer-form, small-window-class and named-handler
+patterns from `Islahi/Simple-PyQt5-Password-Manager`, adapted to our existing
+backend contracts. Do not copy its PyQt5 dependency, unrelated features or
+unsafe practices automatically. Keep numerical work out of GUI callbacks and
+preserve the user's current UI mockup/scope. A reference pattern is not approval
+to change the Qt binding, implement new features or replace engineering modules.
+
 ## File modification
 
 - Never alter files under `02_Reports/Submitted/`; treat submitted work as immutable history.

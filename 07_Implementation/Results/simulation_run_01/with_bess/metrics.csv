@@ -1,0 +1,25 @@
+﻿metric,value,unit
+duration_hours,24.0,h
+served_load_energy_kwh,14040.0,kWh
+pv_generation_energy_kwh,1367.2357402905272,kWh
+grid_import_energy_kwh,12591.473618358268,kWh
+grid_export_energy_kwh,0.0,kWh
+loss_energy_kwh,177.7461503955993,kWh
+peak_grid_import_kw,686.5591275923373,kW
+voltage_min_pu,0.9674389466958614,pu
+voltage_max_pu,1.0,pu
+voltage_violation_hours,0.0,h
+voltage_violation_bus_hours,0.0,bus-hours
+reserve_violation_hours,0.0,h
+bess_charge_energy_kwh,456.05255193180466,kWh
+bess_discharge_energy_kwh,715.0874281184535,kWh
+bess_soc_min,0.1805263157894737,fraction
+bess_soc_max,0.9,fraction
+bess_cost,,SAR
+currency,SAR,
+curtailment_energy_kwh,0.0,kWh
+load_shedding_energy_kwh,0.0,kWh
+feasible,True,
+notes,BESS cost unavailable: supply both economic coefficients.,
+requested_load_energy_kwh,14040.0,kWh
+available_pv_energy_kwh,1367.2357402905272,kWh

@@ -1,0 +1,19 @@
+{
+  "download_date": "2026-10-19",
+  "repository": "https://github.com/MATPOWER/matpower",
+  "release_tag": "8.1",
+  "annotated_tag_sha": "3f8ecfdbc79b07697d6b45f8d868ac1c2d27f788",
+  "commit": "1a828c7af590714499284e36ee9c81273388c594",
+  "original_files_modified": false,
+  "direct_ui_import_supported": false,
+  "license_note": "Upstream explicitly excludes case data files from the MATPOWER software BSD license; retain attribution and verify applicable data reuse rights.",
+  "files": [
+    {"name": "case10ba.m", "bytes": 2589, "sha256": "c50621f5c1d2e070303f0714cb9b3c387549deeb3d2005f1db3c5323df56e4e1", "url": "https://raw.githubusercontent.com/MATPOWER/matpower/1a828c7af590714499284e36ee9c81273388c594/data/case10ba.m"},
+    {"name": "case12da.m", "bytes": 2665, "sha256": "e235056bb3e66e28fcba6cdd47b04f921c6a52433fc19c248bef95eec0d059cd", "url": "https://raw.githubusercontent.com/MATPOWER/matpower/1a828c7af590714499284e36ee9c81273388c594/data/case12da.m"},
+    {"name": "case15da.m", "bytes": 3149, "sha256": "49d7de24a538dc0d09902acf47cd88faaee4d6c7987e5d48a64622540d64020f", "url": "https://raw.githubusercontent.com/MATPOWER/matpower/1a828c7af590714499284e36ee9c81273388c594/data/case15da.m"},
+    {"name": "case22.m", "bytes": 4438, "sha256": "a00dbc4c9b0e06d27ab075f1334ff255d23e9da9597611964c70170ac0765341", "url": "https://raw.githubusercontent.com/MATPOWER/matpower/1a828c7af590714499284e36ee9c81273388c594/data/case22.m"},
+    {"name": "case33bw.m", "bytes": 4866, "sha256": "b40831eeb444669ae876e2996f0dda9f05cd83e81b314b8dfca51e4890cca95d", "url": "https://raw.githubusercontent.com/MATPOWER/matpower/1a828c7af590714499284e36ee9c81273388c594/data/case33bw.m"},
+    {"name": "case69.m", "bytes": 8499, "sha256": "7bbdc8c39394eb6c924a64cad49d528bc8e99061823eb0f4a42b22da5c146a2c", "url": "https://raw.githubusercontent.com/MATPOWER/matpower/1a828c7af590714499284e36ee9c81273388c594/data/case69.m"},
+    {"name": "LICENSE", "bytes": 2074, "sha256": "5d14c09b3e4f2adf62c0373e6320163697aa4603186f8925c07c6b84201e1750", "url": "https://raw.githubusercontent.com/MATPOWER/matpower/1a828c7af590714499284e36ee9c81273388c594/LICENSE"}
+  ]
+}

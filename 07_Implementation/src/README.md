@@ -5,6 +5,25 @@ five-bus network model, and one-time-step Forward/Backward Sweep (FBS) solver.
 The solver calculates bus voltages, branch currents, power flows and losses
 for a balanced radial distribution network.
 
+For the hourly integration module, see the dedicated
+[`simulation.py` README](README_simulation.md), including its execution flow,
+inputs/outputs, configurable defaults and future parameter changes.
+For performance evaluation, see the dedicated
+[`metrics.py` README](README_metrics.md).
+For GWO search, raw WSM and the exhaustive reference, see the dedicated
+[`optimizer.py` README](README_optimizer.md).
+For ARIMA, Monte Carlo scenarios, selection and scenario-based GWO, see
+[`uncertainty.py` README](README_uncertainty.md).
+For summaries, CSV exports and baseline comparisons, see
+[`results.py` README](README_results.md).
+For static Excel network import and the IEEE 33-bus source workbook, see
+[`network_loader.py` README](README_network_loader.md).
+For irradiance conversion and synthetic demand, see
+[`pv_model.py` README](README_pv_model.md) and
+[`load_generator.py` README](README_load_generator.md).
+For the desktop, its editable forms, input variables and test instructions, see
+[`ui.py` README](README_ui.md).
+
 ## 1. Start here
 
 Use **Python 3.10 or newer**. Open a terminal in the repository root and run:
@@ -42,20 +61,29 @@ changes can occur if you change the convergence tolerance.
 |---|---|---|
 | `network_model.py` | Stores buses, lines, loads and PV; validates topology and builds sweep order | Implemented |
 | `network_cases.py` | Builds the prepared feeder and the guide's example networks | Implemented |
+| `network_loader.py` | Imports supported Excel network data without editing the workbook | Implemented |
 | `fbs.py` | Solves one operating point and returns electrical results | Implemented |
 | `main.py` | Runs the fixed-input demo; provides `base_operating_point()` | Implemented |
 | `data_loader.py` | Existing team code for reading load/PV CSV profiles | Existing implementation; not connected to the demo |
-| `bess.py` | Stores BESS configuration/state/result types | Types present; `step_bess()` is a placeholder |
-| `simulation.py` | Will combine profiles, BESS and FBS for one/many time steps | Placeholder |
-| `metrics.py` | Will calculate technical/economic performance | Placeholder |
-| `optimizer.py` | Will search for BESS bus, power and energy capacity | Placeholder |
-| `uncertainty.py` | Will generate/select uncertainty scenarios | Placeholder |
-| `results.py` | Will format/export results | Placeholder |
-| `ui.py` | Will provide user interaction | Placeholder |
+| `pv_model.py` | Prepares PV power from irradiance CSVs | Implemented; see README_pv_model.md |
+| `load_generator.py` | Prepares literature-based synthetic hourly load | Implemented; see README_load_generator.md |
+| `bess.py` | Existing BESS configuration, state and energy-update function | Existing implementation preserved |
+| `simulation.py` | Combines profiles/BESS/FBS, applies PV/load controls, records curtailment/shedding and checks feasibility | Implemented; see the simulation test guide |
+| `metrics.py` | Summarizes simulation energy/voltage/reserve performance and simple investment cost | Implemented; see README_metrics.md |
+| `optimizer.py` | Searches allowed BESS bus/power/energy catalogs with GWO and a public evaluator | Implemented; see README_optimizer.md |
+| `uncertainty.py` | Generates/selects ARIMA/Monte Carlo scenarios and evaluates common candidates | Implemented; see README_uncertainty.md |
+| `results.py` | Formats summaries and exports existing results | Implemented; see README_results.md |
+| `ui.py` | Designer-backed PySide6 windows, timestamp selection and worker jobs | Implemented; see README_ui.md |
+| `ui_workflow.py` | Qt-free preparation/run orchestration and sizing catalogs | Implemented |
+| `dispatch.py` | User-configured net-load-target battery policy | Implemented |
+| `network_layout.py` | Longest-spine radial layout, feeder-wide branch balancing and layer-aware spacing | Implemented |
+| `network_diagram.py` | Single-line symbols, rotation, selectable buses and independent Properties/Results layers | Implemented |
+| `network_icons.py` | Palette-aware Fit and Zoom vector icons | Implemented |
 | `__init__.py` | Makes `src` a Python package | Present |
 
-Placeholder functions raise `NotImplementedError`. They are not completed
-battery, optimization or simulation features.
+The desktop has a separate optional `../requirements-ui.txt` dependency file;
+launch from the repo root with `python .\07_Implementation\examples\run_ui.py`.
+See `../Validation/Simulation_Test_Guide.md` for hourly examples and tests.
 
 ## 3. `network_model.py`: the static network
 
@@ -230,7 +258,7 @@ point = base_operating_point(network)
 # Override this time step's PV output rather than changing its installed rating.
 point.p_pv_kw[4] = 90.0
 
-# A prescribed injection only; the BESS SOC model is not implemented yet.
+# A prescribed injection only; use simulation.py for BESS SOC integration.
 point.p_bess_kw[5] = 50.0  # discharge; use -50.0 for charging
 
 result = run_fbs(network, point, FBSConfig())
@@ -243,10 +271,10 @@ print(result.slack_p_kw)
 `base_operating_point()` adds all base loads at each bus, uses PV **rated**
 output, and sets reactive PV and BESS injection to zero. It is a fixed-input
 fixture. Actual time-varying values should be supplied through `OperatingPoint`
-by the future simulation layer. The present demo does not read CSV files.
+by the simulation layer. The fixed-input demo does not read CSV files.
 
 Changing `point.p_bess_kw` does not enforce battery capacity, efficiency or SOC
-limits. Those require the later `step_bess()` implementation and integration.
+limits. Use `simulation.py` to call the existing BESS step and carry SOC.
 
 ## 8. Checks and current limits
 
@@ -256,9 +284,11 @@ From `07_Implementation`, run:
 python -m unittest discover -s tests -v
 ```
 
-The 12 tests cover manual calculations, the guide's final answers, a two-bus
+The 12 network/FBS tests cover manual calculations, the guide's final answers, a two-bus
 analytic solution, power balance, reversed lines, invalid inputs, injection
-signs and failure handling. An optional independent nodal-equation check is:
+signs and failure handling. Twenty-five additional simulation integration tests
+cover hourly BESS state, reserve, voltage, curtailment/shedding and failure handling, including a
+synthetic three-month run. An optional independent nodal-equation check is:
 
 ```bash
 python -m pip install -r Validation/requirements.txt
@@ -269,13 +299,16 @@ See [verification notes](../Validation/FBS_Verification_Notes.md) for numerical
 comparisons and the guide's tolerance/iteration-count discrepancy.
 
 Always check `result.converged` before accepting results. A failure result is
-diagnostic. Even a converged solution can violate voltage or thermal limits:
-this solver calculates power flow; later modules must evaluate feasibility.
+diagnostic. A converged solution can still violate voltage limits;
+`simulation.py` evaluates voltage/reserve feasibility. Thermal constraints are
+excluded from the first implementation scope.
 
 Current scope is a balanced, single-voltage radial feeder with series lines
 and constant-power injections. It does not model transformers, shunts,
-unbalanced phases, SOC dispatch, time series or optimization. The same solver
-can receive larger radial networks; an IEEE 33-bus builder is not yet included.
+unbalanced phases or optimization. Hourly SOC/profile integration is provided
+by `simulation.py`, outside the solver. The same solver
+can receive larger radial networks. `network_loader.py` now imports the supplied
+IEEE 33-bus Excel workbook into that same model without rewriting the solver.
 
 The software design authority remains
 [`TERM2_SOFTWARE_DESIGN_SPEC.md`](../../02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md).
