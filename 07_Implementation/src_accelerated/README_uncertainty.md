@@ -18,6 +18,27 @@ Expected demo output: 100 generated, 45 selected, with 15 best, 15 worst and
 15 random. Each case contains 24 future hours. It prints holdout errors for
 each bus. All demo inputs are synthetic; these numbers are not real study results.
 
+## Desktop scenario workflow and fallback
+
+The accelerated desktop UI no longer fits ARIMA inside every optimization.
+Use **Scenarios** to generate and save a scenario package first; uncertainty
+optimization consumes the selected active package. Each package includes the
+load/PV scenario CSV files, validation results, stress ranking, and a JSON
+manifest containing the model settings and selected scenario IDs.
+
+`UncertaintyConfig.model_mode` accepts:
+
+- `automatic` (default): retain ARIMA only when it converges and its holdout
+  RMSE improves on repeat-last-day; otherwise record and use the hourly
+  residual-bootstrap fallback;
+- `arima`: strict mode, retaining the previous stop-on-fit-failure behaviour;
+- `bootstrap`: skip ARIMA and sample historical deviations from each hourly
+  baseline.
+
+The fallback avoids presenting a failed ARIMA fit as successful. It is still a
+simple independent-residual model; it does not establish real forecast skill
+from synthetic history or preserve a formal multivariate probability model.
+
 For a 90-day/2,160-hour generation check:
 
 ```powershell

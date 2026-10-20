@@ -24,19 +24,25 @@ For irradiance conversion and synthetic demand, see
 For the desktop, its editable forms, input variables and test instructions, see
 [`ui.py` README](README_ui.md).
 
+The accelerated desktop also stores accepted studies in timestamped session
+folders. The **Scenarios** window generates or imports an inspectable saved
+scenario package before uncertainty optimization, while completed runs are
+automatically exported inside the same session.
+
 ## 1. Start here
 
 Use **Python 3.10 or newer**. Open a terminal in the repository root and run:
 
 ```bash
 cd 07_Implementation
-python -m pip install -r requirements.txt
-python -m src.main
+python -m pip install -r requirements-accelerated.txt
+python -m src_accelerated.main
 ```
 
-Run the command from `07_Implementation`, the folder containing `src`.
-Use `python -m src.main` because the modules use relative package imports.
-Running `python src/main.py` directly causes an import error.
+Run the command from `07_Implementation`, the folder containing
+`src_accelerated`. Use the module launcher because the package uses relative
+imports. Running `python src_accelerated/main.py` directly causes an import
+error.
 
 The current demo uses the guide's five-bus network with 180 kW PV at bus 4.
 Expected output includes approximately:
@@ -75,14 +81,17 @@ changes can occur if you change the convergence tolerance.
 | `results.py` | Formats summaries and exports existing results | Implemented; see README_results.md |
 | `ui.py` | Designer-backed PySide6 windows, timestamp selection and worker jobs | Implemented; see README_ui.md |
 | `ui_workflow.py` | Qt-free preparation/run orchestration and sizing catalogs | Implemented |
+| `study_session.py` | Creates reproducible input snapshots, logs and numbered run folders | Implemented |
+| `scenario_store.py` | Writes and reloads scenario CSV packages and their validation/ranking manifest | Implemented |
 | `dispatch.py` | User-configured net-load-target battery policy | Implemented |
 | `network_layout.py` | Longest-spine radial layout, feeder-wide branch balancing and layer-aware spacing | Implemented |
 | `network_diagram.py` | Single-line symbols, rotation, selectable buses and independent Properties/Results layers | Implemented |
 | `network_icons.py` | Palette-aware Fit and Zoom vector icons | Implemented |
 | `__init__.py` | Makes `src` a Python package | Present |
 
-The desktop has a separate optional `../requirements-ui.txt` dependency file;
-launch from the repo root with `python .\07_Implementation\examples\run_ui.py`.
+The accelerated desktop dependencies are in `../requirements-accelerated.txt`;
+launch from the repo root with
+`python .\07_Implementation\examples\run_accelerated_ui.py`.
 See `../Validation/Simulation_Test_Guide.md` for hourly examples and tests.
 
 ## 3. `network_model.py`: the static network

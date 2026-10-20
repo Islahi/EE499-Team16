@@ -1,0 +1,633 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ScenarioGeneratorDialog</class>
+ <widget class="QDialog" name="ScenarioGeneratorDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1060</width>
+    <height>760</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Scenario Generator</string>
+  </property>
+  <layout class="QVBoxLayout" name="layout_root">
+   <item>
+    <widget class="QLabel" name="lbl_scenario_intro">
+     <property name="text">
+      <string>Validate forecasting models, generate inspectable future scenarios, and save one reusable scenario package.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTabWidget" name="tabs_scenarios">
+     <property name="currentIndex">
+      <number>3</number>
+     </property>
+     <widget class="QWidget" name="tab_scenario_source">
+      <attribute name="title">
+       <string>1. Source Data</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="layout_source">
+       <item>
+        <widget class="QGroupBox" name="group_current_data">
+         <property name="title">
+          <string>Current Accepted Study</string>
+         </property>
+         <layout class="QFormLayout" name="form_current_data">
+          <item row="0" column="0">
+           <widget class="QLabel" name="lbl_source_network_title">
+            <property name="text">
+             <string>Network</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLabel" name="lbl_source_network">
+            <property name="text">
+             <string>Not loaded</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lbl_source_load_title">
+            <property name="text">
+             <string>Load history</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLabel" name="lbl_source_load">
+            <property name="text">
+             <string>Not loaded</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="lbl_source_pv_title">
+            <property name="text">
+             <string>PV history</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLabel" name="lbl_source_pv">
+            <property name="text">
+             <string>Not loaded</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="lbl_source_session_title">
+            <property name="text">
+             <string>Session folder</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QLabel" name="lbl_source_session">
+            <property name="text">
+             <string>Not created</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="group_forecast_period">
+         <property name="title">
+          <string>Forecast Period</string>
+         </property>
+         <layout class="QFormLayout" name="form_forecast_period">
+          <item row="0" column="0">
+           <widget class="QLabel" name="lbl_forecast_hours">
+            <property name="text">
+             <string>Forecast hours</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QSpinBox" name="spin_scenario_forecast_hours">
+            <property name="minimum">
+             <number>2</number>
+            </property>
+            <property name="maximum">
+             <number>100000</number>
+            </property>
+            <property name="value">
+             <number>2184</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lbl_validation_hours">
+            <property name="text">
+             <string>Validation hours</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QSpinBox" name="spin_scenario_validation_hours">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>10000</number>
+            </property>
+            <property name="value">
+             <number>168</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="spacer_source">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_scenario_model">
+      <attribute name="title">
+       <string>2. Forecast Model</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="layout_model">
+       <item>
+        <widget class="QGroupBox" name="group_forecast_method">
+         <property name="title">
+          <string>Forecast Method</string>
+         </property>
+         <layout class="QFormLayout" name="form_forecast_method">
+          <item row="0" column="0">
+           <widget class="QLabel" name="lbl_model_mode">
+            <property name="text">
+             <string>Method</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="combo_scenario_model">
+            <item>
+             <property name="text">
+              <string>Automatic — ARIMA with validated fallback</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>ARIMA only — stop on failure</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Hourly residual bootstrap</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lbl_model_explanation_title">
+            <property name="text">
+             <string>Automatic rule</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLabel" name="lbl_model_explanation">
+            <property name="text">
+             <string>Use ARIMA only when fitting converges and validation RMSE improves on repeat-last-day. Otherwise use hourly residual bootstrap.</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="group_arima_advanced">
+         <property name="title">
+          <string>Advanced ARIMA Order</string>
+         </property>
+         <layout class="QFormLayout" name="form_arima_order">
+          <item row="0" column="0">
+           <widget class="QLabel" name="lbl_ar_p">
+            <property name="text">
+             <string>AR terms (p)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QSpinBox" name="spin_arima_p">
+            <property name="maximum">
+             <number>10</number>
+            </property>
+            <property name="value">
+             <number>1</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lbl_ar_d">
+            <property name="text">
+             <string>Differencing (d)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QSpinBox" name="spin_arima_d">
+            <property name="maximum">
+             <number>3</number>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="lbl_ar_q">
+            <property name="text">
+             <string>MA terms (q)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QSpinBox" name="spin_arima_q">
+            <property name="maximum">
+             <number>10</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="lbl_arima_summary">
+         <property name="text">
+          <string>Default ARIMA(1,0,0) is AR(1) applied to deviations from the normal hourly profile.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="spacer_model">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_scenario_validation">
+      <attribute name="title">
+       <string>3. Validation</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="layout_validation">
+       <item>
+        <widget class="QLabel" name="lbl_validation_summary">
+         <property name="text">
+          <string>Generate scenarios to display per-series fitting and holdout validation results.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTableWidget" name="table_scenario_validation">
+         <property name="rowCount">
+          <number>0</number>
+         </property>
+         <property name="columnCount">
+          <number>6</number>
+         </property>
+         <column>
+          <property name="text">
+           <string>Series</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Method</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Fit status</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Model RMSE</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Naive RMSE</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Warnings / decision</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGraphicsView" name="view_validation_plot">
+         <property name="minimumSize">
+          <size><width>0</width><height>190</height></size>
+         </property>
+         <property name="toolTip">
+          <string>Holdout RMSE comparison: selected model versus repeat-last-day</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_scenario_generate">
+      <attribute name="title">
+       <string>4. Generate &amp; Inspect</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="layout_generate">
+       <item>
+        <widget class="QGroupBox" name="group_scenario_counts">
+         <property name="title">
+          <string>Generation and Selection</string>
+         </property>
+         <layout class="QGridLayout" name="grid_scenario_counts">
+          <item row="0" column="0">
+           <widget class="QLabel" name="lbl_generated_count">
+            <property name="text">
+             <string>Generated</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QSpinBox" name="spin_generator_count">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>10000</number>
+            </property>
+            <property name="value">
+             <number>100</number>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="lbl_best_count">
+            <property name="text">
+             <string>Best</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QSpinBox" name="spin_generator_best">
+            <property name="maximum">
+             <number>10000</number>
+            </property>
+            <property name="value">
+             <number>5</number>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="4">
+           <widget class="QLabel" name="lbl_worst_count">
+            <property name="text">
+             <string>Worst</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="5">
+           <widget class="QSpinBox" name="spin_generator_worst">
+            <property name="maximum">
+             <number>10000</number>
+            </property>
+            <property name="value">
+             <number>5</number>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="6">
+           <widget class="QLabel" name="lbl_random_count">
+            <property name="text">
+             <string>Random</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="7">
+           <widget class="QSpinBox" name="spin_generator_random">
+            <property name="maximum">
+             <number>10000</number>
+            </property>
+            <property name="value">
+             <number>5</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lbl_generation_seed">
+            <property name="text">
+             <string>Generation seed</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QSpinBox" name="spin_generator_seed">
+            <property name="maximum">
+             <number>2147483647</number>
+            </property>
+            <property name="value">
+             <number>42</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLabel" name="lbl_selection_seed">
+            <property name="text">
+             <string>Selection seed</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QSpinBox" name="spin_generator_selection_seed">
+            <property name="maximum">
+             <number>2147483647</number>
+            </property>
+            <property name="value">
+             <number>42</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="6" colspan="2">
+           <widget class="QPushButton" name="btn_generate_scenarios">
+            <property name="text">
+             <string>Generate Scenarios</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTableWidget" name="table_scenario_ranking">
+         <property name="rowCount">
+          <number>0</number>
+         </property>
+         <property name="columnCount">
+          <number>4</number>
+         </property>
+         <column>
+          <property name="text">
+           <string>Scenario</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Stress score</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Group</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Forecast hours</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGraphicsView" name="view_scenario_plot">
+         <property name="minimumSize">
+          <size><width>0</width><height>190</height></size>
+         </property>
+         <property name="toolTip">
+          <string>Selected scenario net-load profiles</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPlainTextEdit" name="text_scenario_preview">
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+         <property name="plainText">
+          <string>No generated scenarios. This preview will show selected cases, net-load ranges and fallback decisions.</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QProgressBar" name="progress_scenarios">
+     <property name="value">
+      <number>0</number>
+     </property>
+     <property name="format">
+      <string>%p%</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="lbl_scenario_status">
+     <property name="text">
+      <string>Ready</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPlainTextEdit" name="log_scenarios">
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="layout_actions">
+     <item>
+      <widget class="QPushButton" name="btn_import_scenarios">
+       <property name="text">
+        <string>Import Saved Set…</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer_actions">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_save_use_scenarios">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>Save &amp; Use in Main Program</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_close_scenarios">
+       <property name="text">
+        <string>Close</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -1,6 +1,6 @@
 # Project State
 
-**Last context update:** 2026-10-19
+**Last context update:** 2026-10-20
 
 ## Snapshot
 
@@ -20,6 +20,15 @@
 
 ## Current status
 
+- On 20 Oct 2026, the isolated `src_accelerated` desktop gained timestamped
+  study sessions and a separate four-tab **Scenarios** workflow. Accepted
+  network/profile inputs are snapshotted; generated sets can be validated,
+  ranked, saved as CSV/JSON packages, imported and activated before uncertainty
+  optimization. Automatic forecasting now rejects non-converged ARIMA fits and
+  ARIMA holdout RMSE that does not beat repeat-last-day, falling back to hourly
+  residual bootstrap. Simulation and optimization exports are numbered inside
+  the active session. This remains an accelerated experimental copy; independent
+  cross-bus residual correlation and real-data scenario validation are pending.
 - On 19 Oct 2026, six published radial feeder sources (10/12/15/22/33/69 buses)
   were downloaded from a pinned official MATPOWER 8.1 commit into
   `04_Research/Working_Data/Network_Data/Radial_Test_Systems/`. Sources are

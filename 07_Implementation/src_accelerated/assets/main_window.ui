@@ -124,6 +124,25 @@
          </widget>
         </item>
         <item>
+         <widget class="QPushButton" name="btn_scenarios">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>38</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Scenarios</string>
+          </property>
+          <property name="toolTip">
+           <string>Generate, validate, inspect or import a saved scenario set</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QPushButton" name="btn_settings">
           <property name="maximumSize">
            <size>

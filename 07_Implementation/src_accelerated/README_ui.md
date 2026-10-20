@@ -1,10 +1,31 @@
 # Desktop UI — `ui.py`
 
-The first desktop version connects your three editable Designer forms to the
+The desktop version connects four editable Designer forms to the
 existing program. It uses PySide6/Qt Widgets, not a web page. The compact network
 toolbar is editable in `assets/main_window.ui`; Python binds its controls and
 draws the icons. This update preserves the user's narrower sidebar and relocated
 log checkbox. `bess.py`, `data_loader.py` and source workbooks are unchanged.
+
+## Sessions and the Scenarios window
+
+After the Load Data dialog accepts a changed, validated input configuration,
+the UI creates `07_Implementation/Results/Sessions/<timestamp>_<network>/`.
+Its `inputs/` directory contains the network and the exact prepared load/PV
+profiles used by the program. `session.json` records provenance and
+`session.log` receives the same timestamped status messages shown in the UI.
+Reopening the unchanged accepted configuration reuses the active session.
+
+The main sidebar's **Scenarios** button opens the four-page scenario workflow:
+
+1. inspect the active source data and forecast/validation horizons;
+2. choose Automatic, strict ARIMA, or residual-bootstrap generation;
+3. inspect per-series fit status and holdout errors;
+4. generate, rank, save, import, and activate a reusable scenario set.
+
+Saved sets live under `scenarios/set_NNN/`. Simulation and optimization runs
+are automatically exported to `simulation/run_NNN/` and
+`optimization/run_NNN/`; the manual Export Result action remains available for
+an additional copy elsewhere. The Load Data form itself is unchanged.
 
 ## Install and run
 
@@ -12,13 +33,14 @@ From the repository root (`EE499-Team16`) in PowerShell:
 
 ```powershell
 python -m pip install -r .\07_Implementation\requirements-ui.txt
-python .\07_Implementation\examples\run_ui.py
+python .\07_Implementation\examples\run_accelerated_ui.py
 ```
 
-Alternatively, from `07_Implementation`, run `python -m src.ui`.
-Do not run `python src/ui.py` directly: package-relative imports need the module
-launcher. The optional Qt requirements are separate; backend scripts/tests do
-not require Qt. The desktop dependency range currently targets Python 3.10–3.14.
+Alternatively, from `07_Implementation`, run `python -m src_accelerated.ui`.
+Do not run `python src_accelerated/ui.py` directly: package-relative imports
+need the module launcher. Install `requirements-accelerated.txt` instead when
+Numba support is also required. The desktop dependency range currently targets
+Python 3.10–3.14.
 
 ## 1. Load Data
 
@@ -270,11 +292,13 @@ settings clear earlier results so they cannot be exported as a new run.
 | `network_diagram.py` | Bus/line selection, wheel-zoom view, symbols, rotation and annotation layers |
 | `network_icons.py` | Palette-aware Fit and Zoom vector icons, including disabled states |
 | `ui_workflow.py` | Qt-free data preparation, run settings and public backend orchestration |
+| `study_session.py` | Accepted-input snapshots, session manifest/log and numbered run folders |
+| `scenario_store.py` | Scenario CSV/JSON package writing and selected-set loading |
 | `progress.py` | Qt-free counters, throttled nested snapshots and duration formatting |
 | `dispatch.py` | User-configured net-load-target operating policy |
 | `network_layout.py` | Qt-free global branch balancing, connection-driven bars and layer-aware spacing |
 | `assets/*.ui` | Your editable Designer layouts; not generated Python |
-| `../examples/run_ui.py` | Launcher independent of working directory |
+| `../examples/run_accelerated_ui.py` | Accelerated UI launcher independent of working directory |
 
 The submitted sidebar is `frame_action` (singular), which is supported. The
 study start is `QDateEdit`, which is supported as midnight. Python extends the
@@ -336,8 +360,9 @@ Also test these interactively on your Windows display:
 3. Enable a manual battery and target dispatch; inspect changed output and SOC.
    Try invalid SOC/efficiency or unset sizes and verify useful errors.
 4. Apply settings, edit them, then Cancel; confirm the applied values remain.
-5. Run a small configured optimization; enable uncertainty only after that
-   works. Confirm the Results forecast dates when uncertainty is enabled.
+5. Run a small deterministic optimization first. Then create and activate a
+   small saved set through **Scenarios**, enable the saved-set option, and
+   confirm that Results reports the scenario forecast dates.
 6. Export to a new folder, then try it again; the first export must remain
    untouched. Change inputs and confirm old results/export are cleared.
 7. Resize at your usual Windows scaling, inspect all five Settings pages, and

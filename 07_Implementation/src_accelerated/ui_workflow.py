@@ -47,6 +47,8 @@ class PreparedStudy:
     profiles: ProfileData
     request: DataRequest
     context: dict[str, str]
+    scenarios: object | None = None
+    scenario_path: Path | None = None
 
 
 @dataclass
@@ -258,19 +260,15 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
     evaluator.progress = progress
     profiles = study.profiles
     if values["group_uncertainty"]:
-        from .uncertainty import UncertaintyConfig, SelectionConfig, ScenarioEvaluator, generate_scenarios, select_scenarios
-        stage("Fitting ARIMA and generating scenarios")
-        ratings = {bus: sum(unit.p_rated_kw for unit in study.network.pv_units if unit.bus_id == bus) for bus in profiles.pv_p_kw}
-        generated = generate_scenarios(profiles, UncertaintyConfig(
-            forecast_hours=values["spin_forecast_hours"], pv_capacity_kw=ratings,
-            scenario_count=values["spin_scenario_count"], seed=values["spin_uncertainty_seed"]), progress=progress)
-        stage("Selecting stress scenarios")
-        profiles = select_scenarios(generated, SelectionConfig(
-            best_count=values["spin_best_count"], worst_count=values["spin_worst_count"],
-            random_count=values["spin_random_count"], seed=values["spin_selection_seed"]))
+        from .uncertainty import ScenarioEvaluator
+        if study.scenarios is None:
+            raise ValueError("No active scenario set. Open Scenarios, generate or import a set, then use it in the main program")
+        stage("Loading active saved scenario set")
+        profiles = study.scenarios
         evaluator = ScenarioEvaluator(evaluator, progress=progress)
         scenario_times = profiles.scenarios[0].profiles.timestamps
         context["Forecast interval"] = f"{scenario_times[0]} through {scenario_times[-1]}; equal-weight stress portfolio"
+        context["Scenario set"] = str(study.scenario_path)
     context["Search catalogs"] = f"Power {bounds.power_ratings_kw}; energy {bounds.energy_capacities_kwh}; endpoint-inclusive grid"
     context["Compute backend"] = (
         f"{settings.simulation.fbs_config.backend}; "
@@ -286,3 +284,12 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
 def export_report(report: RunReport, path, stage=lambda message: None):
     stage("Exporting retained results")
     return export_results(report.result, path, metrics=report.metrics, context=report.context)
+
+
+def run_and_export(study, settings, optimization, output_path,
+                   stage=lambda message: None, progress=None):
+    """Run once and save the retained result inside the active session."""
+    report = run_study(study, settings, optimization, stage=stage, progress=progress)
+    stage("Saving run in active session")
+    export_results(report.result, output_path, metrics=report.metrics, context=report.context)
+    return report

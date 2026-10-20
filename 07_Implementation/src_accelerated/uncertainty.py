@@ -36,6 +36,7 @@ class UncertaintyConfig:
     seed: int = 42
     arima_order: tuple[int, int, int] = (1, 0, 0)
     validation_hours: int = 24
+    model_mode: str = "automatic"
 
     def __post_init__(self):
         _check_integer(self.forecast_hours, "forecast_hours", 2)
@@ -47,6 +48,8 @@ class UncertaintyConfig:
             raise ValueError("arima_order must contain p, d and q")
         for value in self.arima_order:
             _check_integer(value, "ARIMA order")
+        if self.model_mode not in ("automatic", "arima", "bootstrap"):
+            raise ValueError("model_mode must be automatic, arima or bootstrap")
         self.pv_capacity_kw = dict(self.pv_capacity_kw)
         for bus_id, capacity in self.pv_capacity_kw.items():
             _check_integer(bus_id, "PV bus ID")
@@ -135,6 +138,9 @@ class _SeriesModel:
     fitted: object
     capacity_kw: float | None
     fit_warnings: list[str]
+    residual_pool: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))
+    model_name: str = "ARIMA"
+    fit_status: str = "converged"
 
     def restore(self, residuals, times):
         hours = np.array([pd.Timestamp(time).hour for time in times])
@@ -151,7 +157,7 @@ class _SeriesModel:
         return values
 
 
-def _fit_series(p_values, q_values, times, order, capacity_kw):
+def _series_parts(p_values, q_values, times):
     hours = np.array([pd.Timestamp(time).hour for time in times])
     active = np.asarray(p_values, dtype=float)
     reactive = np.asarray(q_values, dtype=float)
@@ -168,6 +174,26 @@ def _fit_series(p_values, q_values, times, order, capacity_kw):
         raise ValueError("Historical hourly Q/P ratios are not finite")
     scale = max(float(active.mean()), 1.0)
     residuals = (active - hourly_p[hours]) / scale
+    return active, hourly_p, hourly_q_ratio, scale, residuals
+
+
+def _bootstrap_series(p_values, q_values, times, capacity_kw, warning=""):
+    active, hourly_p, hourly_q_ratio, scale, residuals = _series_parts(
+        p_values, q_values, times,
+    )
+    warnings_list = [warning] if warning else []
+    return _SeriesModel(
+        hourly_p=hourly_p, hourly_q_ratio=hourly_q_ratio, scale=scale,
+        fitted=None, capacity_kw=capacity_kw, fit_warnings=warnings_list,
+        residual_pool=np.asarray(residuals, dtype=float),
+        model_name="hourly_residual_bootstrap", fit_status="fallback",
+    )
+
+
+def _fit_series(p_values, q_values, times, order, capacity_kw):
+    active, hourly_p, hourly_q_ratio, scale, residuals = _series_parts(
+        p_values, q_values, times,
+    )
     fitted = None
     fit_warnings = []
     if np.max(np.abs(residuals)) > 1e-10:
@@ -179,7 +205,27 @@ def _fit_series(p_values, q_values, times, order, capacity_kw):
             raise ValueError("ARIMA fit did not converge; check data or change arima_order")
         if not np.isfinite(fitted.params).all():
             raise ValueError("ARIMA fitted non-finite parameters")
-    return _SeriesModel(hourly_p, hourly_q_ratio, scale, fitted, capacity_kw, fit_warnings)
+    model_name = "ARIMA" if fitted is not None else "deterministic_hourly_pattern"
+    return _SeriesModel(
+        hourly_p=hourly_p, hourly_q_ratio=hourly_q_ratio, scale=scale,
+        fitted=fitted, capacity_kw=capacity_kw, fit_warnings=fit_warnings,
+        residual_pool=np.asarray(residuals, dtype=float), model_name=model_name,
+        fit_status="converged" if fitted is not None else "not_required",
+    )
+
+
+def _fit_with_mode(p_values, q_values, times, order, capacity_kw, mode):
+    if mode == "bootstrap":
+        return _bootstrap_series(p_values, q_values, times, capacity_kw)
+    try:
+        return _fit_series(p_values, q_values, times, order, capacity_kw)
+    except ValueError as error:
+        if mode == "arima":
+            raise
+        return _bootstrap_series(
+            p_values, q_values, times, capacity_kw,
+            f"ARIMA rejected: {error}; using hourly residual bootstrap",
+        )
 
 
 def _forecast_series(model, times):
@@ -250,33 +296,50 @@ def generate_scenarios(history: ProfileData, config: UncertaintyConfig, *, progr
                 progress(ProgressEvent("ARIMA", fit_completed, fit_total,
                                        f"{kind} bus {bus_id}: fitting training history", True))
             try:
-                training_model = _fit_series(
+                training_model = _fit_with_mode(
                     p_values[:training_count], q_values[:training_count],
                     history.timestamps[:training_count], config.arima_order, capacity,
+                    config.model_mode,
                 )
             except ValueError as error:
                 raise ValueError(f"ARIMA {kind} bus {bus_id}, training fit: {error}") from error
             fit_completed += 1
             prediction = _forecast_series(training_model, holdout_times)
             naive = [p_values[training_count - 24 + i % 24] for i in range(len(holdout_times))]
+            arima_errors = _forecast_errors(p_values[training_count:], prediction)
+            naive_errors = _forecast_errors(p_values[training_count:], naive)
+            if (config.model_mode == "automatic" and training_model.model_name == "ARIMA"
+                    and arima_errors["rmse_kw"] >= naive_errors["rmse_kw"]):
+                training_model = _bootstrap_series(
+                    p_values[:training_count], q_values[:training_count],
+                    history.timestamps[:training_count], capacity,
+                    "ARIMA validation RMSE did not improve on repeat-last-day; using hourly residual bootstrap",
+                )
+                prediction = _forecast_series(training_model, holdout_times)
+                arima_errors = _forecast_errors(p_values[training_count:], prediction)
             validation[kind][bus_id] = {
-                "arima": _forecast_errors(p_values[training_count:], prediction),
-                "repeat_last_day": _forecast_errors(p_values[training_count:], naive),
+                "arima": arima_errors,
+                "repeat_last_day": naive_errors,
                 "training_warnings": training_model.fit_warnings,
             }
             if progress is not None:
                 progress(ProgressEvent("ARIMA", fit_completed, fit_total,
                                        f"{kind} bus {bus_id}: fitting full history", True))
             try:
-                model = _fit_series(p_values, q_values, history.timestamps, config.arima_order, capacity)
+                full_mode = "bootstrap" if training_model.model_name == "hourly_residual_bootstrap" else config.model_mode
+                model = _fit_with_mode(
+                    p_values, q_values, history.timestamps, config.arima_order,
+                    capacity, full_mode,
+                )
             except ValueError as error:
                 raise ValueError(f"ARIMA {kind} bus {bus_id}, full-history fit: {error}") from error
             fit_completed += 1
             forecasts[kind][bus_id] = _forecast_series(model, future_times).tolist()
             ratios[kind][bus_id] = [float(model.hourly_q_ratio[time.hour]) for time in future_times]
             models[kind][bus_id] = {
-                "model": "ARIMA" if model.fitted is not None else "deterministic_hourly_pattern",
-                "order": config.arima_order, "warnings": model.fit_warnings,
+                "model": model.model_name, "fit_status": model.fit_status,
+                "order": config.arima_order,
+                "warnings": sorted(set(training_model.fit_warnings + model.fit_warnings)),
             }
             residual_paths = np.zeros((config.forecast_hours, config.scenario_count))
             if model.fitted is not None:
@@ -285,6 +348,12 @@ def generate_scenarios(history: ProfileData, config: UncertaintyConfig, *, progr
                     repetitions=config.scenario_count, random_state=rng,
                 )
                 residual_paths = np.asarray(simulated).reshape(config.forecast_hours, config.scenario_count)
+            elif model.model_name == "hourly_residual_bootstrap" and model.residual_pool.size:
+                residual_paths = rng.choice(
+                    model.residual_pool,
+                    size=(config.forecast_hours, config.scenario_count),
+                    replace=True,
+                )
             paths[kind][bus_id] = [model.restore(residual_paths[:, i], future_times).tolist()
                                    for i in range(config.scenario_count)]
     if progress is not None:
@@ -311,7 +380,8 @@ def generate_scenarios(history: ProfileData, config: UncertaintyConfig, *, progr
         "history_hours": len(history.timestamps), "forecast_hours": config.forecast_hours,
         "scenario_count": config.scenario_count, "arima_order": config.arima_order,
         "pv_capacity_kw": dict(config.pv_capacity_kw),
-        "validation_hours": config.validation_hours, "validation": validation,
+        "validation_hours": config.validation_hours, "model_mode": config.model_mode,
+        "validation": validation,
         "forecast_p_kw": forecasts, "models": models,
         "assumptions": ["Independent innovations between buses and between load/PV",
                         "Hourly historical Q/P ratios; fixed historical PV daylight hours",
