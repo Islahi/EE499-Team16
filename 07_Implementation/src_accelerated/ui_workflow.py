@@ -76,10 +76,21 @@ class RunReport:
 
 
 @dataclass
+class StaticResultStep:
+    """One displayable electrical snapshot for the static base-case run."""
+    timestamp: str
+    operating_point: OperatingPoint
+    power_flow: object
+    shedding_by_bus_kw: dict[int, float]
+    curtailment_by_bus_kw: dict[int, float]
+
+
+@dataclass
 class BaseCaseReport:
     """Static, one-sweep feeder check using the network's original base values."""
     result: object
     context: dict[str, str]
+    step: object
     metrics: object = None
 
     def summary(self, detailed=False):
@@ -301,7 +312,7 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
 
 
 def run_base_case(study: PreparedStudy, settings: RunSettings, stage=lambda message: None, progress=None):
-    """Run original network base loads, installed PV ratings, and no BESS."""
+    """Run one static FBS snapshot with original load/PV and inactive BESS."""
     stage("Running static base-case FBS")
     ids = [bus.bus_id for bus in study.network.buses]
     loads = {bus_id: [load for load in study.network.loads if load.bus_id == bus_id] for bus_id in ids}
@@ -313,9 +324,16 @@ def run_base_case(study: PreparedStudy, settings: RunSettings, stage=lambda mess
         {bus_id: 0.0 for bus_id in ids}, {bus_id: 0.0 for bus_id in ids}, {bus_id: 0.0 for bus_id in ids},
     )
     result = run_fbs(study.network, point, settings.simulation.fbs_config, progress=progress)
-    context = {"Network": study.context["Network"], "Case definition": "Original base loads + installed PV ratings; no BESS", "Compute backend": settings.simulation.fbs_config.backend,
+    context = {"Network": study.context["Network"], "Case definition": "Static base loads + installed PV ratings; BESS inactive (0 kW)", "Compute backend": settings.simulation.fbs_config.backend,
                "PV installations": study.context["PV ratings (kW)"]}
-    return BaseCaseReport(result, context)
+    step = StaticResultStep(
+        timestamp="Static base case",
+        operating_point=point,
+        power_flow=result,
+        shedding_by_bus_kw={bus_id: 0.0 for bus_id in ids},
+        curtailment_by_bus_kw={bus_id: 0.0 for bus_id in ids},
+    )
+    return BaseCaseReport(result, context, step)
 
 
 def export_report(report: RunReport, path, stage=lambda message: None):

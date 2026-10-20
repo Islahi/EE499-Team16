@@ -30,7 +30,10 @@ from .optimizer import BESSParameters, OptimizationResult
 from .simulation import SimulationConfig, TimeSeriesSimulationResult
 from .progress import StageReporter, format_duration
 from .study_session import StudySession, study_fingerprint
-from .ui_workflow import DataRequest, RunSettings, prepare_study, run_and_export, run_base_case_and_export, size_catalog
+from .ui_workflow import (
+    BaseCaseReport, DataRequest, RunSettings, prepare_study, run_and_export,
+    run_base_case_and_export, size_catalog,
+)
 
 
 ASSETS = Path(__file__).resolve().parent / "assets"
@@ -589,12 +592,15 @@ class ScenarioGeneratorDialog(QDialog):
         self.runner = JobRunner(self)
         widget(self, "tabs_scenarios").setCurrentIndex(0)
         widget(self, "log_scenarios").setMaximumBlockCount(3000)
-        self.validation_scene = QGraphicsScene(self)
         self.scenario_scene = QGraphicsScene(self)
-        widget(self, "view_validation_plot").setScene(self.validation_scene)
         widget(self, "view_scenario_plot").setScene(self.scenario_scene)
-        for name in ("view_validation_plot", "view_scenario_plot"):
+        for name in ("view_scenario_plot",):
             widget(self, name).setRenderHint(QPainter.RenderHint.Antialiasing)
+        tabs = widget(self, "tabs_scenarios")
+        validation_tab = widget(self, "tab_scenario_validation")
+        validation_index = tabs.indexOf(validation_tab)
+        if validation_index >= 0:
+            tabs.removeTab(validation_index)
         self.show_sources()
         self.connect_events()
 
@@ -928,10 +934,7 @@ class ScenarioGeneratorDialog(QDialog):
         )
 
     def fit_scenario_plots(self):
-        for view_name, scene in (
-            ("view_validation_plot", self.validation_scene),
-            ("view_scenario_plot", self.scenario_scene),
-        ):
+        for view_name, scene in (("view_scenario_plot", self.scenario_scene),):
             if scene.items():
                 widget(self, view_name).fitInView(
                     scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio,
@@ -977,15 +980,13 @@ class ScenarioGeneratorDialog(QDialog):
         if self.pending_action == "generate":
             self.generated, self.selected = result
             self.imported_path = None
-            self.populate_validation(self.generated.metadata)
             self.populate_scenarios()
-            widget(self, "tabs_scenarios").setCurrentWidget(widget(self, "tab_scenario_validation"))
+            widget(self, "tabs_scenarios").setCurrentWidget(widget(self, "tab_scenario_generate"))
             QTimer.singleShot(0, self.fit_scenario_plots)
-            self.show_stage("Scenario generation completed; inspect validation before saving")
+            self.show_stage("Scenario generation completed; save the generated CSV files when ready")
         elif self.pending_action == "import":
             self.selected, manifest, self.imported_path = result
             self.generated = None
-            self.populate_validation(manifest.get("generation", {}))
             self.populate_scenarios()
             self.show_stage(f"Imported saved scenario set from {self.imported_path}")
             QTimer.singleShot(0, self.fit_scenario_plots)
@@ -1019,7 +1020,7 @@ class ScenarioGeneratorDialog(QDialog):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        if hasattr(self, "validation_scene"):
+        if hasattr(self, "scenario_scene"):
             QTimer.singleShot(0, self.fit_scenario_plots)
 
 
@@ -1072,6 +1073,8 @@ class MainWindow(QMainWindow):
         view = widget(self, "network_view")
         view.setScene(self.scene)
         view.setRenderHint(QPainter.RenderHint.Antialiasing)
+        # The compact sidebar is for actions; detailed source status belongs in dialogs/logs.
+        widget(self, "lbl_data_status").hide()
         self.add_network_controls()
         widget(self, "run_log").setMaximumBlockCount(5000)
         self.connect_events()
@@ -1120,6 +1123,8 @@ class MainWindow(QMainWindow):
     def simulation_steps(self):
         if self.report and isinstance(self.report.result, TimeSeriesSimulationResult):
             return self.report.result.steps
+        if isinstance(self.report, BaseCaseReport):
+            return [self.report.step]
         return []
 
     def selected_step(self):
@@ -1145,10 +1150,10 @@ class MainWindow(QMainWindow):
             bess_bus=bess_bus, show_properties=widget(self, "chk_network_properties").isChecked(),
             step=step, bess_ratings=bess_ratings)
         if step is None:
-            self.diagram_status.setText("Result labels hidden" if self.simulation_steps() else "No retained hourly simulation results")
+            self.diagram_status.setText("Result labels hidden" if self.simulation_steps() else "No retained network results")
         else:
             state = "converged" if step.power_flow.converged else "NOT CONVERGED — calculated labels suppressed"
-            self.diagram_status.setText(f"Source clock: {step.timestamp} — {state}; BESS + discharge / − charge; line P/Q source-rooted")
+            self.diagram_status.setText(f"{step.timestamp} — {state}; BESS + discharge / − charge; line P/Q source-rooted")
         self.diagram_status.setVisible(step is not None)
 
     def rotate_network(self):
@@ -1188,7 +1193,7 @@ class MainWindow(QMainWindow):
     def choose_result_timestamp(self):
         steps = self.simulation_steps()
         if not steps or self.runner.busy:
-            self.statusBar().showMessage("Run Simulation first; optimization summaries do not retain hourly network results.")
+            self.statusBar().showMessage("Run Simulation or Base-Case FBS first; optimization summaries do not retain network results.")
             return False
         index = self.result_index if self.result_index is not None else len(steps) - 1
         dialog = TimestampDialog(steps, index, self)
@@ -1270,7 +1275,7 @@ class MainWindow(QMainWindow):
                            or study_fingerprint(next_study) != self.session.manifest["fingerprint"])
             if new_session:
                 self.session = StudySession.create(
-                    next_study, REPO / "07_Implementation" / "Results",
+                    next_study, Path(__file__).resolve().parent / "Results",
                 )
             elif self.study is not None:
                 next_study.scenarios = self.study.scenarios

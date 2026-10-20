@@ -214,11 +214,11 @@ class NetworkScene(QGraphicsScene):
             label.setToolTip(branch.toolTip())
             lines = []
             if show_properties:
-                lines.append(f"R {line.r_ohm:g} Ω; X {line.x_ohm:g} Ω")
+                lines.append(f"{line_text}: R {line.r_ohm:g} Ω; X {line.x_ohm:g} Ω")
             if step is not None:
                 if good_result:
                     flow = step.power_flow
-                    lines.extend((f"P {flow.branch_p_kw[line.line_id]:.2f} kW; Q {flow.branch_q_kvar[line.line_id]:.2f} kvar",
+                    lines.extend((f"{line_text}: P {flow.branch_p_kw[line.line_id]:.2f} kW; Q {flow.branch_q_kvar[line.line_id]:.2f} kvar",
                                   f"I {flow.branch_current_a[line.line_id]:.2f} A; loss {flow.line_loss_p_kw[line.line_id]:.3f} kW"))
                 else:
                     lines.append("Result unavailable: power flow did not converge")
@@ -279,15 +279,14 @@ class NetworkScene(QGraphicsScene):
             node.setRect(node.rect().united(node.childrenBoundingRect()))
             inputs, outputs = [], []
             if show_properties:
-                inputs = [f"Base {bus.base_kv:g} kV",
-                          f"Load {sum(l.p_base_kw for l in loads):g} kW / {sum(l.q_base_kvar for l in loads):g} kvar",
+                inputs = [f"B{bus_id}: Load {sum(l.p_base_kw for l in loads):g} kW / {sum(l.q_base_kvar for l in loads):g} kvar",
                           f"PV rating {sum(u.p_rated_kw for u in units):g} kW"]
                 if bus_id == bess_bus and bess_ratings is not None:
                     inputs.append(f"BESS {bess_ratings[0]:g} kW / {bess_ratings[1]:g} kWh")
             if step is not None:
                 if good_result:
                     op = step.operating_point
-                    outputs = [f"V {step.power_flow.voltage_mag_pu[bus_id]:.5f} pu",
+                    outputs = [f"B{bus_id}: V {step.power_flow.voltage_mag_pu[bus_id]:.5f} pu",
                                f"Served load {op.p_load_kw[bus_id]:.2f} kW / {op.q_load_kvar[bus_id]:.2f} kvar",
                                f"PV {op.p_pv_kw[bus_id]:.2f} kW; BESS {op.p_bess_kw[bus_id]:.2f} kW"]
                     shed = step.shedding_by_bus_kw
