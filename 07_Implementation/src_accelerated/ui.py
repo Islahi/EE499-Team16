@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QApplication, QComboBox, QDateTimeEdit, QDialog, QDialogButtonBox,
     QDoubleSpinBox, QFileDialog, QFormLayout, QGraphicsScene,
     QGroupBox, QLabel, QListWidgetItem, QMainWindow, QMessageBox,
-    QSpinBox, QTableWidgetItem, QVBoxLayout, QWidget,
+    QPushButton, QSpinBox, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
 from .bess import BESSConfig
@@ -30,10 +30,7 @@ from .optimizer import BESSParameters, OptimizationResult
 from .simulation import SimulationConfig, TimeSeriesSimulationResult
 from .progress import StageReporter, format_duration
 from .study_session import StudySession, study_fingerprint
-from .ui_workflow import (
-    DataRequest, RunSettings, export_report, prepare_study, run_and_export,
-    size_catalog,
-)
+from .ui_workflow import DataRequest, RunSettings, prepare_study, run_and_export, run_base_case_and_export, size_catalog
 
 
 ASSETS = Path(__file__).resolve().parent / "assets"
@@ -393,12 +390,14 @@ class SettingsDialog(QDialog):
             combo.addItem("Python reference (CPU)", "python")
             combo.addItem("NumPy arrays (CPU)", "numpy")
             combo.addItem("Numba compiled (CPU)", "numba")
-            combo.addItem("CuPy CUDA (GPU, experimental)", "gpu")
             layout.addRow("Power-flow backend", combo)
+            logical_threads = max(1, os.cpu_count() or 1)
+            layout.addRow("Logical CPU threads", QLabel(str(logical_threads), group))
+            layout.addRow("Recommended GWO workers", QLabel(str(max(1, logical_threads - 1)), group))
             workers = QSpinBox(group)
             workers.setObjectName("spin_cpu_workers")
-            workers.setRange(1, max(1, os.cpu_count() or 1))
-            workers.setValue(1)
+            workers.setRange(1, logical_threads)
+            workers.setValue(max(1, logical_threads - 1))
             workers.setKeyboardTracking(False)
             layout.addRow("GWO CPU workers", workers)
             status = QLabel(group)
@@ -406,32 +405,55 @@ class SettingsDialog(QDialog):
             status.setWordWrap(True)
             layout.addRow(status)
             widget(self, "contents_optimization").layout().insertWidget(0, group)
+        if self.findChild(QWidget, "btn_select_all_buses") is None:
+            controls = QWidget(self)
+            controls.setObjectName("panel_allowed_bus_actions")
+            layout = QFormLayout(controls)
+            select_all = QPushButton("Select all eligible buses", controls)
+            select_all.setObjectName("btn_select_all_buses")
+            clear = QPushButton("Clear selection", controls)
+            clear.setObjectName("btn_clear_allowed_buses")
+            count = QLabel("0 eligible buses selected", controls)
+            count.setObjectName("lbl_allowed_bus_count")
+            layout.addRow(select_all, clear)
+            layout.addRow("Selection", count)
+            parent_layout = widget(self, "contents_optimization").layout()
+            parent_layout.insertWidget(1, controls)
+            select_all.clicked.connect(self.select_all_allowed_buses)
+            clear.clicked.connect(self.clear_allowed_buses)
+            widget(self, "list_allowed_buses").itemSelectionChanged.connect(self.update_allowed_bus_count)
         widget(self, "lbl_optimization_status").setText("Endpoint-inclusive min/max/step grid; generic study sizes, not supplier products.")
-        scenario_group = widget(self, "group_uncertainty")
-        scenario_group.setTitle("Use active saved scenario set")
-        scenario_form = scenario_group.layout()
-        for name in (
-            "spin_forecast_hours", "spin_scenario_count", "spin_best_count",
-            "spin_worst_count", "spin_random_count", "spin_uncertainty_seed",
-            "spin_selection_seed",
-        ):
-            scenario_form.setRowVisible(widget(self, name), False)
-        widget(self, "lbl_uncertainty_note").setText(
-            "Create or import the active set with the Scenarios button. Optimization "
-            "reuses that saved set and does not fit ARIMA during the run."
-        )
+        pages = widget(self, "list_settings_pages")
+        stack = widget(self, "stack_settings_pages")
+        uncertainty_page = widget(self, "page_uncertainty")
+        uncertainty_index = stack.indexOf(uncertainty_page)
+        if uncertainty_index >= 0:
+            stack.removeWidget(uncertainty_page)
+            pages.takeItem(uncertainty_index)
+
+    def select_all_allowed_buses(self):
+        choices = widget(self, "list_allowed_buses")
+        for index in range(choices.count()):
+            choices.item(index).setSelected(True)
+        self.update_allowed_bus_count()
+
+    def clear_allowed_buses(self):
+        widget(self, "list_allowed_buses").clearSelection()
+        self.update_allowed_bus_count()
+
+    def update_allowed_bus_count(self):
+        choices = widget(self, "list_allowed_buses")
+        widget(self, "lbl_allowed_bus_count").setText(
+            f"{len(choices.selectedItems())} of {choices.count()} eligible buses selected")
 
     def update_compute_status(self):
         backend = widget(self, "combo_compute_backend").currentData()
         available, reason = backend_available(backend)
         workers = widget(self, "spin_cpu_workers")
-        workers.setEnabled(backend != "gpu")
-        if backend == "gpu":
-            workers.setValue(1)
         status = backend_status()
         prefix = "Ready" if available else "Unavailable"
         widget(self, "lbl_compute_status").setText(
-            f"{prefix}: {reason}. Detected: Numba {status['numba']}; GPU {status['gpu']}."
+            f"{prefix}: {reason}. Detected: Numba {status['numba']}; CPU workers run GWO."
         )
 
     def update_dispatch(self):
@@ -484,11 +506,14 @@ class SettingsDialog(QDialog):
         combo.clear()
         choices.clear()
         for bus in sorted(network.buses, key=lambda item: item.bus_id):
-            combo.addItem(f"Bus {bus.bus_id}", bus.bus_id)
-            item = QListWidgetItem(f"Bus {bus.bus_id}")
+            combo.addItem(f"B{bus.bus_id}", bus.bus_id)
+            if bus.is_slack:
+                continue
+            item = QListWidgetItem(f"B{bus.bus_id}")
             item.setData(Qt.ItemDataRole.UserRole, bus.bus_id)
             choices.addItem(item)
         self.restore_values()
+        self.update_allowed_bus_count()
 
     def read_settings(self, optimization=False):
         values = self.capture_values()
@@ -496,8 +521,6 @@ class SettingsDialog(QDialog):
         available, reason = backend_available(backend)
         if not available:
             raise ValueError(f"Selected compute backend is unavailable: {reason}")
-        if backend == "gpu" and values["spin_cpu_workers"] != 1:
-            raise ValueError("The current CUDA backend requires one CPU worker; multi-GPU scheduling is not implemented")
         simulation = SimulationConfig(
             voltage_min_pu=values["spin_voltage_min_pu"], voltage_max_pu=values["spin_voltage_max_pu"],
             reserve_fraction=values["spin_reserve_percent"] / 100 if values["group_reserve"] else 0,
@@ -1226,8 +1249,8 @@ class MainWindow(QMainWindow):
         widget(self, "btn_scenarios").clicked.connect(self.open_scenarios)
         widget(self, "btn_settings").clicked.connect(self.open_settings)
         widget(self, "btn_run_simulation").clicked.connect(self.run_simulation)
+        widget(self, "btn_run_base_case").clicked.connect(self.run_base_case)
         widget(self, "btn_run_optimization").clicked.connect(self.run_optimization)
-        widget(self, "btn_export_results").clicked.connect(self.export_results)
         widget(self, "btn_zoom_in").clicked.connect(self.zoom_in)
         widget(self, "btn_zoom_out").clicked.connect(self.zoom_out)
         widget(self, "btn_fit_network").clicked.connect(self.fit_network)
@@ -1249,9 +1272,6 @@ class MainWindow(QMainWindow):
                 self.session = StudySession.create(
                     next_study, REPO / "07_Implementation" / "Results",
                 )
-                uncertainty_group = widget(self.settings_dialog, "group_uncertainty")
-                uncertainty_group.setChecked(False)
-                self.settings_dialog.committed["group_uncertainty"] = False
             elif self.study is not None:
                 next_study.scenarios = self.study.scenarios
                 next_study.scenario_path = self.study.scenario_path
@@ -1271,9 +1291,6 @@ class MainWindow(QMainWindow):
             return
         dialog = ScenarioGeneratorDialog(self.study, self.session, self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            uncertainty_group = widget(self.settings_dialog, "group_uncertainty")
-            uncertainty_group.setChecked(True)
-            self.settings_dialog.committed["group_uncertainty"] = True
             self.invalidate_results("Active scenario set changed; previous results cleared.")
             widget(self, "lbl_data_status").setText(
                 f"{len(self.study.network.buses)} buses; {len(self.study.profiles.timestamps)} hourly steps\n"
@@ -1309,7 +1326,6 @@ class MainWindow(QMainWindow):
         widget(self, "lbl_line_details").clear()
         self.show_detail_rows(False)
         widget(self, "group_bus_details").setTitle("Selected Element")
-        widget(self, "btn_export_results").setEnabled(False)
         widget(self, "btn_result_details").setEnabled(False)
         self.append_log(message)
         self.set_busy(self.runner.busy)
@@ -1320,10 +1336,32 @@ class MainWindow(QMainWindow):
     def run_optimization(self):
         self.start_run(True)
 
+    def run_base_case(self):
+        if self.study is None or self.runner.busy:
+            return
+        try:
+            self.settings_dialog.restore_values()
+            settings = self.settings_dialog.read_settings(optimization=False)
+            self.pending_action = "run"
+            self.pending_base_case = True
+            self.pending_run_optimization = False
+            self.pending_run_output = self.session.next_path("base_case", "run")
+            self.invalidate_results("Static base-case FBS started; earlier results cleared.")
+            self.run_started = perf_counter()
+            self.last_worker_update = self.run_started
+            self.last_progress_log = self.run_started
+            self.last_heartbeat = self.run_started
+            self.run_elapsed_seconds = 0.0
+            self.run_clock.start()
+            self.runner.start(partial(run_base_case_and_export, deepcopy(self.study), deepcopy(settings), self.pending_run_output))
+        except ValueError as error:
+            self.show_failure(str(error), "")
+
     def start_run(self, optimization):
         if self.study is None or self.runner.busy:
             return
         self.pending_action = ""
+        self.pending_base_case = False
         try:
             self.settings_dialog.restore_values()
             settings = self.settings_dialog.read_settings(optimization=optimization)
@@ -1348,21 +1386,12 @@ class MainWindow(QMainWindow):
         except ValueError as error:
             self.show_failure(str(error), "")
 
-    def export_results(self):
-        if self.report is None or self.runner.busy:
-            return
-        path, _ = QFileDialog.getSaveFileName(self, "Choose a NEW export folder name", str(REPO / "07_Implementation/Results/new_ui_run"), "All files (*)")
-        if path:
-            self.pending_action = "export"
-            self.runner.start(partial(export_report, self.report, Path(path)))
-
     def set_busy(self, busy):
         for name in ("btn_load_data", "btn_settings"):
             widget(self, name).setEnabled(not busy)
         widget(self, "btn_scenarios").setEnabled(self.study is not None and not busy)
-        for name in ("btn_run_simulation", "btn_run_optimization", "btn_zoom_in", "btn_zoom_out", "btn_fit_network"):
+        for name in ("btn_run_simulation", "btn_run_base_case", "btn_run_optimization", "btn_zoom_in", "btn_zoom_out", "btn_fit_network"):
             widget(self, name).setEnabled(self.study is not None and not busy)
-        widget(self, "btn_export_results").setEnabled(self.report is not None and not busy)
         for name in ("chk_network_properties", "chk_hide_diagram", "chk_bus_details", "btn_rotate_network"):
             widget(self, name).setEnabled(self.study is not None and not busy)
         widget(self, "chk_network_results").setEnabled(bool(self.simulation_steps()) and not busy)
@@ -1429,15 +1458,16 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(message)
 
     def job_succeeded(self, result):
-        if self.pending_action == "export":
-            self.show_stage("Export complete")
-        else:
+        if self.pending_action == "run":
             self.finish_run_clock()
             self.report = result
             if self.pending_run_output is not None and self.session is not None:
-                self.session.record_run(
-                    self.pending_run_output, self.pending_run_optimization,
-                )
+                if getattr(self, "pending_base_case", False):
+                    self.session.record_base_case(self.pending_run_output)
+                else:
+                    self.session.record_run(
+                        self.pending_run_output, self.pending_run_optimization,
+                    )
                 self.append_log(f"Run files saved in {self.pending_run_output}")
             self.show_full_result_details = False
             widget(self, "results_text").setPlainText(result.summary())
@@ -1449,7 +1479,6 @@ class MainWindow(QMainWindow):
                 self.append_log(f"Optimized BESS placed at bus {result.result.best_candidate.bus_id}")
             self.show_stage(f"Run finished in {format_duration(self.run_elapsed_seconds)}; inspect convergence, feasibility and shedding in Results")
         self.last_progress = 100
-        widget(self, "btn_export_results").setEnabled(self.report is not None)
         self.set_busy(self.runner.busy)
         widget(self, "progress_run").setValue(100)
         widget(self, "progress_run").setFormat("Completed: %p%")
@@ -1483,9 +1512,9 @@ class MainWindow(QMainWindow):
         if self.study is None:
             return
         self.show_detail_rows(False)
-        widget(self, "group_bus_details").setTitle(f"Bus {bus_id}")
+        widget(self, "group_bus_details").setTitle(f"Bus B{bus_id}")
         network = self.study.network
-        widget(self, "lbl_bus_id").setText(str(bus_id))
+        widget(self, "lbl_bus_id").setText(f"B{bus_id}")
         last = self.selected_step()
         if last:
             prefix = "" if last.power_flow.converged else "Diagnostic only: "

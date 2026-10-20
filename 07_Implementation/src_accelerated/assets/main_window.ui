@@ -185,6 +185,17 @@
          </widget>
         </item>
         <item>
+         <widget class="QPushButton" name="btn_run_base_case">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="maximumSize">
+           <size><width>16777215</width><height>38</height></size>
+          </property>
+          <property name="text"><string>Run Base-Case FBS</string></property>
+         </widget>
+        </item>
+        <item>
          <widget class="QPushButton" name="btn_run_optimization">
           <property name="enabled">
            <bool>false</bool>
@@ -212,22 +223,6 @@
            </size>
           </property>
          </spacer>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btn_export_results">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>38</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>Export Result</string>
-          </property>
-         </widget>
         </item>
         <item>
          <widget class="QLabel" name="lbl_data_status">

@@ -131,7 +131,12 @@ class NetworkScene(QGraphicsScene):
             label.setRotation(-90 * self.turns)
         label.setPos(x, y)
         label.setData(1, role)
-        label.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+        # Text can be repositioned without altering the electrical model.
+        # A busbar or conductor remains the selectable electrical element.
+        if role in ("bus_number", "line_id", "bus_properties", "bus_results", "line_annotation"):
+            label.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
+        else:
+            label.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
         return label
 
     def equipment(self, node, kind, port, left=False):
@@ -201,7 +206,10 @@ class NetworkScene(QGraphicsScene):
             a, b = self.rotate_point(*a), self.rotate_point(*b)
             x, y = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
             horizontal = abs(a[1] - b[1]) < 1e-6
-            label = self.add_label(None, line.line_id, x - 30 if horizontal else x - 90, y - 38, "line_id")
+            line_text = str(line.line_id)
+            if not line_text.upper().startswith("L"):
+                line_text = f"L{line_text}"
+            label = self.add_label(None, line_text, x - 30 if horizontal else x - 90, y - 38, "line_id")
             label.setData(2, line.line_id)
             label.setToolTip(branch.toolTip())
             lines = []
@@ -251,7 +259,7 @@ class NetworkScene(QGraphicsScene):
             bar = QPainterPath()
             bar.addRect(-3, top, 6, bottom - top)
             self.add_symbol(node, bar, "busbar", f"Bus {bus_id}; {bus.base_kv:g} kV", color, color)
-            self.add_label(node, str(bus_id), -15, top - 36, "bus_number")
+            self.add_label(node, f"B{bus_id}", -15, top - 36, "bus_number")
             loads = [load for load in network.loads if load.bus_id == bus_id]
             units = [unit for unit in network.pv_units if unit.bus_id == bus_id]
             for kind, port, left in self.layout.equipment_ports[bus_id]:

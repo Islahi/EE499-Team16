@@ -13,6 +13,7 @@ import pandas as pd
 from .bess import BESSConfig
 from .data_loader import ProfileData
 from .dispatch import NetLoadTargetPolicy
+from .fbs import OperatingPoint, run_fbs
 from .load_generator import LoadGenerationConfig, generate_load_profile
 from .metrics import EconomicConfig, evaluate_results
 from .network_loader import load_network
@@ -72,6 +73,23 @@ class RunReport:
             if key in ("Network", "History interval", "Dispatch", "Forecast interval", "Run duration")
         }
         return format_summary(self.result, metrics=self.metrics, context=context)
+
+
+@dataclass
+class BaseCaseReport:
+    """Static, one-sweep feeder check using the network's original base values."""
+    result: object
+    context: dict[str, str]
+    metrics: object = None
+
+    def summary(self, detailed=False):
+        lines = ["Static Base-Case FBS", f"Status: {self.result.message}",
+                 f"FBS iterations: {self.result.iterations}",
+                 f"Voltage range: {min(self.result.voltage_mag_pu.values()):.5f} to {max(self.result.voltage_mag_pu.values()):.5f} pu",
+                 f"Real power loss: {self.result.total_loss_p_kw:.4f} kW"]
+        if detailed:
+            lines.extend(f"{key}: {value}" for key, value in self.context.items())
+        return "\n".join(lines)
 
 
 def size_catalog(minimum: float, maximum: float, step: float) -> tuple[float, ...]:
@@ -192,10 +210,11 @@ def prepare_study(request: DataRequest, stage=lambda message: None) -> PreparedS
         raise ValueError("Unsupported load input mode")
     stage("Checking prepared profiles")
     profiles = ProfileData(StringIO(demand.to_csv(index=False)), StringIO(pv.to_csv(index=False)))
+    network_label = "Guide 5-Bus radial test" if len(network.buses) == 5 else f"{len(network.buses)}-bus radial network"
     context = {
-        "Network": str(Path(request.network_path).resolve()),
-        "PV source": f"{request.pv_source}: {request.pv_path}",
-        "Demand": f"Literature-based synthetic demand; seed {request.load_seed}; not measured" if request.load_source == "synthetic" else str(request.load_path),
+        "Network": network_label,
+        "PV source": "No PV" if request.pv_source == "none" else request.pv_source.replace("_", " "),
+        "Demand": f"Synthetic load; seed {request.load_seed}" if request.load_source == "synthetic" else "Imported load profile",
         "History interval": f"{start.isoformat()} to {end.isoformat()} (exclusive); {len(times)} hours",
         "Study scope": "Calendar-month study",
         "Clock": "Source clock preserved; NASA LST is not automatically converted to civil time",
@@ -259,7 +278,7 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
     evaluator = SimulationEvaluator(settings.economics, parameters, settings.dispatch, settings.simulation)
     evaluator.progress = progress
     profiles = study.profiles
-    if values["group_uncertainty"]:
+    if study.scenarios is not None:
         from .uncertainty import ScenarioEvaluator
         if study.scenarios is None:
             raise ValueError("No active scenario set. Open Scenarios, generate or import a set, then use it in the main program")
@@ -268,7 +287,7 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
         evaluator = ScenarioEvaluator(evaluator, progress=progress)
         scenario_times = profiles.scenarios[0].profiles.timestamps
         context["Forecast interval"] = f"{scenario_times[0]} through {scenario_times[-1]}; equal-weight stress portfolio"
-        context["Scenario set"] = str(study.scenario_path)
+        context["Scenario set"] = f"{len(study.scenarios.scenarios)} saved scenarios"
     context["Search catalogs"] = f"Power {bounds.power_ratings_kw}; energy {bounds.energy_capacities_kwh}; endpoint-inclusive grid"
     context["Compute backend"] = (
         f"{settings.simulation.fbs_config.backend}; "
@@ -279,6 +298,24 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
         population_size=values["spin_gwo_population"], max_iterations=values["spin_gwo_iterations"],
         seed=values["spin_gwo_seed"], workers=values["spin_cpu_workers"]), progress=progress)
     return finish_report(result, None, context, started, started_clock)
+
+
+def run_base_case(study: PreparedStudy, settings: RunSettings, stage=lambda message: None, progress=None):
+    """Run original network base loads, installed PV ratings, and no BESS."""
+    stage("Running static base-case FBS")
+    ids = [bus.bus_id for bus in study.network.buses]
+    loads = {bus_id: [load for load in study.network.loads if load.bus_id == bus_id] for bus_id in ids}
+    pvs = {bus_id: [unit for unit in study.network.pv_units if unit.bus_id == bus_id] for bus_id in ids}
+    point = OperatingPoint(
+        {bus_id: sum(item.p_base_kw for item in loads[bus_id]) for bus_id in ids},
+        {bus_id: sum(item.q_base_kvar for item in loads[bus_id]) for bus_id in ids},
+        {bus_id: sum(item.p_rated_kw for item in pvs[bus_id]) for bus_id in ids},
+        {bus_id: 0.0 for bus_id in ids}, {bus_id: 0.0 for bus_id in ids}, {bus_id: 0.0 for bus_id in ids},
+    )
+    result = run_fbs(study.network, point, settings.simulation.fbs_config, progress=progress)
+    context = {"Network": study.context["Network"], "Case definition": "Original base loads + installed PV ratings; no BESS", "Compute backend": settings.simulation.fbs_config.backend,
+               "PV installations": study.context["PV ratings (kW)"]}
+    return BaseCaseReport(result, context)
 
 
 def export_report(report: RunReport, path, stage=lambda message: None):
@@ -292,4 +329,20 @@ def run_and_export(study, settings, optimization, output_path,
     report = run_study(study, settings, optimization, stage=stage, progress=progress)
     stage("Saving run in active session")
     export_results(report.result, output_path, metrics=report.metrics, context=report.context)
+    return report
+
+
+def run_base_case_and_export(study, settings, output_path, stage=lambda message: None, progress=None):
+    report = run_base_case(study, settings, stage=stage, progress=progress)
+    output = Path(output_path)
+    output.mkdir(parents=True, exist_ok=False)
+    rows = [{"bus_id": bus_id, "voltage_pu": voltage}
+            for bus_id, voltage in sorted(report.result.voltage_mag_pu.items())]
+    pd.DataFrame(rows).to_csv(output / "bus_voltages.csv", index=False)
+    pd.DataFrame([{"line_id": line_id, "p_kw": report.result.branch_p_kw[line_id],
+                   "q_kvar": report.result.branch_q_kvar[line_id],
+                   "current_a": report.result.branch_current_a[line_id],
+                   "loss_kw": report.result.line_loss_p_kw[line_id]}
+                  for line_id in report.result.branch_p_kw]).to_csv(output / "line_flows.csv", index=False)
+    (output / "summary.txt").write_text(report.summary(detailed=True), encoding="utf-8")
     return report

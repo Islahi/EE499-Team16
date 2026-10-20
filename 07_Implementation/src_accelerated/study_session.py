@@ -102,6 +102,7 @@ class StudySession:
             "active_scenario_set": None,
             "scenario_sets": [],
             "simulation_runs": [],
+            "base_case_runs": [],
             "optimization_runs": [],
         }
         session = cls(root, manifest)
@@ -162,3 +163,12 @@ class StudySession:
         })
         self.save()
         self.append_log(f"{'Optimization' if optimization else 'Simulation'} stored: {relative}")
+
+    def record_base_case(self, path):
+        relative = str(Path(path).relative_to(self.root))
+        self.manifest["base_case_runs"].append({
+            "path": relative,
+            "completed_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        })
+        self.save()
+        self.append_log(f"Static base-case FBS stored: {relative}")
