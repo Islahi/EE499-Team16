@@ -1,6 +1,19 @@
 # Network model and FBS code guide
 
-This folder contains the code for Tasks **10, 12 and 13**: the module structure,
+This folder contains the documentation for Tasks **10, 12 and 13**. The Python
+source code is one folder above (`src_accelerated/`), while all READMEs live here.
+This separation keeps the application folder focused on executable modules.
+
+The fastest Windows launch is to double-click
+[`../app.pyw`](../app.pyw). It starts the Designer-based desktop application
+without opening a console. For troubleshooting, use the terminal launcher:
+
+```powershell
+cd 07_Implementation
+python .\examples\run_accelerated_ui.py
+```
+
+This guide documents the module structure,
 five-bus network model, and one-time-step Forward/Backward Sweep (FBS) solver.
 The solver calculates bus voltages, branch currents, power flows and losses
 for a balanced radial distribution network.

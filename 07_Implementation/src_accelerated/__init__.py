@@ -1,1 +1,1 @@
-"""EE499 implementation modules. Run with python -m src.main."""
+"""Accelerated EE499 implementation modules; launch with app.pyw or ui.py."""
