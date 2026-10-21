@@ -5,7 +5,7 @@ source code is one folder above (`src_accelerated/`), while all READMEs live her
 This separation keeps the application folder focused on executable modules.
 
 Project-level records are available in
-[the chronological progress report](PROGRESS_REPORT.md) and
+[the dated development explanation](DEVELOPMENT_CHRONOLOGY.md) and
 [the detailed script reference](SCRIPT_REFERENCE.md).
 
 The fastest Windows launch is to double-click
@@ -109,7 +109,7 @@ changes can occur if you change the convergence tolerance.
 The accelerated desktop dependencies are in `../requirements-accelerated.txt`;
 launch from the repo root with
 `python .\07_Implementation\examples\run_accelerated_ui.py`.
-See `../Validation/Simulation_Test_Guide.md` for hourly examples and tests.
+See `../../Validation/Simulation_Test_Guide.md` for hourly examples and tests.
 
 ## 3. `network_model.py`: the static network
 
@@ -213,7 +213,7 @@ voltages to the slack voltage, then repeats:
 3. **Convergence check:** compare the new and previous complex bus voltages.
 
 The equations and worked examples are in
-[the supplied guide](../Validation/FBS_Step_by_Step_Guide.pdf).
+[the supplied guide](../../Validation/FBS_Step_by_Step_Guide.pdf).
 
 | FBSConfig field | Default | Purpose |
 |---|---:|---|
@@ -321,7 +321,7 @@ python -m pip install -r Validation/requirements.txt
 python -m Validation.verify_nodal_reference
 ```
 
-See [verification notes](../Validation/FBS_Verification_Notes.md) for numerical
+See [verification notes](../../Validation/FBS_Verification_Notes.md) for numerical
 comparisons and the guide's tolerance/iteration-count discrepancy.
 
 Always check `result.converged` before accepting results. A failure result is
@@ -337,4 +337,4 @@ can receive larger radial networks. `network_loader.py` now imports the supplied
 IEEE 33-bus Excel workbook into that same model without rewriting the solver.
 
 The software design authority remains
-[`TERM2_SOFTWARE_DESIGN_SPEC.md`](../../02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md).
+[`TERM2_SOFTWARE_DESIGN_SPEC.md`](../../../02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md).
