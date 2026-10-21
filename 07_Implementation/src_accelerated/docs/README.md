@@ -4,6 +4,10 @@ This folder contains the documentation for Tasks **10, 12 and 13**. The Python
 source code is one folder above (`src_accelerated/`), while all READMEs live here.
 This separation keeps the application folder focused on executable modules.
 
+Project-level records are available in
+[the chronological progress report](PROGRESS_REPORT.md) and
+[the detailed script reference](SCRIPT_REFERENCE.md).
+
 The fastest Windows launch is to double-click
 [`../app.pyw`](../app.pyw). It starts the Designer-based desktop application
 without opening a console. For troubleshooting, use the terminal launcher:
