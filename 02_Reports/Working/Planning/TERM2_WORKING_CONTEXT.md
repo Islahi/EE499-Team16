@@ -1,6 +1,6 @@
 # Term 2 Working Context — Current Summary
 
-**Last updated:** 2026-09-26
+**Last updated:** 2026-10-15
 
 This file is the current working context for EE499 Team 16.
 
@@ -119,6 +119,24 @@ The two later design gates were resolved on 15 Oct 2026:
    lowest and 15 seeded-random remaining scenarios.
 
 If another unresolved architecture/interface issue appears, update the design specification first rather than letting an individual implementation owner silently choose a local solution.
+
+## Revised working schedule — confirmed 13 Oct 2026
+
+The live Task Register remains authoritative. This plan moves full-program testing from 15 November to **8 November**.
+
+| Period | Work |
+| --- | --- |
+| 18–24 Oct | Tasks 32–37: metrics, WSM objective, GWO integration, deterministic run and exhaustive-search reference. |
+| 25–31 Oct | Tasks 42–49: ARIMA, Monte Carlo, scenario selection and GWO/WSM integration. GWO comparison/tuning (Tasks 38–39) continues through 27 Oct. |
+| 1–7 Nov | Tasks 51–55: complete GUI, automatic network drawing, backend controls/results, progress/errors and export. |
+| 8–14 Nov | Tasks 56 and 62: complete-program testing, bug fixes and repeated tests; document integration in Task 57. |
+| 15–24 Nov | Tasks 58–61: formal validation, necessary reruns and requirement-evidence results. |
+| 24–29 Nov | Freeze exact final cases/outputs and finish the report; Chapter 4 polishing also runs from 15 Nov. |
+| 1–10 Dec | Prepare/rehearse the demo and deliver during the official 6–10 Dec window. |
+
+The GUI loads network data and automatically builds the distribution-system diagram: buses, line connections, loads, PV and BESS locations. It displays simulation results and the optimized BESS location. Manual placement or drag-and-drop network editing is outside this agreed scope. Engineering calculations stay in the backend.
+
+Implementation writing runs alongside development. Keep the official 22 Oct progress submission, 25–29 Oct presentation window and 30 Nov final-report deadline. These are planned dates, not claims that the tasks are complete.
 
 ## 5. Parallel Ethics work
 
