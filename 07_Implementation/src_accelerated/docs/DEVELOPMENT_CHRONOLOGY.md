@@ -232,6 +232,14 @@ Later (`f047976`), the static result gained bus-voltage and line-flow CSVs and c
 
 The first documentation pass mistakenly organized the chronology as a presentation progress report. This version instead records **what happened at each development step** and identifies the calculations, software tools and important limitations so the team can write its own report. [SCRIPT_REFERENCE.md](SCRIPT_REFERENCE.md) remains the companion file for each current Python module and its inputs/outputs. No physics or application behavior changes merely because these documents were revised.
 
+## 22-10-2026 — Stable-package consolidation and general reference networks
+
+**What changed:** `src_accelerated` became the declared stable implementation. The separate accelerated FBS implementation was folded into `fbs.py`; the net-load-target policy moved into `simulation.py`; and the small vector-icon helper moved into `network_diagram.py`. The obsolete console demo and hard-coded network-case module were removed from the stable package, while `app.pyw` remains the application launcher. `network_layout.py` was deliberately retained because it is a Qt-free topology algorithm, not an icon or drawing helper. The network loader's IEEE33-style adapter now accepts other radial bus/branch counts in `auto` or `reference` mode; the dialog calls this **Bus / Branch**. The legacy explicit `ieee33` mode remains strict for compatibility.
+
+**Why:** The removed files split one responsibility across multiple tiny modules or represented a second, non-application entry path. In contrast, merging layout into the Qt scene would couple a tested deterministic algorithm to the GUI and make reuse harder. Generalizing the reference adapter allows published RDS spreadsheets with the same schema to enter through the normal validation path instead of creating another loader per bus count.
+
+**Verification:** The package compiles, the stable UI imports, and Python/NumPy FBS were compared on the same 33-bus workbook after consolidation. They produced identical bus-voltage magnitudes and active losses for that run. This regression check does not replace independent validation against published feeder results.
+
 ## Reading the chronology critically
 
 - A tested code path is not the same as independently validated feeder behavior. Solver convergence, voltage feasibility, fully served demand and economic desirability are four different claims.

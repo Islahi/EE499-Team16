@@ -12,7 +12,6 @@ import pandas as pd
 
 from .bess import BESSConfig
 from .data_loader import ProfileData
-from .dispatch import NetLoadTargetPolicy
 from .fbs import OperatingPoint, run_fbs
 from .load_generator import LoadGenerationConfig, generate_load_profile
 from .metrics import EconomicConfig, evaluate_results
@@ -21,7 +20,7 @@ from .network_model import NetworkModel, PVUnit
 from .optimizer import BESSParameters, OptimizationBounds, OptimizerConfig, SimulationEvaluator, optimize
 from .pv_model import PVModelConfig, make_pv_profile, read_irradiance
 from .results import export_results, format_summary
-from .simulation import SimulationConfig, simulate_timeseries
+from .simulation import NetLoadTargetPolicy, SimulationConfig, simulate_timeseries
 from .progress import format_duration
 
 

@@ -5,17 +5,29 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.fbs import FBSConfig, run_fbs
-from src.main import base_operating_point
-from src.network_loader import load_network
+from src_accelerated.fbs import FBSConfig, OperatingPoint, run_fbs
+from src_accelerated.network_loader import load_network
+
+
+def base_operating_point(network):
+    bus_ids = [bus.bus_id for bus in network.buses]
+    loads = network.loads_by_bus()
+    pv_units = network.pv_by_bus()
+    zeros = {bus_id: 0.0 for bus_id in bus_ids}
+    return OperatingPoint(
+        {bus_id: sum(load.p_base_kw for load in loads[bus_id]) for bus_id in bus_ids},
+        {bus_id: sum(load.q_base_kvar for load in loads[bus_id]) for bus_id in bus_ids},
+        {bus_id: sum(unit.p_rated_kw for unit in pv_units[bus_id]) for bus_id in bus_ids},
+        zeros.copy(), zeros.copy(), zeros.copy(),
+    )
 
 
 def main():
-    default_source = Path(__file__).resolve().parents[2] / "04_Research/Working_Data/Network_Data/IEEE_33Bus_Network_Data.xlsx"
+    default_source = Path(__file__).resolve().parents[2] / "04_Research/Working_Data/Network_Data/Working_RDS/IEEE_33Bus_Network_Data.xlsx"
     parser = argparse.ArgumentParser(description="Read a supported static network Excel workbook")
     parser.add_argument("path", type=Path, nargs="?", default=default_source)
-    parser.add_argument("--format", choices=("auto", "project", "ieee33"), default="auto")
-    parser.add_argument("--frequency-hz", type=float, help="Study frequency; mandatory for the IEEE33 source")
+    parser.add_argument("--format", choices=("auto", "project", "reference", "ieee33"), default="auto")
+    parser.add_argument("--frequency-hz", type=float, help="Study frequency; mandatory when absent from the workbook")
     parser.add_argument("--power-flow", action="store_true", help="Run base-load/rated-PV snapshot, not an hourly simulation")
     args = parser.parse_args()
     try:

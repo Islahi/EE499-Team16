@@ -19,15 +19,12 @@ from PySide6.QtWidgets import (
 )
 
 from .bess import BESSConfig
-from .dispatch import NetLoadTargetPolicy
-from .fbs import FBSConfig
-from .accelerated_fbs import backend_available, backend_status
+from .fbs import FBSConfig, backend_available, backend_status
 from .metrics import EconomicConfig
-from .network_diagram import NetworkScene, NetworkView
-from .network_icons import network_icon
+from .network_diagram import NetworkScene, NetworkView, network_icon
 from .network_loader import load_network
 from .optimizer import BESSParameters, OptimizationResult
-from .simulation import SimulationConfig, TimeSeriesSimulationResult
+from .simulation import NetLoadTargetPolicy, SimulationConfig, TimeSeriesSimulationResult
 from .progress import StageReporter, format_duration
 from .study_session import StudySession, study_fingerprint
 from .ui_workflow import (
@@ -243,7 +240,7 @@ class LoadDataDialog(QDialog):
         if not path:
             raise ValueError("Choose a network workbook")
         frequency = widget(self, "spin_frequency_hz").value()
-        format_name = ("auto", "project", "ieee33")[widget(self, "combo_network_format").currentIndex()]
+        format_name = ("auto", "project", "reference")[widget(self, "combo_network_format").currentIndex()]
         return Path(path), frequency or None, format_name
 
     def load_network_preview(self):

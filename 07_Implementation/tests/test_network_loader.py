@@ -17,7 +17,8 @@ from src.network_loader import load_network
 
 
 DATA = Path(__file__).resolve().parents[2] / "04_Research/Working_Data/Network_Data"
-IEEE33 = DATA / "IEEE_33Bus_Network_Data.xlsx"
+WORKING_DATA = DATA / "Working_RDS"
+IEEE33 = WORKING_DATA / "IEEE_33Bus_Network_Data.xlsx"
 PJM = DATA / "PJM_5Bus_Network_Data.xlsx"
 
 

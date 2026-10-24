@@ -3,12 +3,28 @@ from collections.abc import Callable
 from copy import copy
 from dataclasses import dataclass, field, replace
 from math import isfinite
+from numbers import Real
 
 from .fbs import FBSConfig, OperatingPoint, PowerFlowResult, run_fbs
 from .bess import BESSConfig, BESSState, BESSStepResult, step_bess
 from .network_model import NetworkModel
 from .data_loader import ProfileSlice, ProfileData, profile_at
 from .progress import ProgressEvent
+
+
+@dataclass(frozen=True)
+class NetLoadTargetPolicy:
+    """Request discharge above a configurable net-load target."""
+    target_kw: float
+
+    def __post_init__(self):
+        if (isinstance(self.target_kw, bool) or not isinstance(self.target_kw, Real)
+                or not isfinite(self.target_kw) or self.target_kw < 0):
+            raise ValueError("Net-load target must be finite and nonnegative (kW)")
+
+    def __call__(self, index, profile, state):
+        net_load_kw = sum(profile.p_load_kw.values()) - sum(profile.p_pv_kw.values())
+        return net_load_kw - self.target_kw
 
 
 @dataclass

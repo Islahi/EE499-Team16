@@ -81,7 +81,7 @@ def main():
     parser.add_argument("--compare-ieee33", action="store_true")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    folder = ROOT / "04_Research/Working_Data/Network_Data"
+    folder = ROOT / "04_Research/Working_Data/Network_Data/Working_RDS"
     records = [diagnostic(folder / "Guide_5Bus_Radial_Test.xlsx", args.hours)]
     if args.compare_ieee33:
         records.append(diagnostic(folder / "IEEE_33Bus_Network_Data.xlsx", args.hours))

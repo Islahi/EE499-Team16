@@ -1,7 +1,7 @@
 """Read supported static Excel networks without changing source files.
 
 Supported schemas, units and examples: README_network_loader.md.
-Hourly profiles belong to the existing data_loader.py, not this module.
+Hourly profiles belong to data_loader.py, not this module.
 """
 from math import isclose, isfinite
 from pathlib import Path
@@ -111,11 +111,11 @@ def _project_network(book, frequency_hz):
     if frequency_hz is None:
         frequency_hz = _number(settings.get("frequency_hz"), "Network frequency_hz")
     elif "frequency_hz" in settings:
-        # An explicit override is allowed, but malformed source values stay visible.
         if _number(settings["frequency_hz"], "Network frequency_hz") <= 0:
             raise ValueError("Network frequency_hz must be positive")
     buses, lines, loads, pv_units = [], [], [], []
-    for row, record in _table(book["Buses"], ("bus_id", "base_kv", "is_slack"), ("name", "v_set_pu", "notes")):
+    for row, record in _table(book["Buses"], ("bus_id", "base_kv", "is_slack"),
+                              ("name", "v_set_pu", "notes")):
         label = f"Buses row {row}"
         bus_id = _integer(record["bus_id"], f"{label} bus_id")
         name = _text(record["name"], f"{label} name") if record.get("name") is not None else f"Bus {bus_id}"
@@ -125,13 +125,14 @@ def _project_network(book, frequency_hz):
     bus_ids = {bus.bus_id for bus in buses}
     line_ids = set()
     for row, record in _table(book["Lines"], ("line_id", "from_bus", "to_bus", "r_ohm", "x_ohm"),
-                               ("ampacity_a", "status", "notes")):
+                              ("ampacity_a", "status", "notes")):
         label = f"Lines row {row}"
         line = Line(
             _text(record["line_id"], f"{label} line_id"),
             _integer(record["from_bus"], f"{label} from_bus"),
             _integer(record["to_bus"], f"{label} to_bus"),
-            _number(record["r_ohm"], f"{label} r_ohm"), _number(record["x_ohm"], f"{label} x_ohm"),
+            _number(record["r_ohm"], f"{label} r_ohm"),
+            _number(record["x_ohm"], f"{label} x_ohm"),
             _number(record["ampacity_a"], f"{label} ampacity_a") if record.get("ampacity_a") is not None else None,
         )
         if line.line_id in line_ids:
@@ -152,10 +153,12 @@ def _project_network(book, frequency_hz):
                               _number(record["p_base_kw"], f"{label} p_base_kw"),
                               _number(record["q_base_kvar"], f"{label} q_base_kvar")))
     if "PV" in book.sheetnames:
-        for row, record in _table(book["PV"], ("pv_id", "bus_id", "p_rated_kw"), ("q_capability_kvar", "notes")):
+        for row, record in _table(book["PV"], ("pv_id", "bus_id", "p_rated_kw"),
+                                  ("q_capability_kvar", "notes")):
             label = f"PV row {row}"
             pv_units.append(PVUnit(
-                _text(record["pv_id"], f"{label} pv_id"), _integer(record["bus_id"], f"{label} bus_id"),
+                _text(record["pv_id"], f"{label} pv_id"),
+                _integer(record["bus_id"], f"{label} bus_id"),
                 _number(record["p_rated_kw"], f"{label} p_rated_kw"),
                 _number(record["q_capability_kvar"], f"{label} q_capability_kvar")
                 if record.get("q_capability_kvar") is not None else None,
@@ -177,17 +180,19 @@ def _overview_quantity(sheet, label, unit):
     return _number(value, f"Overview {label}")
 
 
-def _ieee33_network(book, frequency_hz):
-    _check_sheets(book, ("Overview", "Bus Data", "Branch Data"), ("Overview", "Bus Data", "Branch Data"))
+def _reference_network(book, frequency_hz):
+    _check_sheets(book, ("Overview", "Bus Data", "Branch Data"),
+                  ("Overview", "Bus Data", "Branch Data"))
     if frequency_hz is None:
-        raise ValueError("IEEE33 workbook has no frequency: supply frequency_hz explicitly (e.g. your study's 50 or 60 Hz)")
+        raise ValueError("Bus/branch reference workbook has no frequency: supply frequency_hz explicitly (e.g. 50 or 60 Hz)")
     base_kva = 1000.0 * _overview_quantity(book["Overview"], "Base MVA", "MVA")
     base_kv = _overview_quantity(book["Overview"], "Base voltage", "kV")
     buses, loads, lines = [], [], []
     demand = {}
-    for row, record in _table(book["Bus Data"],
-                               ("Bus No.", "Type", "P_load (kW)", "Q_load (kVAr)", "Vm (p.u.) init", "Va (deg) init"),
-                               ("Notes",), reference_footer=True):
+    for row, record in _table(
+            book["Bus Data"],
+            ("Bus No.", "Type", "P_load (kW)", "Q_load (kVAr)", "Vm (p.u.) init", "Va (deg) init"),
+            ("Notes",), reference_footer=True):
         label = f"Bus Data row {row}"
         bus_id = _integer(record["Bus No."], f"{label} Bus No.")
         kind = _text(record["Type"], f"{label} Type").lower()
@@ -203,37 +208,36 @@ def _ieee33_network(book, frequency_hz):
         demand[bus_id] = (p_kw, q_kvar)
         if p_kw != 0 or q_kvar != 0:
             loads.append(Load(f"LD{bus_id}", bus_id, p_kw, q_kvar))
-    for row, record in _table(book["Branch Data"],
-                               ("Branch No.", "From Bus", "To Bus", "R (Ohm)", "X (Ohm)",
-                                "P_load at To Bus (kW)", "Q_load at To Bus (kVAr)"), reference_footer=True):
+    for row, record in _table(
+            book["Branch Data"],
+            ("Branch No.", "From Bus", "To Bus", "R (Ohm)", "X (Ohm)",
+             "P_load at To Bus (kW)", "Q_load at To Bus (kVAr)"),
+            reference_footer=True):
         label = f"Branch Data row {row}"
         target = _integer(record["To Bus"], f"{label} To Bus")
         p_kw = _number(record["P_load at To Bus (kW)"], f"{label} receiving P_load")
         q_kvar = _number(record["Q_load at To Bus (kVAr)"], f"{label} receiving Q_load")
-        if target not in demand or not all(isclose(a, b, rel_tol=1e-9, abs_tol=1e-9)
-                                          for a, b in zip((p_kw, q_kvar), demand[target])):
+        if target not in demand or not all(
+                isclose(a, b, rel_tol=1e-9, abs_tol=1e-9)
+                for a, b in zip((p_kw, q_kvar), demand[target])):
             raise ValueError(f"{label}: receiving-bus load disagrees with Bus Data")
-        lines.append(Line(f"L{_integer(record['Branch No.'], label + ' Branch No.')}",
-                          _integer(record["From Bus"], f"{label} From Bus"), target,
-                          _number(record["R (Ohm)"], f"{label} R"), _number(record["X (Ohm)"], f"{label} X")))
-    if len(buses) != 33 or len(lines) != 32:
-        raise ValueError("IEEE33 reference layout requires 33 numbered buses and 32 numbered branches")
+        lines.append(Line(
+            f"L{_integer(record['Branch No.'], label + ' Branch No.')}",
+            _integer(record["From Bus"], f"{label} From Bus"), target,
+            _number(record["R (Ohm)"], f"{label} R"),
+            _number(record["X (Ohm)"], f"{label} X"),
+        ))
     return NetworkModel(buses, lines, loads, [], base_kva, frequency_hz)
 
 
 def load_network(path: str | Path, *, workbook_format: str = "auto",
                  frequency_hz: float | None = None) -> NetworkModel:
-    """Import a strict project template or the bundled IEEE33 Excel workbook.
-
-    Frequency must be in the project Network sheet or supplied by the caller.
-    A supplied frequency overrides a valid template value. No source is edited,
-    no formula is executed, and no line is removed to force radiality.
-    """
+    """Import a strict project template or supported bus/branch workbook."""
     source = Path(path)
     if source.suffix.lower() != ".xlsx":
         raise ValueError("Network import supports .xlsx only; renaming another format does not convert it")
-    if workbook_format not in ("auto", "project", "ieee33"):
-        raise ValueError("workbook_format must be auto, project or ieee33")
+    if workbook_format not in ("auto", "project", "reference", "ieee33"):
+        raise ValueError("workbook_format must be auto, project, reference or ieee33")
     if frequency_hz is not None:
         frequency_hz = _number(frequency_hz, "frequency_hz")
         if frequency_hz <= 0:
@@ -250,10 +254,16 @@ def load_network(path: str | Path, *, workbook_format: str = "auto",
             if {"Network", "Buses", "Lines"}.issubset(book.sheetnames):
                 selected = "project"
             elif {"Overview", "Bus Data", "Branch Data"}.issubset(book.sheetnames):
-                selected = "ieee33"
+                selected = "reference"
             else:
-                raise ValueError("Unrecognized workbook layout; use the documented project template or bundled IEEE33 workbook")
-        network = _project_network(book, frequency_hz) if selected == "project" else _ieee33_network(book, frequency_hz)
+                raise ValueError("Unrecognized workbook layout; use the documented project template or bus/branch reference workbook")
+        network = _project_network(book, frequency_hz) if selected == "project" else _reference_network(book, frequency_hz)
+        if selected == "ieee33" and (len(network.buses) != 33 or len(network.lines) != 32):
+            raise ValueError(
+                f"IEEE33 format expects 33 buses and 32 branches, but this workbook has "
+                f"{len(network.buses)} buses and {len(network.lines)} branches; "
+                "choose Auto or Bus / Branch instead"
+            )
         network.validate()
         return network
     finally:

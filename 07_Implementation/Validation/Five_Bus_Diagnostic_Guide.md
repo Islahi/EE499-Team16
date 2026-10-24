@@ -18,7 +18,7 @@ python .\07_Implementation\examples\run_ui.py
 ```
 
 1. Load Data > Network: browse to
-   `04_Research/Working_Data/Network_Data/Guide_5Bus_Radial_Test.xlsx`.
+   `04_Research/Working_Data/Network_Data/Working_RDS/Guide_5Bus_Radial_Test.xlsx`.
    Keep workbook format Auto and frequency 60 Hz; click Load Network.
 2. PV / Irradiance: choose **No PV**. Load: use synthetic demand and seed 42.
 3. Study Period: start 2024-01-01 and use the shortest calendar period appropriate

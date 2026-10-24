@@ -26,7 +26,7 @@ WEATHER = REPO / "04_Research/Working_Data/Jeddah_Weather_PV"
 
 def main():
     parser = argparse.ArgumentParser(description="Prepare PV power and synthetic load CSVs; no supplier catalog needed")
-    parser.add_argument("--network", type=Path, default=REPO / "04_Research/Working_Data/Network_Data/IEEE_33Bus_Network_Data.xlsx")
+    parser.add_argument("--network", type=Path, default=REPO / "04_Research/Working_Data/Network_Data/Working_RDS/IEEE_33Bus_Network_Data.xlsx")
     parser.add_argument("--frequency-hz", type=float, required=True, help="Explicit network study frequency")
     parser.add_argument("--source", choices=("open_meteo", "nasa_power", "prepared"), default="open_meteo")
     parser.add_argument("--irradiance-file", type=Path, help="Defaults to the repository weather file for the chosen provider")

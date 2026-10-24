@@ -1,9 +1,41 @@
 """Selectable single-line graphics with independent input/result annotations."""
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QPainterPath, QPainterPathStroker, QPen
+from PySide6.QtCore import QPointF, QRectF, Qt, Signal
+from PySide6.QtGui import (
+    QBrush, QColor, QIcon, QPainter, QPainterPath, QPainterPathStroker,
+    QPalette, QPen, QPixmap,
+)
 from PySide6.QtWidgets import QGraphicsItem, QGraphicsPathItem, QGraphicsScene, QGraphicsView
 
 from .network_layout import build_layout
+
+
+def network_icon(action: str, palette: QPalette) -> QIcon:
+    """Build a compact palette-aware Fit or Zoom toolbar icon."""
+    icon = QIcon()
+    for mode, group in ((QIcon.Mode.Normal, QPalette.ColorGroup.Active),
+                        (QIcon.Mode.Disabled, QPalette.ColorGroup.Disabled)):
+        image = QPixmap(48, 48)
+        image.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.scale(2, 2)
+        pen = QPen(palette.color(group, QPalette.ColorRole.ButtonText), 1.8)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        if action == "fit":
+            for x, y, dx, dy in ((4, 4, 1, 1), (20, 4, -1, 1),
+                                 (4, 20, 1, -1), (20, 20, -1, -1)):
+                painter.drawLine(QPointF(x, y), QPointF(x + dx * 5, y))
+                painter.drawLine(QPointF(x, y), QPointF(x, y + dy * 5))
+        else:
+            painter.drawEllipse(QRectF(3, 3, 13, 13))
+            painter.drawLine(QPointF(15, 15), QPointF(21, 21))
+            painter.drawLine(QPointF(6, 9.5), QPointF(13, 9.5))
+            if action == "zoom_in":
+                painter.drawLine(QPointF(9.5, 6), QPointF(9.5, 13))
+        painter.end()
+        icon.addPixmap(image, mode)
+    return icon
 
 
 class NetworkView(QGraphicsView):

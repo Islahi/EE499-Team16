@@ -23,7 +23,7 @@ from src.ui_workflow import DataRequest, RunSettings, export_report, prepare_stu
 
 
 ROOT = Path(__file__).resolve().parents[2]
-NETWORK = ROOT / "04_Research/Working_Data/Network_Data/IEEE_33Bus_Network_Data.xlsx"
+NETWORK = ROOT / "04_Research/Working_Data/Network_Data/Working_RDS/IEEE_33Bus_Network_Data.xlsx"
 WEATHER = ROOT / "04_Research/Working_Data/Jeddah_Weather_PV/OpenMeteo_Jeddah_2024_Hourly.csv"
 
 

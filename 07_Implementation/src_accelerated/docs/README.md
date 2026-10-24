@@ -53,45 +53,24 @@ Use **Python 3.10 or newer**. Open a terminal in the repository root and run:
 ```bash
 cd 07_Implementation
 python -m pip install -r requirements-accelerated.txt
-python -m src_accelerated.main
+python .\examples\run_accelerated_ui.py
 ```
 
 Run the command from `07_Implementation`, the folder containing
-`src_accelerated`. Use the module launcher because the package uses relative
-imports. Running `python src_accelerated/main.py` directly causes an import
-error.
-
-The current demo uses the guide's five-bus network with 180 kW PV at bus 4.
-Expected output includes approximately:
-
-```text
-Guide five-bus verification case: Converged, 5 sweeps
-Bus 1: 1.00000000 pu
-Bus 2: 0.97476646 pu
-Bus 3: 0.96626463 pu
-Bus 4: 0.96342032 pu
-Bus 5: 0.96908306 pu
-Slack: 733.96339259 kW, 477.90721656 kvar
-Losses: 13.96341822 kW, 27.90726776 kvar
-```
-
-The actual output also prints each bus voltage angle. Small final-digit
-changes can occur if you change the convergence tolerance.
+`src_accelerated`. Windows users can alternatively double-click `app.pyw`.
 
 ## 2. What each file does
 
 | File | Responsibility | Current status |
 |---|---|---|
 | `network_model.py` | Stores buses, lines, loads and PV; validates topology and builds sweep order | Implemented |
-| `network_cases.py` | Builds the prepared feeder and the guide's example networks | Implemented |
 | `network_loader.py` | Imports supported Excel network data without editing the workbook | Implemented |
-| `fbs.py` | Solves one operating point and returns electrical results | Implemented |
-| `main.py` | Runs the fixed-input demo; provides `base_operating_point()` | Implemented |
+| `fbs.py` | Solves one operating point using Python, NumPy, optional Numba or experimental CuPy | Implemented |
 | `data_loader.py` | Existing team code for reading load/PV CSV profiles | Existing implementation; not connected to the demo |
 | `pv_model.py` | Prepares PV power from irradiance CSVs | Implemented; see README_pv_model.md |
 | `load_generator.py` | Prepares literature-based synthetic hourly load | Implemented; see README_load_generator.md |
 | `bess.py` | Existing BESS configuration, state and energy-update function | Existing implementation preserved |
-| `simulation.py` | Combines profiles/BESS/FBS, applies PV/load controls, records curtailment/shedding and checks feasibility | Implemented; see the simulation test guide |
+| `simulation.py` | Contains the net-load-target dispatch policy; combines profiles/BESS/FBS, applies controls and checks feasibility | Implemented; see the simulation test guide |
 | `metrics.py` | Summarizes simulation energy/voltage/reserve performance and simple investment cost | Implemented; see README_metrics.md |
 | `optimizer.py` | Searches allowed BESS bus/power/energy catalogs with GWO and a public evaluator | Implemented; see README_optimizer.md |
 | `uncertainty.py` | Generates/selects ARIMA/Monte Carlo scenarios and evaluates common candidates | Implemented; see README_uncertainty.md |
@@ -100,11 +79,9 @@ changes can occur if you change the convergence tolerance.
 | `ui_workflow.py` | Qt-free preparation/run orchestration and sizing catalogs | Implemented |
 | `study_session.py` | Creates reproducible input snapshots, logs and numbered run folders | Implemented |
 | `scenario_store.py` | Writes and reloads scenario CSV packages and their validation/ranking manifest | Implemented |
-| `dispatch.py` | User-configured net-load-target battery policy | Implemented |
 | `network_layout.py` | Longest-spine radial layout, feeder-wide branch balancing and layer-aware spacing | Implemented |
-| `network_diagram.py` | Single-line symbols, rotation, selectable buses and independent Properties/Results layers | Implemented |
-| `network_icons.py` | Palette-aware Fit and Zoom vector icons | Implemented |
-| `__init__.py` | Makes `src` a Python package | Present |
+| `network_diagram.py` | Single-line symbols, toolbar icons, rotation, selectable buses and independent Properties/Results layers | Implemented |
+| `__init__.py` | Makes `src_accelerated` a Python package | Present |
 
 The accelerated desktop dependencies are in `../requirements-accelerated.txt`;
 launch from the repo root with
@@ -136,40 +113,7 @@ children in the forward sweep and children before parents in the backward sweep.
 `network.loads_by_bus()` and `network.pv_by_bus()` return a list of equipment
 objects for each bus. This permits multiple loads or PV units at one bus.
 
-## 4. `network_cases.py`: choose the network
-
-| Builder | Voltage / power base | Topology | Input values |
-|---|---|---|---|
-| `build_5_bus_case()` | 11 kV / 10 MVA | 1→2→3→4→5 | Prepared feeder line data; pass study loads/PV explicitly |
-| `build_guide_3_bus_case()` | 1 kV / 1 MVA | 1→2→3 | Guide Example 1 |
-| `build_guide_5_bus_case()` | 12.66 kV / 1 MVA | 1→2→3→4 and 2→5 | Guide Example 2, including PV at bus 4 |
-
-The prepared feeder and the guide's five-bus feeder are **different cases**.
-The prepared source does not supply bus-load magnitudes or installed PV
-ratings, so `build_5_bus_case()` without arguments creates an unloaded feeder.
-Its 60 Hz value is a development configuration; the solver uses the supplied
-R/X directly and does not calculate them from frequency.
-
-To run the guide case in your own script, save the following in a file inside
-`07_Implementation` and run it from that folder:
-
-```python
-from src.network_cases import build_guide_5_bus_case
-from src.main import base_operating_point
-from src.fbs import FBSConfig, run_fbs
-
-network = build_guide_5_bus_case()
-point = base_operating_point(network)
-result = run_fbs(network, point, FBSConfig())
-
-if not result.converged:
-    raise RuntimeError(result.message)
-
-print(result.voltage_mag_pu)
-print(result.total_loss_p_kw)
-```
-
-## 5. `fbs.py`: inputs and calculation
+## 4. `fbs.py`: inputs and calculation
 
 The public function is:
 
@@ -237,7 +181,7 @@ config = FBSConfig(
 
 The FBS iteration limit is separate from the future optimizer's iteration limit.
 
-## 6. Outputs: `PowerFlowResult`
+## 5. Outputs: `PowerFlowResult`
 
 | Field | Meaning / unit |
 |---|---|
@@ -264,25 +208,28 @@ against that direction. Current magnitude remains nonnegative.
 Public powers are three-phase totals. Voltage bases are line-to-line kV,
 line R/X are ohms per phase, and public current magnitudes are A.
 
-## 7. Change loads, PV or BESS injection
+## 6. Change loads, PV or BESS injection
 
-This example uses the prepared feeder with **synthetic demonstration inputs**:
+This example loads a workbook and constructs one explicit operating point:
 
 ```python
-from src.network_model import Load, PVUnit
-from src.network_cases import build_5_bus_case
-from src.main import base_operating_point
-from src.fbs import FBSConfig, run_fbs
+from src_accelerated.fbs import FBSConfig, OperatingPoint, run_fbs
+from src_accelerated.network_loader import load_network
 
-network = build_5_bus_case(
-    loads=[Load("load_2", 2, 250.0, 120.0),
-           Load("load_5", 5, 150.0, 80.0)],
-    pv_units=[PVUnit("pv_4", 4, 180.0)],
+network = load_network("path/to/network.xlsx", workbook_format="auto", frequency_hz=60)
+bus_ids = [bus.bus_id for bus in network.buses]
+loads = network.loads_by_bus()
+pv_units = network.pv_by_bus()
+zeros = {bus_id: 0.0 for bus_id in bus_ids}
+point = OperatingPoint(
+    {bus_id: sum(load.p_base_kw for load in loads[bus_id]) for bus_id in bus_ids},
+    {bus_id: sum(load.q_base_kvar for load in loads[bus_id]) for bus_id in bus_ids},
+    {bus_id: sum(unit.p_rated_kw for unit in pv_units[bus_id]) for bus_id in bus_ids},
+    zeros.copy(), zeros.copy(), zeros.copy(),
 )
-point = base_operating_point(network)
 
 # Override this time step's PV output rather than changing its installed rating.
-point.p_pv_kw[4] = 90.0
+point.p_pv_kw[4] = 90.0  # only if bus 4 exists in this workbook
 
 # A prescribed injection only; use simulation.py for BESS SOC integration.
 point.p_bess_kw[5] = 50.0  # discharge; use -50.0 for charging
@@ -294,15 +241,14 @@ print(result.voltage_mag_pu)
 print(result.slack_p_kw)
 ```
 
-`base_operating_point()` adds all base loads at each bus, uses PV **rated**
-output, and sets reactive PV and BESS injection to zero. It is a fixed-input
-fixture. Actual time-varying values should be supplied through `OperatingPoint`
-by the simulation layer. The fixed-input demo does not read CSV files.
+This construction adds all base loads at each bus, uses PV **rated** output,
+and sets reactive PV and BESS injection to zero. Actual time-varying values
+should be supplied through `OperatingPoint` by the simulation layer.
 
 Changing `point.p_bess_kw` does not enforce battery capacity, efficiency or SOC
 limits. Use `simulation.py` to call the existing BESS step and carry SOC.
 
-## 8. Checks and current limits
+## 7. Checks and current limits
 
 From `07_Implementation`, run:
 

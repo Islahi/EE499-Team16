@@ -45,8 +45,8 @@ Python 3.10–3.14.
 ## 1. Load Data
 
 1. Choose a supported `.xlsx` network. For the existing data, choose
-   `04_Research/Working_Data/Network_Data/IEEE_33Bus_Network_Data.xlsx`.
-   Use **Auto** or **IEEE33** format. Supply frequency **60 Hz** as an explicit
+   `04_Research/Working_Data/Network_Data/Working_RDS/IEEE_33Bus_Network_Data.xlsx`.
+   Use **Auto** or **Bus / Branch** format. Supply frequency **60 Hz** as an explicit
    study input; this workbook does not provide it. Project-schema workbooks
    may supply their own frequency. The looped PJM case is not supported.
    `PJM_5Bus_Network_Data.xlsx` is not our radial five-bus example: it has five
@@ -55,7 +55,7 @@ Python 3.10–3.14.
    In that workbook, **PV bus** means specified active power/voltage magnitude,
    not photovoltaic panels. The existing radial five-bus Python fixtures are
    separate from this file; they are not currently a built-in UI data-source
-   choice. Use IEEE33 or a supported project-format radial workbook in the UI.
+   choice. Use an IEEE33-style bus/branch or supported project-format radial workbook in the UI.
 2. Click **Load Network** to inspect buses/base demand and prefill existing PV
    installations. This is a preview, not a simulation or a data commit.
 3. Choose PV input mode (table below). For irradiance or prepared PV power, the
@@ -289,13 +289,12 @@ settings clear earlier results so they cannot be exported as a new run.
 | File | Responsibility |
 |---|---|
 | `ui.py` | Loads forms; explicit window/dialog handlers, timestamp picker and workers |
-| `network_diagram.py` | Bus/line selection, wheel-zoom view, symbols, rotation and annotation layers |
-| `network_icons.py` | Palette-aware Fit and Zoom vector icons, including disabled states |
+| `network_diagram.py` | Bus/line selection, wheel-zoom view, symbols, rotation, annotations and toolbar icons |
 | `ui_workflow.py` | Qt-free data preparation, run settings and public backend orchestration |
 | `study_session.py` | Accepted-input snapshots, session manifest/log and numbered run folders |
 | `scenario_store.py` | Scenario CSV/JSON package writing and selected-set loading |
 | `progress.py` | Qt-free counters, throttled nested snapshots and duration formatting |
-| `dispatch.py` | User-configured net-load-target operating policy |
+| `simulation.py` | User-configured net-load-target policy and hourly electrical simulation |
 | `network_layout.py` | Qt-free global branch balancing, connection-driven bars and layer-aware spacing |
 | `assets/*.ui` | Your editable Designer layouts; not generated Python |
 | `../examples/run_accelerated_ui.py` | Accelerated UI launcher independent of working directory |

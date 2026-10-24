@@ -58,7 +58,7 @@ class NetworkLayoutTests(unittest.TestCase):
         self.assertEqual(build_layout(network), layout)
 
     def test_ieee33_balances_across_separate_junctions(self):
-        source = Path(__file__).resolve().parents[2] / '04_Research/Working_Data/Network_Data/IEEE_33Bus_Network_Data.xlsx'
+        source = Path(__file__).resolve().parents[2] / '04_Research/Working_Data/Network_Data/Working_RDS/IEEE_33Bus_Network_Data.xlsx'
         network = load_network(source, frequency_hz=60)
         layout = build_layout(network)
         self.assertEqual(set(layout.branch_sides.values()), {'above', 'below'})

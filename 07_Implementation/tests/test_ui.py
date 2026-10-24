@@ -266,7 +266,7 @@ class UITests(unittest.TestCase):
         self.assertFalse(any(item.data(1) in ("load", "pv", "bess") for item in scene.items()))
 
     def test_pjm_preview_is_rejected_without_changing_workbook(self):
-        path = NETWORK.with_name("PJM_5Bus_Network_Data.xlsx")
+        path = NETWORK.parent.parent / "PJM_5Bus_Network_Data.xlsx"
         before = sha256(path.read_bytes()).hexdigest()
         dialog = self.window.load_dialog
         widget(dialog, "edit_network_path").setText(str(path))

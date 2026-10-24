@@ -16,14 +16,14 @@ app.pyw → ui.py → ui_workflow.py
                      ├─ pv_model.py / load_generator.py / imported CSV
                      │                     ↓
                      │                data_loader.py
-                     ├─ static run: fbs.py → accelerated_fbs.py (optional)
-                     ├─ hourly run: simulation.py → dispatch.py, bess.py, fbs.py
+                     ├─ static run: fbs.py (Python/NumPy/Numba/CuPy)
+                     ├─ hourly run: simulation.py → bess.py, fbs.py
                      │                         ↓
                      │                     metrics.py → results.py
                      ├─ scenarios: uncertainty.py ↔ scenario_store.py
                      └─ optimization: optimizer.py → simulation.py / metrics.py
 
-ui.py → network_layout.py → network_diagram.py → network_icons.py
+ui.py → network_layout.py → network_diagram.py
 ui.py → progress.py (worker counters/log); study_session.py (snapshots/manifests)
 ```
 
@@ -69,9 +69,9 @@ Public data types: `DataRequest` (paths, format, study start/months, PV/load mod
 
 `ProgressEvent(phase, completed, total, detail)` computes `100 × completed/total` when total is known. `StageReporter` nests GWO → Candidate → Scenario → Simulation → Control → FBS counters and throttles routine UI snapshots to about four per second, while explicit boundaries can be logged. `format_duration()` formats elapsed seconds as `HH:MM:SS`. These are **work counters, not time-left estimates**: GWO iteration 1 may still contain hours × scenarios × FBS/control solves per candidate. With process workers, the parent sees completed candidate results, not every worker's inner FBS step. A “no worker counter update” heartbeat means no new result was received; it alone cannot establish a hang.
 
-### `__init__.py`, `main.py` and `assets/*.ui`
+### `__init__.py`, `app.pyw` and `assets/*.ui`
 
-`__init__.py` makes this an importable package. `main.py` is a console guide-five-bus FBS demonstration: `base_operating_point()` constructs fixed base loads and PV rated output; `main()` prints voltages, slack P/Q and losses. It is not the desktop application or an operational dispatch policy. The `.ui` files are editable Qt Designer layouts (`main_window.ui`, data/settings/scenario dialogs) loaded at runtime. They do not carry electrical equations.
+`__init__.py` makes this an importable package. `app.pyw` is the Windows desktop launcher. The old console-only `main.py` and hard-coded `network_cases.py` fixtures were removed from the stable package; validation networks now enter through the same Excel loader as user studies. The `.ui` files are editable Qt Designer layouts (`main_window.ui`, data/settings/scenario dialogs) loaded at runtime. They do not carry electrical equations.
 
 ## 3. Static network and Excel input
 
@@ -83,19 +83,15 @@ Defines `Bus`, `Line`, `Load`, `PVUnit`, `NetworkModel` and `RadialOrder`. `Netw
 
 ### `network_loader.py` — strict workbook adapter
 
-`load_network(path, workbook_format='auto', frequency_hz=...)` accepts `.xlsx` only. The project template uses `Network`, `Buses`, `Lines` and optional `Loads`/`PV`; the bundled IEEE-33 workbook uses `Overview`, `Bus Data`, `Branch Data`. It reads literal Excel cell values using `openpyxl`, converts source units where documented, constructs `NetworkModel` and calls `validate()`. The IEEE-33 source's overview quantities and open/closed lines are handled explicitly; it does not drop closed lines to force a radial result. A frequency absent from the workbook must be supplied by the caller. Formula cells are not evaluated as physical data. The PJM/generator workbook is rejected rather than misinterpreting a generator-type “PV bus” as a photovoltaic installation.
+`load_network(path, workbook_format='auto', frequency_hz=...)` accepts `.xlsx` only. The project template uses `Network`, `Buses`, `Lines` and optional `Loads`/`PV`; the general reference adapter uses the IEEE-33-style `Overview`, `Bus Data`, `Branch Data` schema for any radial bus/branch count. It reads literal Excel cell values using `openpyxl`, converts source units where documented, constructs `NetworkModel` and calls `validate()`. Open branches are excluded while closed branches must still form one radial network; the loader does not drop closed lines merely to force a tree. A frequency absent from the workbook must be supplied by the caller. Formula cells are not evaluated as physical data. The legacy explicit `ieee33` API remains strict to 33 buses and 32 active branches; the UI's **Bus / Branch** and **Auto** choices use the general adapter. A PJM/generator workbook is still rejected rather than misinterpreting a generator-type “PV bus” as a photovoltaic installation.
 
 Input: source workbook and optional format/frequency. Output: validated `NetworkModel`, not an hourly profile or solved power flow. The source workbook is opened read-only and closed; it is not rewritten.
-
-### `network_cases.py` — code fixtures, not acquired measurements
-
-`build_5_bus_case()` constructs a prepared 11 kV / 10 MVA chain; by default it has **no loads or PV** because its source did not supply them. `build_guide_3_bus_case()` and `build_guide_5_bus_case()` create named guide examples for solver verification. The guide five-bus case is a different **12.66 kV branched** network with explicit loads and one PV rating. Do not conflate either with the meshed PJM five-bus workbook or label fixture values as local measured data.
 
 ## 4. One-operating-point power flow
 
 ### `fbs.py` — balanced radial Forward/Backward Sweep
 
-`OperatingPoint` requires explicit dictionaries for every network bus: load P/Q, PV P/Q, BESS P/Q. `FBSConfig` selects backend, maximum sweeps (default 100), voltage-change tolerance (default `1e-6 pu`) and optional history. `run_fbs()` validates the network and operating point, calls the Python solver or `accelerated_fbs.run_array_fbs`, and returns `PowerFlowResult` with complex/magnitude/angle bus voltages, branch currents and sending-end P/Q, per-line/total losses, slack P/Q, convergence flag, sweep count and diagnostics.
+`OperatingPoint` requires explicit dictionaries for every network bus: load P/Q, PV P/Q, BESS P/Q. `FBSConfig` selects backend, maximum sweeps (default 100), voltage-change tolerance (default `1e-6 pu`) and optional history. `run_fbs()` validates the network and operating point, runs the selected implementation, and returns `PowerFlowResult` with complex/magnitude/angle bus voltages, branch currents and sending-end P/Q, per-line/total losses, slack P/Q, convergence flag, sweep count and diagnostics.
 
 With line-line $V_{\mathrm{base}}$ and three-phase $S_{\mathrm{base}}$ (use kV/MVA for $Z_{\mathrm{base}}$ and kVA/kV for $I_{\mathrm{base}}$):
 
@@ -119,7 +115,7 @@ I_{\ell,\mathrm{A}}=|I_{\ell,\mathrm{pu}}|I_{\mathrm{base}}.$$
 
 Slack power is slack net demand plus outgoing sending-end powers. A non-converged last iterate remains *diagnostic only*; voltage feasibility and FBS numerical convergence are separate questions. The model is balanced, constant-power and single-voltage-level; it is not a three-phase unbalanced load flow.
 
-### `accelerated_fbs.py` — alternative numerical execution
+#### Alternative numerical execution inside `fbs.py`
 
 `backend_status()`/`backend_available()` report Python, NumPy, optional Numba and experimental CuPy availability. `run_array_fbs()` converts the radial tree and operating point into indexed arrays, invokes `_cpu_sweeps` for NumPy, a JIT-compiled version for Numba, or `_gpu_sweeps` for CuPy, and reconstructs the same `PowerFlowResult` dictionary interface. The underlying backward/forward equations are intended to match `fbs.py`. The current normal UI exposes CPU choices; GPU code remains experimental. Repeated host/device transfers and sequential parent-child dependencies can erase GPU advantages on a small feeder. Numba may incur first-use compilation overhead. No backend should be described as *verified equivalent* or *faster* without controlled comparison at the same inputs and tolerance.
 
@@ -171,7 +167,7 @@ SOC_{t+1}=\frac{E_{t+1}}{E_{\mathrm{rated}}}.$$
 
 `simulation.py` uses this public step with an operating SOC floor raised for reserve. There is no chemistry, degradation, temperature or cycle-life model. Settings validation around this simple class is important; the class itself is not a comprehensive supplier-data validator.
 
-### `dispatch.py` — requested net-load-target operation
+### Net-load-target operation in `simulation.py`
 
 `NetLoadTargetPolicy(target_kw)` returns $P_{B,\mathrm{request},t}=\sum_iP_{L,i,t}-\sum_iP_{PV,i,t}-P_{\mathrm{target}}$ for the current `ProfileSlice`. Positive means request discharge; negative means request charge. `bess.py` and `simulation.py` may clip or pause that request. This policy can charge from the grid below the target. It does not use a price signal, forecast or optimal control.
 
@@ -265,9 +261,9 @@ It picks configured low (“best”), high (“worst”) and seeded random disti
 
 `build_layout()` roots the validated radial tree at the slack, computes subtree depth/bus count/width/equipment count, chooses a longest spine and balances lateral envelopes above/below using weighted size. It then reserves ports/annotation space, shortens busbars to attached items, and routes orthogonal branch take-offs. Bus IDs break ties; the arrangement is a **diagram heuristic**, not geographic coordinate data or an electrical calculation. `arrange_network()` is a coordinate-only compatibility wrapper. Branch-side overrides can be supplied in code, while normal UI auto-arranges behind the scenes. Rotation is a rendering/view choice and cannot change simulated power.
 
-### `network_diagram.py` and `network_icons.py` — visible network
+### `network_diagram.py` — visible network and toolbar icons
 
-`NetworkView` supports fitting/zooming and wheel-centered zoom. `NetworkScene.draw_network()` renders busbars, selectable lines and buses, external grid, load arrows, PV and BESS symbols, optional base properties/result annotations, voltage coloring and 90°-increment orientation. `NetworkLine`/scene item data make line selection possible even with a slim visible stroke. A result overlay needs a retained static or hourly step; an optimizer summary alone cannot supply bus-by-bus voltages. `network_icons.network_icon()` draws compact palette-aware Fit/Zoom button icons. These files do not solve FBS or change source network topology.
+`NetworkView` supports fitting/zooming and wheel-centered zoom. `NetworkScene.draw_network()` renders busbars, selectable lines and buses, external grid, load arrows, PV and BESS symbols, optional base properties/result annotations, voltage coloring and 90°-increment orientation. `NetworkLine`/scene item data make line selection possible even with a slim visible stroke. A result overlay needs a retained static or hourly step; an optimizer summary alone cannot supply bus-by-bus voltages. `network_icon()` draws compact palette-aware Fit/Zoom button icons. This module does not solve FBS or change source network topology.
 
 ## 9. What this reference does **not** certify
 
