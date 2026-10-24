@@ -85,13 +85,16 @@ The current baseline preserves:
 ├─ src/
 │  ├─ network_model.py
 │  ├─ network_cases.py
+│  ├─ network_loader.py   # static Excel network import, separate from profiles
 │  ├─ data_loader.py
+│  ├─ pv_model.py         # irradiance preparation, not power flow
+│  ├─ load_generator.py   # literature-based synthetic hourly demand
 │  ├─ fbs.py
 │  ├─ bess.py
 │  ├─ simulation.py
 │  ├─ metrics.py
-│  ├─ uncertainty.py      # placeholder until V5
-│  ├─ optimizer.py        # placeholder until V4
+│  ├─ uncertainty.py      # V5 hourly ARIMA/scenario workflow
+│  ├─ optimizer.py        # V4 catalog GWO/WSM
 │  ├─ results.py
 │  └─ ui.py               # later V6
 └─ tests/
@@ -110,7 +113,10 @@ The current baseline preserves:
 |---|---|---|
 | `network_model.py` | Define static network entities, topology, validation and radial ordering | Run power flow, read time-series CSV, update SOC, optimize |
 | `network_cases.py` | Construct named network cases using `NetworkModel` objects | Contain FBS equations |
+| `network_loader.py` | Read supported Excel network layouts into a validated `NetworkModel` | Read hourly profiles, run FBS, invent PV/load data or alter topology |
 | `data_loader.py` | Read/validate prepared load/PV profiles and return standardized profile objects | Solve power flow or choose optimization decisions |
+| `pv_model.py` | Read supported irradiance CSVs and prepare bus-level PV power CSV rows | Invent installed PV ratings, alter the network or simulate FBS |
+| `load_generator.py` | Prepare synthetic hourly P/Q demand from base loads and hourly normal statistics | Claim measured local demand or replace ARIMA/scenario selection |
 | `fbs.py` | Solve one radial-network power-flow time step | Read CSV, update BESS SOC, optimize, manage UI |
 | `bess.py` | Define BESS parameters/state and apply one physically feasible charge/discharge step | Solve network power flow |
 | `simulation.py` | Orchestrate profiles, BESS injection and FBS for one/many time steps | Contain GWO search logic |
@@ -308,7 +314,40 @@ build_ieee33_case(...) -> NetworkModel
 
 The first implementation may encode the prepared 5-bus data directly in `network_cases.py`. `fbs.py` must not contain any 5-bus-specific constants or equations.
 
-## 3.7 Units/base convention
+## 3.7 Static network import (18 Oct 2026)
+
+`load_network(path, *, workbook_format="auto", frequency_hz=None) -> NetworkModel`
+reads `.xlsx` only, using openpyxl in read-only mode with formula text retained.
+It supports a strict project template and the existing IEEE 33-bus workbook.
+Auto-detection uses sheet/header structure, not the filename. `.m`, `.mat`,
+arbitrary Excel layouts and the PJM transmission workbook are not supported.
+
+- Project template: required `Network` (parameter/value), `Buses` and `Lines`
+  sheets; optional `Loads` and `PV`. Fields use existing model names and
+  engineering units: kVA, kV, ohms, kW, kvar and Hz. Numeric inputs are literals,
+  not Excel formulas. Unknown nonempty columns/sheets are rejected to avoid
+  silently discarding unsupported electrical features. Optional line `status`
+  is 1/0; only explicitly open lines are omitted, never automatically removed
+  to manufacture a radial network. An absent status means in service.
+- Reference adapter: `Overview`, `Bus Data`, `Branch Data`, with the supplied
+  IEEE33 headers. Read base MVA/kV from labelled overview fields, convert MVA to
+  kVA and retain line ohms and bus kW/kvar. Load only numbered rows, skipping
+  explicit TOTAL/Source footer rows without evaluating their formulas. Receiving-
+  bus load columns are consistency checks, not additional loads. Expect 33
+  buses/32 branches. No PV is invented. Require explicit `frequency_hz` because
+  the workbook does not specify it. A supplied frequency overrides the project
+  template value too; no numerical default is silently assumed.
+- Validate identifiers, literal finite numeric values, endpoint/device references,
+  unique equipment IDs, one slack, one voltage level, connectivity and radiality.
+  Reject voltage-controlled generator buses, unknown parameters and unsupported
+  model features rather than dropping them. Non-slack initial voltages/angles
+  in the reference workbook do not replace the solver's initialization; the
+  reference adapter requires zero angle and uses the recorded slack magnitude.
+- This is not hourly profile import or feeder drawing. Base loads are not added
+  to absolute hourly profile loads. Existing `data_loader.py`, `bess.py` and
+  source workbooks remain unchanged. A dedicated README defines every column.
+
+## 3.8 Units/base convention
 
 **Proposed design decision:** module boundaries use engineering units; FBS converts deterministically to per-unit internally.
 
@@ -636,6 +675,70 @@ This prevents `data_loader.py` from importing/depending on FBS internals.
 
 ---
 
+## 5.7 Input preparation (18 Oct 2026)
+
+The user requested two separate preparation scripts. Both return pandas frames
+with `timestamp,bus_id,p_kw,q_kvar` for the unchanged `ProfileData` CSV interface.
+They never mutate source files/network objects. The driver saves new output
+directories only and records the source, settings and synthetic-data limitations.
+
+### `pv_model.py`
+
+- `PVModelConfig(critical_irradiance_w_m2, standard_irradiance_w_m2=1000)`:
+  require `0 < critical < standard`. Critical irradiance is an explicit study
+  input, not an invented panel parameter. Installed kW comes from `PVUnit` in
+  the network and multiple units at one bus are summed.
+- `irradiance_to_power(irradiance_w_m2, rated_power_kw, config) -> float`:
+  nonnegative finite inputs, output kW. Use rated times `s*s/(Rstd*Rc)` below
+  Rc, `s/Rstd` between Rc and Rstd, and one at/above Rstd. This explicitly
+  resolves the report page 24 last-branch typo (`s >= Rc`) by following its
+  prose (`s >= Rstd`). The original cited article's equation was not retrievable
+  for independent comparison. Clipping is this prototype's model assumption,
+  not a universal claim about a panel's physical maximum.
+- `read_irradiance(path, *, source) -> DataFrame`: explicit source choice
+  `prepared`, `open_meteo` or `nasa_power`. Prepared columns are `timestamp`
+  and `irradiance_w_m2`; Open-Meteo uses `time`/`shortwave_radiation (W/m²)`;
+  NASA uses YEAR/MO/DY/HR and `ALLSKY_SFC_SW_DWN` (Wh/m² for each one-hour
+  interval, divide by one hour to get W/m²). Recognize headers rather than
+  fixed metadata line counts. Reject missing/sentinel/negative/nonfinite data,
+  repeated, unordered or noncontinuous hourly timestamps. No interpolation.
+- `make_pv_profile(network, irradiance, config) -> DataFrame`: use one common
+  irradiance series for this feeder and unity-power-factor PV. No PV devices
+  means explicit zero rows at the slack so the existing CSV loader can read a
+  no-PV case. Preserve naive timestamps in the source's documented clock; do not
+  silently mix NASA LST and civil time. GHI is an explicit resource proxy, not
+  a plane-of-array/temperature/inverter model. No weather source averaging.
+
+### `load_generator.py`
+
+- `LoadGenerationConfig(seed=42, mean_percent=..., sd_percent=...)` provides
+  the 24 Table 1 hourly mean/SD pairs from Ali, Shaaban and Sindi, Sustainability
+  2022, 14, 13209 (pages 11–12; normal load pdf in Section 3). Tuples are
+  configurable, not user-local demand estimates. Table hours 1–24 are mapped
+  to consecutive civil-clock hours 00–23 as an explicit project convention.
+- `generate_load_profile(network, timestamps, config=None) -> DataFrame`:
+  require a validated network with base-load objects and >=2 continuous,
+  increasing, naive hourly timestamps. Sum multiple base loads per bus. Draw
+  one local-seeded normal multiplier per timestamp using its hour's mean/SD,
+  divide percentages by 100, clamp negative samples to zero, and apply the
+  same multiplier to every bus's base P and Q. Do not add base demand again.
+  Do not cap at 100%; it is not a physical demand limit. Record clipping count.
+- Shared bus scaling preserves base proportions/power factor and avoids an
+  undocumented independent-per-bus diversity assumption. Hours are independent;
+  no temporal correlation, weekday or seasonal pattern is claimed. Repetition
+  over three months is synthetic study data, not local measurement or faithful
+  replication of the paper's probability-state optimizer. Q scaling follows
+  the existing SD-4 base-P/Q rule; reject Q-only base loads for compatibility
+  with the later ARIMA Q/P model. Original imported load profiles can still be
+  used through `ProfileData`; generation is not mandatory.
+
+The preparation driver exposes PV bus/rating, critical irradiance, network
+frequency, source, start and hours/months explicitly. It can run an optional
+no-BESS integration simulation, with convergence/feasibility distinguished.
+This change does not implement UI, supplier catalogs or min/max optimizer bounds.
+
+---
+
 # 6. BESS model design specification
 
 ## 6.1 Existing baseline requirements
@@ -827,7 +930,80 @@ simulate_timeseries(
 ) -> TimeSeriesSimulationResult
 ```
 
-The first FBS task does **not** implement this loop; Task 17 later adds it using the same one-step contracts.
+## 7.3 Implemented simulation details (15 Oct 2026)
+
+The original positional interfaces above are retained. `simulate_step` also
+accepts keyword-only `simulation_config` and `peak_load_kw`. The step is hourly,
+matching the existing profile loader. A standalone step uses that hour's total
+load for reserve sizing unless `peak_load_kw` is supplied. The time-series loop
+calculates peak total load over the complete supplied horizon.
+
+- `SimulationConfig`: FBS settings, voltage bounds (0.95/1.05 pu), reserve
+  fraction (0.10), reserve duration (1 hour), and stop-on-FBS-failure (True).
+- `SimulationStepResult`: timestamp, operating point, power-flow result,
+  requested BESS power, BESS-step result, accepted BESS state, voltage
+  violations, reserve shortfalls, feasibility and diagnostic messages.
+- `TimeSeriesSimulationResult`: steps, hourly duration, completion flag,
+  convergence flag, feasibility flag, final accepted BESS state and message.
+- `dispatch_policy(index, profile_slice, bess_state) -> requested_power_kw` is
+  optional. No policy means zero BESS dispatch. The policy receives a copy of
+  the current state; positive power means discharge, negative means charge.
+- Reserve is enabled only in BESS runs. Hold `R = reserve_fraction * peak_load`
+  kW of discharge capability and `R * reserve_duration / eta_discharge` kWh
+  above the physical minimum energy. Limit normal discharge to retain both;
+  permit charging when initial reserve is deficient and report the deficiency.
+  Both starting and ending energy must cover reserve for an hour to be feasible.
+- Use a shallow copy of BESSConfig with the reserve energy floor for calls to
+  the public `step_bess`; never change the caller's configuration/state.
+- Remaining voltage violations and reserve shortages make results infeasible.
+  See Section 7.4 for the curtailment/shedding controller added on 17 Oct.
+- Non-converged FBS steps are diagnostic: do not advance accepted BESS state.
+  Stop by default; optional continuation retains the last accepted state and
+  always leaves the overall result infeasible and non-converged.
+- Profile rows required by configured load/PV equipment must be present. Fill
+  unconfigured buses with explicit zeros and reject unknown bus references.
+- The loop accepts any nonempty hourly horizon, so short fixtures, three months,
+  and a later full year use the same interface. No artificial three-month cap.
+- Terminal SOC, optimizer search and thermal limits remain outside orchestration.
+
+## 7.4 Curtailment/shedding integration (17 Oct 2026)
+
+Implementation rule for the requested first working controller:
+
+- Profile load values are original requested demand; profile PV values are
+  available generation. Preserve them and modify a separate operating point.
+- `allow_pv_curtailment` and `allow_load_shedding` default True. High voltage
+  triggers PV curtailment; low voltage triggers shedding. Optional nonnegative
+  `grid_import_limit_kw` / `grid_export_limit_kw` also trigger the corresponding
+  action. Both caps default None (unlimited); they are configurable study
+  assumptions, not additional mandatory network ratings.
+- After feasible battery clipping and a converged FBS, pause charging if it
+  contributes to low voltage/import excess, or pause discharge if it contributes
+  to high voltage/export excess. Recompute from the original battery state;
+  battery energy is advanced only once, from the final accepted action.
+- Try proportional PV reduction across buses, followed by proportional demand
+  reduction across buses. Scale corresponding Q with P, preserving each
+  device's power factor. Use bounded bisection and repeated public FBS calls to
+  find a reduction that clears the triggering limit. The default search budget
+  is 30 bisection iterations per action; grid-cap tolerance is 1e-6 kW.
+- Retain only converged control trials. If even full removal cannot clear the
+  triggering limit, retain the prior point and report residual infeasibility.
+  This simple ordered controller is not an optimal or priority-load dispatcher;
+  interacting high/low voltage problems may remain infeasible.
+- A non-converged initial FBS remains a solver failure; do not invent shedding
+  from it. Check final voltage and grid-cap feasibility after controls.
+- Each step records total `curtailment_kw` / `shedding_kw` plus
+  `curtailment_by_bus_kw` / `shedding_by_bus_kw`. They are original minus final
+  operating-point P. New converged runs record explicit zeros when no action
+  occurs. Failed hours leave these records unavailable (None).
+- `metrics.py` integrates those records automatically. Legacy results without
+  records remain unavailable unless explicit external records are provided.
+  Explicit records must match any existing automatic records; they cannot
+  silently overwrite a different simulated action.
+- Electrical feasibility may be True after shedding, while unmet demand is
+  separately reported by the shedding metric. Feasible does not mean that all
+  original demand was served. Reserve is based on original demand, not reduced
+  served load.
 
 ---
 
@@ -855,7 +1031,42 @@ Existing metric families remain:
 
 Economic coefficients remain inputs; do not hard-code unverified cost values in the public interface.
 
-## 8.2 `uncertainty.py` placeholder — do not implement before V5
+### Implemented metrics contract (17 Oct 2026)
+
+The first two positional arguments of `evaluate_results` are preserved. Add an
+optional `bess_config` argument because simulation results do not store nominal
+battery size. It must be the configuration used for that run. No-BESS runs cost
+zero; BESS runs require their configuration and cost is unavailable (`None`)
+until both `EconomicConfig.cost_per_kwh` and `cost_per_kw` are supplied.
+
+`C = cost_per_kwh * energy_capacity_kwh + cost_per_kw * power_rating_kw` is
+investment cost in the configured currency (default SAR), with no other cost
+terms, annualization or normalization.
+
+`PerformanceMetrics` contains horizon duration, served-load/PV/grid-import/
+grid-export/loss energies, peak grid import, voltage extrema, voltage-violation
+hours and bus-hours, reserve-violation hours, battery charge/discharge energies,
+SOC extrema, investment cost, feasibility, optional curtailed/shed energies and
+availability notes.
+
+Automatic per-step records are the preferred source. Optional keyword inputs
+`curtailment_kw` and `shedding_kw` are nonnegative
+per-step total powers, in the same order as the simulation steps. They are
+integrated with `dt_hours`. Omitted inputs use automatic records when present;
+legacy unrecorded results produce `None`, not inferred zeros. Export is
+not curtailment, grid import is not shedding, and failed FBS is not unserved
+energy. Served load/PV energy describe values actually sent to FBS.
+
+Evaluation rejects empty, incomplete or non-converged runs. Converged but
+voltage/reserve-infeasible runs may be summarized, retaining `feasible=False`.
+There is no optimizer fitness/penalty or emissions calculation in this module.
+
+`percentage_reduction(baseline, candidate)` returns `100*(baseline-candidate)/
+baseline`. Negative values indicate deterioration. Missing data or a zero
+baseline with a nonzero candidate returns `None`; zero versus zero returns zero.
+Callers must compare matching horizons/inputs. WSM belongs to the optimizer.
+
+## 8.2 `uncertainty.py`
 
 Existing baseline: ARIMA + Monte Carlo, 100 generated scenarios, 45 retained scenarios.
 
@@ -877,7 +1088,45 @@ Scenarios reuse `ProfileData`; they do not introduce a second simulation format.
 
 The exact 15-best/15-worst/15-random ranking rule is documented at the high-level design layer (`TERM2_SHADOW_DESIGN.md` SD-8) and must be fixed there before selection code diverges.
 
-## 8.3 `optimizer.py` placeholder — do not implement before V4
+### First working uncertainty contract (18 Oct 2026)
+
+The following are explicit prototype implementation defaults, not statistically
+validated team parameters or new requirements:
+
+- `UncertaintyConfig` requires `forecast_hours` and per-bus `pv_capacity_kw`.
+  Defaults: 100 scenarios, seed 42, ARIMA order `(1,0,0)`, 24-hour holdout.
+  Require at least 48 training hours plus the holdout. Forecast timestamps start
+  one hour after history; the initial study horizon can be set to 2,160 hours.
+- For each bus active-power series, learn its 24 hourly means, fit ARIMA to
+  scaled deviations, then simulate conditional future paths with Gaussian ARIMA
+  innovations. Restore hourly means and clip load/PV to nonnegative power; cap
+  PV at supplied installed ratings. Historically all-zero PV hours stay zero.
+  Constant residuals are deterministic and reported, not given invented noise.
+  Separate buses and load/PV models use independent innovations; cross-series
+  correlation, changing daylight and seasonal weather remain limitations.
+- Q follows each bus's historical hourly Q/P ratio, learned from supplied Q
+  values (not a new assumed power factor). This prototype requires zero Q where
+  P is zero. Signed Q is retained. Input history is never changed.
+- Fit daily means and ARIMA on training data only for holdout RMSE and MAPE;
+  MAPE excludes zero actuals and reports its count/None if none qualify.
+  Compare against a repeat-last-day baseline. Refit all history for generation.
+  Failed/non-converged ARIMA fits raise an error, not a hidden noise fallback.
+- `ScenarioSet` also carries metadata with forecasts, validation and assumptions.
+  All scenarios share timestamps and bus keys. Generated cases have mass 1/N.
+  Selection uses the confirmed four-feature stress rule, min-max normalization
+  (constant feature = zero), ID tie-breaking, and seeded sampling without
+  replacement. It returns new Scenario wrappers without mutating its source.
+- Selected probabilities are `None`: the 15/15/15 set oversamples extremes and
+  is not a probability-preserving reduction. `ScenarioEvaluator` explicitly uses
+  an equal-weight stress-set mean of each case's raw WSM. One common candidate
+  is tested in all cases with independently reset SOC; any infeasible case
+  rejects it. Investment cost is counted once. Per-case evaluations are retained.
+  Aggregate energy/durations are means, voltage/SOC extremes and peak import
+  are worst-case values. This is not a two-stage stochastic program or an
+  unbiased expected-cost estimator. Existing single-profile evaluation remains
+  available; the generic optimizer does not gain forecasting equations.
+
+## 8.3 `optimizer.py`
 
 Existing baseline: decision vector `[B,P,E]`, starting GWO/WSM approach.
 
@@ -906,11 +1155,152 @@ optimize(
 
 The optimizer evaluates candidates through the public simulation/evaluator interface. It must not contain its own copy of FBS or BESS equations.
 
+### First working optimizer contract (17 Oct 2026)
+
+- Retain `optimize(network, profiles_or_scenarios, bounds, evaluator,
+  optimizer_config)`. The search engine forwards data to an explicit evaluator;
+  the built-in `SimulationEvaluator` initially handles one `ProfileData`.
+  `uncertainty.ScenarioEvaluator` now wraps that evaluator for scenario sets,
+  using the equal-weight stress-portfolio contract in Section 8.2.
+- `OptimizationBounds` holds finite catalogs `allowed_bus_ids`,
+  `power_ratings_kw`, `energy_capacities_kwh`. Candidates are positive BESS
+  installations. A no-BESS baseline is evaluated separately.
+- `BESSCandidate` stores bus, kW and kWh. `BESSParameters` supplies explicit
+  directional efficiencies plus SOC bounds/initial SOC. Candidate construction
+  calls the existing public `BESSConfig` without changing the battery module.
+  Directional power limits default to each candidate's own nominal rating.
+- `SimulationEvaluator` requires economic coefficients, battery parameters,
+  a dispatch policy and optional simulation settings/WSM weights. It runs
+  `simulate_timeseries` and `evaluate_results` for each candidate. No optimizer
+  physics, automatic cost assumptions or hidden dispatch target is introduced.
+- `ObjectiveWeights` defaults to cost/curtailment/shedding weights
+  0.50/0.25/0.25; `weighted_sum` uses raw cost and kWh without normalization.
+  All component values must be available. Missing prices are an input error.
+  Failed/incomplete/infeasible runs have infinite fitness and cannot win.
+- `OptimizerConfig` exposes population size, iteration count, random seed,
+  cache toggle and optional initial candidates. Default controls are 12 wolves,
+  20 evaluated generations, seed 42 and per-search caching enabled.
+- Search three continuous catalog-index coordinates using the GWO alpha/beta/
+  delta equations using positive one-based coordinates, clip to bounds and round to nearest catalog entry for
+  evaluation. Bus IDs need not be consecutive. This is discrete catalog
+  adaptation of GWO, not an assumption that bus indices have physical distance.
+- Include the all-low/all-high catalog choices in the default starting pack;
+  explicit initial candidates may replace those slots. Keep the
+  best three distinct feasible candidates seen so far as leaders; repeat the
+  best available leader if fewer than three exist. If none are feasible yet,
+  resample the next pack instead of treating an invalid candidate as a solution.
+- `OptimizationResult` reports success, message, best candidate/objective/
+  metrics, best-so-far history, iteration count, unique/evaluated candidates
+  and metadata. Return no best candidate if all sampled candidates are infeasible.
+  Unexpected programming/profile errors propagate instead of being hidden.
+- `exhaustive_search` evaluates the same finite catalog through the same
+  evaluator as an independent small-case reference. GWO does not silently run
+  exhaustive search or claim a guaranteed global optimum.
+- Cache scope is one search. Evaluators/dispatch policies must be deterministic
+  for identical inputs; metrics summaries, not full hourly traces, are cached.
+- The algorithm reference is the author's GWO equations and reference code:
+  https://github.com/alimirjalili/GWO/blob/master/GWO.m . The implementation is
+  project-specific Python, with the catalog adaptation and failure handling above.
+
 ## 8.4 `results.py` / `ui.py`
 
 `results.py` may format/export standardized results. `ui.py` may collect user choices and call public backend interfaces. Neither module owns engineering equations.
 
-**User-confirmed GUI scope (13 Oct 2026):** Load network data through the existing `NetworkModel` interface and automatically build the distribution-system diagram from bus IDs, line endpoints and connected devices. Display buses, lines, loads, PV and BESS locations; display simulation results and the optimizer-selected BESS location through the existing result interfaces. Loading another network rebuilds the diagram. Manual placement or drag-and-drop network editing is outside this scope. The layout algorithm and GUI library remain implementation/design choices to document before development; this confirmation does not select either library or algorithm.
+**User-confirmed GUI scope (13 Oct 2026):** Load network data through the existing `NetworkModel` interface and automatically build the distribution-system diagram from bus IDs, line endpoints and connected devices. Display buses, lines, loads, PV and BESS locations; display simulation results and the optimizer-selected BESS location through the existing result interfaces. Loading another network rebuilds the diagram. Manual placement or drag-and-drop network editing is outside this scope. This historical scope confirmation predates the later desktop implementation contract below, which records the PySide6 selection.
+
+### Qt implementation guidance (18 Oct 2026)
+
+Before desktop implementation, follow
+`07_Implementation/Qt_Desktop_Implementation_Guide.md`: reuse the user's
+password-manager reference's Designer forms, focused screen classes and named
+signal handlers where beneficial. Adapt paths, job threading, progress and
+dynamic feeder drawing to this numerical application. Do not inherit its PyQt5
+version, authentication or database features. The binding/loading choice must
+be explicit before implementation; PySide6 remains a recommendation. Existing
+public engineering interfaces and the user's UI mockup take precedence over
+reference-app structure. Adding this guidance does not implement the UI.
+
+### Desktop UI implementation contract (18 Oct 2026)
+
+The user supplied three Designer forms in `07_Implementation/src/assets/` and
+requested implementation. Use PySide6 with runtime `QUiLoader` and explicit
+screen classes/handlers, preserving the source forms and their actual names.
+Support the supplied `frame_action` name and date-only start control (midnight).
+Add provider choices and the newly confirmed controls at runtime, not by
+overwriting the user's forms. Keep the core backend runnable without Qt through
+a separate `requirements-ui.txt`.
+
+- `ui.py`: form binding, staged Load Data/Settings dialogs, one active worker
+  job per owner, main-thread-only widget updates, busy/error/success cleanup,
+  real stage messages/indeterminate progress, text results/export and selectable
+  vector network scene with zoom/fit. Block closing a window while its job runs;
+  no forced termination or advertised cancellation. Data/settings commits clear
+  prior results. Apply commits settings; Cancel discards only unapplied edits.
+- `ui_workflow.py`: UI-neutral request/study/report objects, strict prepared CSV
+  validation and orchestration through public loaders, preparation, simulation,
+  metrics, optimization, uncertainty and results. Validate full selected hourly
+  coverage for each included bus, known IDs, required configured devices, finite
+  values and no duplicate rows. Prepared PV requires explicit installed ratings
+  for nonzero power; never infer ratings from observed maxima. Study PV table
+  represents the complete per-bus installed ratings, not an addition to them.
+  No-PV mode explicitly removes PV devices and generates a zero PV series.
+- `dispatch.py`: `NetLoadTargetPolicy(target_kw)` requests original net load
+  minus the explicit target. Positive discharge, negative charge; reserve/SOC/
+  network clipping stays in the existing simulator. The user confirmed this
+  configurable policy, not the demo's fixed 600 kW. Grid charging below a
+  positive target is possible and must be disclosed. Idle stays diagnostic.
+- `network_layout.py`: deterministic radial schematic coordinates independent
+  of Qt, preserving IDs/topology and leaving physical parameters untouched.
+- Diagram-symbol update (19 Oct 2026): use selectable busbar groups, downward
+  arrows for connected base-load devices, labeled vector solar-panel icons for
+  installed PV, a battery icon for the configured BESS and an explicit legend.
+  Symbols describe equipment presence, not instantaneous output or branch-flow
+  direction. No externally downloaded icons or formal symbol-standard compliance
+  are claimed. PJM/meshed generator workbooks remain unsupported and unchanged.
+- The user confirmed min/max PLUS explicit steps. Build finite catalogs with
+  Decimal-based stepping, include min/max endpoints (last interval can be
+  shorter), reject invalid/reversed/nonpositive bounds/steps and cap each axis
+  at 10,000 entries as a software resource guard. Pass catalogs to the unchanged
+  GWO engine; never interpret spin-box arrow increments as search resolution.
+- New runtime settings: dispatch mode/target, power step and energy step. No
+  automatic target, size, efficiency or price is invented. Optimization needs
+  explicit target dispatch, valid battery parameters, prices and search ranges.
+  Optional uncertainty reuses the existing generation/selection/evaluator path;
+  stage progress is not a fabricated percent. Text identifies forecast dates and
+  stress-portfolio aggregation. Optimizer summaries do not have hourly traces;
+  diagram details must not display a history-hour voltage as an optimized one.
+
+### First results-export contract (18 Oct 2026)
+
+- `format_summary(result, *, metrics=None, context=None) -> str` and
+  `export_results(result, output_path, *, metrics=None, baseline_metrics=None,
+  context=None) -> dict[str, Path]` accept `TimeSeriesSimulationResult`,
+  `PerformanceMetrics` or `OptimizationResult`. The output path is a **new
+  directory**, never an existing run to overwrite. No plotting/UI dependency.
+- A simulation may be accompanied by its already-calculated metrics. Export
+  does not call the simulator, evaluator or optimizer again. Optimization uses
+  its own retained metrics. Context is an optional string-to-string mapping
+  for case names, input paths, settings and assumptions supplied by the driver.
+- Always write `summary.md`. Write `metrics.csv` when metrics are available;
+  simulation exports add hourly, bus and branch CSVs. Optimization adds candidate
+  evaluations and convergence history, plus per-case evaluations when retained
+  by `ScenarioEvaluator`. Empty histories/tables retain their headers.
+- Retain completion, convergence and feasibility flags/messages. Failed FBS
+  rows are explicitly diagnostic; trial injections are not accepted operation.
+  Do not attach performance totals to incomplete/non-converged simulations.
+  Unknown values are blank in CSV / unavailable in summaries, never invented
+  zeros. Infinity remains labelled rather than being converted into a finite
+  optimizer score. Export does not change input objects or battery state.
+- Optional baseline comparison uses existing `percentage_reduction`, checks
+  matching duration/currency, retains both feasibility flags, and labels zero-
+  baseline reductions unavailable when undefined. Caller must ensure identical
+  profiles/scenarios, network, control settings and aggregation basis: metric
+  objects alone cannot establish these identities.
+- CSVs use UTF-8 with BOM for Excel, explicit unit-bearing names/metric units,
+  deterministic row order and spreadsheet-formula protection for text cells.
+  Summary is written last as the completion marker; an I/O error propagates and
+  a partially written new directory is retained for inspection, never silently
+  presented as a successful export. Existing run folders are not changed.
 
 ---
 

@@ -1,0 +1,10 @@
+﻿metric,unit,baseline,candidate,reduction_percent,baseline_feasible,candidate_feasible
+bess_cost,SAR,0.0,,,True,True
+curtailment_energy_kwh,kWh,0.0,0.0,0.0,True,True
+load_shedding_energy_kwh,kWh,0.0,0.0,0.0,True,True
+loss_energy_kwh,kWh,188.192392980478,177.7461503955993,5.550831475936609,True,True
+grid_import_energy_kwh,kWh,12860.95446465982,12591.473618358268,2.0953409565522505,True,True
+grid_export_energy_kwh,kWh,0.0,0.0,0.0,True,True
+peak_grid_import_kw,kW,779.9647822228726,686.5591275923373,11.97562463837565,True,True
+voltage_violation_hours,h,0.0,0.0,0.0,True,True
+reserve_violation_hours,h,0.0,0.0,0.0,True,True

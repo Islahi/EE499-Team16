@@ -39,6 +39,11 @@ Team literature-review notes. Treat as secondary/internal notes and verify claim
 
 Reference list of GUI programs and software libraries/frameworks relevant to the project, including GLOW, OpenDSS Designer, GridCal, PowerFactory, ETAP, CYME, PowerWorld, pandapower, PyPSA, OpenDSS, OpenDSSDirect.py, MATPOWER and GridLAB-D. Intended for GUI/workflow inspiration, architecture references, distribution-system modelling and result-validation ideas; inclusion does not mean the team has adopted those tools.
 
+VeraGrid was added on 18 Oct 2026 with focused official-documentation links for
+later uncertainty/scenario, investment optimization, network-diagram and
+results-workflow review. It is a comparison/reference application, not an
+adopted project dependency; exact equivalence to our workflow is unverified.
+
 ### `Working_Data/My Project.xlsx`
 
 Internal project workbook. It is not categorized as an external academic source. Inspect its contents for the current task before relying on it as data/evidence.
@@ -58,3 +63,15 @@ MATPOWER/PJM five-bus test system based on Li and Bo (2010), with bus loads, fiv
 ### `Working_Data/Network_Data/IEEE_33Bus_Network_Data.xlsx`
 
 Baran and Wu IEEE 33-bus radial distribution-system data with 33 buses, 32 branches, 3,715 kW real load and 2,300 kVAr reactive load. Suitable as a larger validation case after documenting base conversions and any project-specific additions.
+
+### `Working_Data/Network_Data/Radial_Test_Systems/`
+
+Six original MATPOWER 8.1 `.m` cases downloaded from the official repository on
+19 Oct 2026: `case10ba`, `case12da`, `case15da`, `case22`, `case33bw` and `case69`.
+Pinned commit: `1a828c7af590714499284e36ee9c81273388c594`. The folder README
+records literature references, numerical bases/units, active radial-topology and
+base-load FBS checks, and limitations. The manifest records bytes/SHA256/URLs.
+The 33-bus original retains five normally open ties. These are research source
+downloads, not directly supported UI inputs or a confirmed change of case study.
+MATPOWER's software BSD license explicitly excludes case data files; preserve
+attribution and verify applicable data reuse rights before republication.

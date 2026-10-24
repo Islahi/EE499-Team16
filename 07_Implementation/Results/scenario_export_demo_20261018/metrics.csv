@@ -1,0 +1,25 @@
+﻿metric,value,unit
+duration_hours,24.0,h
+served_load_energy_kwh,11031.014757851168,kWh
+pv_generation_energy_kwh,5322.908009014573,kWh
+grid_import_energy_kwh,5858.433106084425,kWh
+grid_export_energy_kwh,4.4435873727513255e-06,kWh
+loss_energy_kwh,97.68872819756497,kWh
+peak_grid_import_kw,400.00000099984135,kW
+voltage_min_pu,0.9776428045669968,pu
+voltage_max_pu,1.0,pu
+voltage_violation_hours,0.0,h
+voltage_violation_bus_hours,0.0,bus-hours
+reserve_violation_hours,0.0,h
+bess_charge_energy_kwh,340.38489370845275,kWh
+bess_discharge_energy_kwh,287.7469402991524,kWh
+bess_soc_min,0.24798360972581956,fraction
+bess_soc_max,0.9,fraction
+bess_cost,1300.0,SAR
+currency,SAR,
+curtailment_energy_kwh,3134.586769775342,kWh
+load_shedding_energy_kwh,1958.0317503978831,kWh
+feasible,True,
+notes,Equal-weight scenario means; extrema/peak are worst-case values.,
+requested_load_energy_kwh,12989.04650824905,kWh
+available_pv_energy_kwh,8457.494778789913,kWh

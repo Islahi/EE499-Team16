@@ -42,10 +42,9 @@ Implementation tasks should focus on **coding, testing, debugging and integratio
 
 Where `TERM2_SOFTWARE_DESIGN_SPEC.md` labels a choice as a **proposed design decision**, it is an explicit proposal rather than a new project requirement. If the team changes it, update the design specification before implementations diverge.
 
-Two later design gates remain open:
-
-- confirm WSM normalization before Task 33,
-- confirm the best/worst scenario ranking metric before Task 45.
+The later design gates were resolved on 15 Oct 2026: Task 33 uses the raw
+Term 1 WSM without normalization for the first prototype, and Task 45 uses the
+composite scenario-stress ranking documented in `TERM2_SHADOW_DESIGN.md` SD-8.
 
 ## How to read this guide
 
@@ -279,9 +278,9 @@ For each task:
 ## Task 33 — Implement the Term 1 WSM objective
 **Start:** 19 Oct 2026  
 **Deadline:** 20 Oct 2026  
-**Design gate:** Confirm/document normalization before coding it.  
-**What to do:** Apply the existing Term 1 weights through the evaluator using an explicit confirmed normalization method. Do not hide an arbitrary normalization rule in code.  
-**Done when:** Working WSM fitness uses a documented normalization method.
+**Confirmed simplification:** No WSM normalization in the first prototype.
+**What to do:** Apply the existing raw Term 1 weights and return every unweighted component beside the total score. Use only `cost_per_kwh * E + cost_per_kw * P` for cost.
+**Done when:** Working raw WSM fitness and its cost/curtailment/shedding components are visible and reproducible.
 
 ## Task 34 — Implement GWO candidate variables
 **Start:** 20 Oct 2026  
@@ -357,8 +356,8 @@ For each task:
 ## Task 45 — Select the 45 Term 1 scenarios
 **Start:** 28 Oct 2026  
 **Deadline:** 28 Oct 2026  
-**Design gate:** Confirm/document the best/worst ranking metric before coding the selector.  
-**What to do:** Apply the retained 15 best + 15 worst + 15 random method to `ScenarioSet` using the confirmed explicit rule.  
+**Design reference:** `TERM2_SHADOW_DESIGN.md` SD-8 composite stress score.
+**What to do:** Apply the retained 15 best + 15 worst + 15 seeded-random method to `ScenarioSet` using the confirmed explicit rule.
 **Done when:** 45 retained scenarios are available through the standard interface.
 
 ## Task 46 — Verify scenario realism

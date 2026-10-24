@@ -1,0 +1,50 @@
+[
+  {
+    "network": "C:\\Users\\ISLAHI\\Documents\\EE499-Team16\\04_Research\\Working_Data\\Network_Data\\Guide_5Bus_Radial_Test.xlsx",
+    "buses": 5,
+    "hours": 24,
+    "population": 3,
+    "iterations": 2,
+    "uncertainty": false,
+    "gwo_seconds": 0.02471480000002657,
+    "exhaustive_seconds": 0.025081600000021353,
+    "unique_candidates": 3,
+    "power_flow_calls": 72,
+    "evaluated_hour_steps": 72,
+    "success": true,
+    "best_candidate": {
+      "bus_id": 4,
+      "power_rating_kw": 50.0,
+      "energy_capacity_kwh": 100.0
+    },
+    "gwo_objective": 175.0,
+    "exhaustive_objective": 175.0,
+    "agrees_with_exhaustive": true,
+    "run_timing": "0.025",
+    "caveat": "Tiny four-candidate development check, not a global GWO guarantee or validated battery design. Costs 2/kWh and 3/kW are illustrative."
+  },
+  {
+    "network": "C:\\Users\\ISLAHI\\Documents\\EE499-Team16\\04_Research\\Working_Data\\Network_Data\\IEEE_33Bus_Network_Data.xlsx",
+    "buses": 33,
+    "hours": 24,
+    "population": 3,
+    "iterations": 2,
+    "uncertainty": false,
+    "gwo_seconds": 1.6493877999999995,
+    "exhaustive_seconds": 1.9758603999999877,
+    "unique_candidates": 3,
+    "power_flow_calls": 2025,
+    "evaluated_hour_steps": 72,
+    "success": true,
+    "best_candidate": {
+      "bus_id": 4,
+      "power_rating_kw": 50.0,
+      "energy_capacity_kwh": 100.0
+    },
+    "gwo_objective": 3585.1731486333206,
+    "exhaustive_objective": 3585.1731486333206,
+    "agrees_with_exhaustive": true,
+    "run_timing": "1.649",
+    "caveat": "Tiny four-candidate development check, not a global GWO guarantee or validated battery design. Costs 2/kWh and 3/kW are illustrative."
+  }
+]

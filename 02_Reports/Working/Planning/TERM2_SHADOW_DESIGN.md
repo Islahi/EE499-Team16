@@ -365,19 +365,29 @@ Main constraints include voltage/SOC/BESS bounds/allowed buses/network feasibili
 
 GWO remains the starting optimizer. Limited exhaustive search on the small case is an independent verification reference.
 
-## Proposed design decision — WSM normalization
+## Confirmed first-version decision — raw WSM
 
-Term 1 does not fully define a common numerical scale. The current proposed default remains fixed no-BESS baseline-relative normalization:
+The first working version uses the Term 1 expression directly without
+normalization:
 
 ```text
-C_norm    = C_candidate     / max(|C_baseline|, eps)
-Curt_norm = Ecurt_candidate / max(|Ecurt_baseline|, eps)
-Shed_norm = Eshed_candidate / max(|Eshed_baseline|, eps)
-
-J = 0.50*C_norm + 0.25*Curt_norm + 0.25*Shed_norm
+J = 0.50*C + 0.25*E_curt + 0.25*E_shed
 ```
 
-This is proposed, not a new customer requirement. If changed, update the design before Task 33 implementation.
+This deliberately simple prototype mixes SAR and kWh. Therefore the weights
+do not have a rigorous relative-importance interpretation. Keep every component
+visible in results and revisit normalization only if the raw objective produces
+implausible selections or stronger final validation is required.
+
+For the first version, economic cost is only:
+
+```text
+C = cost_per_kwh * E_rated + cost_per_kw * P_rated
+```
+
+Both coefficients are explicit inputs/placeholders until the team supplies
+sourced values. Do not add discounting, O&M, replacement, tariff or degradation
+costs to the first implementation.
 
 ---
 
@@ -409,13 +419,23 @@ ARIMA should be checked with RMSE/MAPE. Generated scenarios should be checked ag
 
 Future `Scenario`/`ScenarioSet` reuse the exact same `ProfileData`/simulation path; uncertainty code does not create a second network model or solver.
 
-## Proposed design decision — best/worst ranking
+## Confirmed first-version decision — best/worst ranking
 
-Until replaced by a team/advisor-approved rule, the proposed scenario stress score is:
+For each of the 100 scenarios, calculate four features from the load/PV
+profiles before optimization:
 
 ```text
-Stress_s = sum_t max(P_load,total,s(t) - P_PV,total,s(t), 0) * Delta_t
+E_net_s     = sum_t max(P_load,total,s(t) - P_PV,total,s(t), 0) * Delta_t
+P_peak_s    = max_t(P_load,total,s(t) - P_PV,total,s(t))
+E_surplus_s = sum_t max(P_PV,total,s(t) - P_load,total,s(t), 0) * Delta_t
+Ramp_s      = max_t(abs(P_net,s(t) - P_net,s(t-1)))
+
+Stress_s = 0.35*E_net_norm + 0.30*P_peak_norm
+         + 0.20*E_surplus_norm + 0.15*Ramp_norm
 ```
+
+Normalize each feature across the 100 generated scenarios only for this
+ranking calculation. This is separate from the WSM decision above.
 
 Selection:
 
@@ -424,7 +444,16 @@ Selection:
 3. 15 random from remaining 70,
 4. fixed recorded seed (proposed default 42) for reproducibility.
 
-This is a proposed design decision, not a new Term 1 requirement.
+The fixed seed makes the random subset reproducible.
+
+## Confirmed first-version operational simplifications
+
+- Generic fixed BESS technology; battery chemistry is not a decision variable.
+- Configurable reserve baseline: 10% of peak load sustained for one hour.
+- Normal voltage constraint: `0.95 <= V_i <= 1.05 pu`.
+- No thermal/ampacity constraint in the first version.
+- Emissions calculation is an optional placeholder and does not block the
+  working simulation/optimization program.
 
 ---
 

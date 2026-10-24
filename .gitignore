@@ -35,5 +35,10 @@ Exports/*.zip
 *.temp
 *.part
 
+# Generated simulation, optimization and scenario-session outputs.
+# Existing tracked reference results remain versioned.
+07_Implementation/Results/*/
+07_Implementation/src_accelerated/Results/*/
+
 .obsidian/
 

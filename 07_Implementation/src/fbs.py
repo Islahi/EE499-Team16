@@ -3,6 +3,7 @@ import cmath
 from dataclasses import dataclass, field
 from math import degrees, isfinite, sqrt
 from .network_model import NetworkModel, _finite
+from .progress import ProgressEvent
 
 
 @dataclass
@@ -46,7 +47,7 @@ class PowerFlowResult:
 
 
 def run_fbs(network: NetworkModel, operating_point: OperatingPoint,
-            config: FBSConfig) -> PowerFlowResult:
+            config: FBSConfig, *, progress=None) -> PowerFlowResult:
     order = network.radial_order()
     ids = {b.bus_id for b in network.buses}
     if (not isinstance(config.max_iterations, int) or isinstance(config.max_iterations, bool)
@@ -76,6 +77,8 @@ def run_fbs(network: NetworkModel, operating_point: OperatingPoint,
     converged, delta = False, float("inf")
     completed_sweeps = 0
     message = "Maximum iterations reached; last iterate is diagnostic only"
+    if progress is not None:
+        progress(ProgressEvent("FBS", 0, config.max_iterations, "Starting power flow"))
     for iteration in range(1, config.max_iterations + 1):
         if any(abs(v) < 1e-12 for v in voltages.values()):
             message = "Near-zero bus voltage; constant-power current is undefined"
@@ -96,6 +99,10 @@ def run_fbs(network: NetworkModel, operating_point: OperatingPoint,
         delta = max(abs(new_voltages[i] - voltages[i]) for i in ids)
         voltages, currents = new_voltages, new_currents
         completed_sweeps = iteration
+        if progress is not None and (iteration == 1 or iteration % 10 == 0
+                                     or delta <= config.voltage_tolerance_pu or iteration == config.max_iterations):
+            progress(ProgressEvent("FBS", iteration, config.max_iterations,
+                                   f"voltage error {delta:.3g} pu; tolerance {config.voltage_tolerance_pu:g}"))
         if config.record_history:
             history.append(voltages.copy())
         if delta <= config.voltage_tolerance_pu:

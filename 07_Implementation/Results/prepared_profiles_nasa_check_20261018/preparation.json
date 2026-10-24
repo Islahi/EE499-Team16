@@ -1,0 +1,100 @@
+{
+  "irradiance_file": "C:\\Users\\ISLAHI\\Documents\\EE499-Team16\\04_Research\\Working_Data\\Jeddah_Weather_PV\\NASA_POWER_Jeddah_2024_Hourly.csv",
+  "irradiance_sha256": "a67dd719400d81a58ad8968a093db000c849c603e748d25f3adfbaa32cf60a7e",
+  "source": "nasa_power",
+  "source_clock": "NASA LST (no civil-time conversion)",
+  "network_file": "C:\\Users\\ISLAHI\\Documents\\EE499-Team16\\04_Research\\Working_Data\\Network_Data\\IEEE_33Bus_Network_Data.xlsx",
+  "network_sha256": "7d4a086bf3d8e202a50dc29373f20d211f1237f912ccfcc974217cf4404c013a",
+  "frequency_hz": 60.0,
+  "start_inclusive": "2024-01-01T00:00:00",
+  "end_exclusive": "2024-01-02T00:00:00",
+  "hours": 24,
+  "additional_study_pv": {
+    "pv_id": "user_study_pv",
+    "bus_id": 6,
+    "p_rated_kw": 1000.0,
+    "q_capability_kvar": null
+  },
+  "all_pv_units": [
+    {
+      "pv_id": "user_study_pv",
+      "bus_id": 6,
+      "p_rated_kw": 1000.0,
+      "q_capability_kvar": null
+    }
+  ],
+  "pv_model": {
+    "critical_irradiance_w_m2": 120.0,
+    "standard_irradiance_w_m2": 1000
+  },
+  "load_generation": {
+    "seed": 42,
+    "mean_percent": [
+      65.177,
+      62.018,
+      58.758,
+      57.756,
+      58.776,
+      62.223,
+      70.783,
+      76.01,
+      78.115,
+      79.969,
+      81.174,
+      81.949,
+      82.103,
+      81.037,
+      80.539,
+      80.64,
+      81.114,
+      81.093,
+      81.05,
+      81.509,
+      80.661,
+      77.876,
+      73.689,
+      69.979
+    ],
+    "sd_percent": [
+      4.698,
+      4.41,
+      5.23,
+      4.22,
+      4.614,
+      6.212,
+      9.278,
+      9.321,
+      8.115,
+      7.26,
+      6.852,
+      6.811,
+      7.116,
+      7.444,
+      7.616,
+      7.944,
+      8.291,
+      8.775,
+      8.558,
+      7.702,
+      6.04,
+      5.348,
+      5.373,
+      5.167
+    ]
+  },
+  "pv_notes": {
+    "model": "Term 1 piecewise PV, corrected saturation at standard irradiance",
+    "assumptions": "Shared irradiance; unity PF; no temperature, tilt or inverter losses"
+  },
+  "load_notes": {
+    "source": "Synthetic; Ali, Shaaban and Sindi (2022), Table 1; DOI 10.3390/su142013209",
+    "seed": 42,
+    "negative_samples_clipped": 0,
+    "assumptions": "Shared bus multiplier; fixed base P/Q; independent hours; no seasonality"
+  },
+  "limitations": [
+    "GHI used as a resource proxy; no tilt/temperature/inverter losses",
+    "Synthetic demand, not measured Jeddah demand; no seasonal or temporal correlation",
+    "Table periods 1-24 mapped to clock hours 00-23; shared bus multiplier"
+  ]
+}

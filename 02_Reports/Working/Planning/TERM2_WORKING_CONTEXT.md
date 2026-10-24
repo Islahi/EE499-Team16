@@ -109,10 +109,14 @@ Implementation tasks should therefore focus on **coding, testing, debugging and 
 
 The specification explicitly labels software choices not fixed by existing requirements as **proposed design decisions**. These are not automatically recorded as confirmed team decisions in `DECISIONS.md`.
 
-Two later design gates remain open and must be resolved before the relevant code is written:
+The two later design gates were resolved on 15 Oct 2026:
 
-1. **WSM normalization method** before Task 33 — Term 1 gives weights/priorities but does not fully determine the normalization implementation.
-2. **Scenario best/worst ranking rule** before Task 45 — the 15 best + 15 worst + 15 random structure is retained, but the exact ranking metric must be explicit before selection code is implemented.
+1. Use the raw Term 1 WSM without normalization in the first prototype. Keep
+   component values visible because the mixed SAR/kWh objective is a known
+   simplification.
+2. Rank scenarios using the documented composite of net-load energy, peak net
+   load, PV-surplus energy and maximum hourly ramp; retain 15 highest, 15
+   lowest and 15 seeded-random remaining scenarios.
 
 If another unresolved architecture/interface issue appears, update the design specification first rather than letting an individual implementation owner silently choose a local solution.
 
@@ -288,8 +292,18 @@ Use a deliberately small finite search space and exhaustive search as a referenc
 ### V5 / uncertainty
 Implement Term 1 ARIMA + Monte Carlo + 100→45 selection first. Validate ARIMA with held-out data/RMSE/MAPE and check scenario realism.
 
-### Potential two-stage stochastic issue
-The original project brief asks for a two-stage stochastic planning structure. If the implemented Term 1 workflow produces different physical B/P/E deployments for different future scenarios, demonstrate the inconsistency first, then justify any refinement in Chapter 4 rather than silently replacing the baseline.
+### Confirmed optimization scope
+On 15 Oct 2026 the team confirmed the existing GWO/WSM design as the Term 2
+implementation method. Do not implement a separate two-stage stochastic
+programming formulation. The original brief's two-stage wording remains an
+explicit scope deviation to disclose and justify in the final report; do not
+describe GWO/WSM as mathematically equivalent to two-stage programming.
+
+### Confirmed initial simulation horizon
+On 15 Oct 2026 the team confirmed three continuous months of hourly data for
+the first integrated implementation and validation. Keep the interfaces
+horizon-independent so a full-year run can be added later. Three-month results
+must not be presented as full annual or seasonal performance.
 
 ## 13. Data status
 
