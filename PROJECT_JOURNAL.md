@@ -574,3 +574,9 @@ Log items such as confirmed decisions, important advisor guidance, meaningful re
 - At the user's request, reviewed src_accelerated and updated 25 implementation tasks to Done/100% and four verification/testing tasks to In Progress in the live Task Register. Preserved owners, dates, documentation/formal-validation statuses; added cell notes with evidence and limitations.
 - Checked 56 focused accelerated regression tests and direct synthetic baseline/BESS, GWO/reference, 100-to-45 scenario, scenario optimization, workflow/export and offscreen GUI/drawing paths. ARIMA fallback and stable-versus-accelerated test incompatibilities remain explicit limitations.
 - Full assessment and task-by-task mapping: `07_Implementation/Validation/2026-10-24_Accelerated_Task_Audit.md`. Implementation completion does not imply final project validation or successful project-data forecast validation.
+
+## 2026-10-24 — Remaining semester replanned after accelerated audit
+
+- At the user's request, moved remaining full-program tests, failure-case/regression work, GWO tuning, forecast/scenario checks and experiment planning to 25–31 Oct. Formal validation runs 1–14 Nov including fixes and reruns; evidence analysis is 15–21 Nov; final case/output freeze is 22–23 Nov; report preparation finishes 29 Nov for 30 Nov submission. Final presentation remains 6–10 Dec.
+- Preserved existing owners/status/progress and official deadlines. Moved already-complete future development blocks to 24 Oct audit-confirmation milestones without claiming exact original implementation dates. Removed obsolete experiment-planning and cross-experiment sequencing gates; formal experiments wait for required project-input/forecast/scenario/failure checks.
+- Updated the live Task Register, linked views and repository CSV/guide/context. Task 31 now describes remaining V3 writing rather than rescheduling an already-past official submission. No implementation code or technical design was changed.

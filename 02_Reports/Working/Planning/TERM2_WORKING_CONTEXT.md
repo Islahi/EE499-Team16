@@ -1,6 +1,6 @@
 # Term 2 Working Context — Current Summary
 
-**Last updated:** 2026-10-15
+**Last updated:** 2026-10-24
 
 This file is the current working context for EE499 Team 16.
 
@@ -120,23 +120,23 @@ The two later design gates were resolved on 15 Oct 2026:
 
 If another unresolved architecture/interface issue appears, update the design specification first rather than letting an individual implementation owner silently choose a local solution.
 
-## Revised working schedule — confirmed 13 Oct 2026
+## Remaining-semester plan — revised 24 Oct 2026
 
-The live Task Register remains authoritative. This plan moves full-program testing from 15 November to **8 November**.
+The accelerated program now has demonstrated implementation paths. Focus remaining effort on project-input testing, verification, formal validation and reporting.
 
-| Period | Work |
+| Period | Remaining work |
 | --- | --- |
-| 18–24 Oct | Tasks 32–37: metrics, WSM objective, GWO integration, deterministic run and exhaustive-search reference. |
-| 25–31 Oct | Tasks 42–49: ARIMA, Monte Carlo, scenario selection and GWO/WSM integration. GWO comparison/tuning (Tasks 38–39) continues through 27 Oct. |
-| 1–7 Nov | Tasks 51–55: complete GUI, automatic network drawing, backend controls/results, progress/errors and export. |
-| 8–14 Nov | Tasks 56 and 62: complete-program testing, bug fixes and repeated tests; document integration in Task 57. |
-| 15–24 Nov | Tasks 58–61: formal validation, necessary reruns and requirement-evidence results. |
-| 24–29 Nov | Freeze exact final cases/outputs and finish the report; Chapter 4 polishing also runs from 15 Nov. |
-| 1–10 Dec | Prepare/rehearse the demo and deliver during the official 6–10 Dec window. |
+| 25–31 Oct | Tasks 29–31: finish manual size comparisons and V3 notes; Tasks 39, 43, 46: GWO tuning and forecast/scenario checks; Tasks 41, 56, 62: experiment planning, full GUI/project-input tests, bug fixes and regression. Finish outstanding BESS writing/ethics material in parallel. The official progress presentation remains 25–29 Oct. |
+| 1–7 Nov | Initial formal performance, optimizer/uncertainty and IEEE 33-bus scalability experiments (58–60). Write V4/V5/V6 implementation sections alongside testing. |
+| 8–14 Nov | Diagnose validation findings, make necessary fixes and repeat affected experiments. Keep inputs, code version, seeds/settings and outputs linked. |
+| 15–21 Nov | Task 61: analyze results and finish the Chapter 5 requirement-evidence summary. Record targets as Met, Partially Met or Not Met. |
+| 22–23 Nov | Task 63: freeze exact final cases, code/settings and outputs. |
+| 22–29 Nov | Complete and review Chapters 4–6 and Appendix D; Chapter 4 polish runs 5–24 Nov. Report submission remains 30 Nov. |
+| 1–10 Dec | Prepare/rehearse presentation and demo; deliver in the official 6–10 Dec window. |
 
-The GUI loads network data and automatically builds the distribution-system diagram: buses, line connections, loads, PV and BESS locations. It displays simulation results and the optimized BESS location. Manual placement or drag-and-drop network editing is outside this agreed scope. Engineering calculations stay in the backend.
+Completed tasks previously placed in future development weeks now use 24 Oct as their audit-confirmation milestone, not an asserted original coding date. Owners and completion percentages are preserved. New dates on unfinished tasks are remaining-work windows, not original actual start dates. Task 31 consolidates writing/progress material; it does not move the historical 22 Oct submission deadline.
 
-Implementation writing runs alongside development. Keep the official 22 Oct progress submission, 25–29 Oct presentation window and 30 Nov final-report deadline. These are planned dates, not claims that the tasks are complete.
+The GUI builds the diagram automatically from network data. This plan does not add drag-and-drop editing, change the engineering design, or claim that implementation completion proves formal validation. Validate and disclose the current raw-WSM/simple-investment-cost and ARIMA-fallback limitations honestly.
 
 ## 5. Parallel Ethics work
 

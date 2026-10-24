@@ -18,11 +18,23 @@
 - **Current software implementation-handoff specification:** `02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md`
 - **Live schedule:** https://docs.google.com/spreadsheets/d/1HE7RNvaZ-VkVMlozWfkfPbe23hywnEdOzuaI1CfAEcY/edit
 
-## Revised schedule
+## Remaining-semester plan — revised 24 Oct 2026
 
-- User-confirmed plan: GWO development 18–24 Oct, uncertainty 25–31 Oct, complete GUI with automatic network drawing 1–7 Nov, full-program testing/bug fixes 8–14 Nov, formal validation/results 15–24 Nov, and report completion by 29 Nov. GWO comparison/tuning continues through 27 Oct.
-- The GUI builds the distribution-system diagram from loaded network data; interactive drag-and-drop editing is outside the agreed scope.
-- The repository task-register CSV was refreshed from the live sheet on 15 Oct; live statuses are copied as recorded, not independently verified completion claims.
+The accelerated program now has demonstrated implementation paths. Focus remaining effort on project-input testing, verification, formal validation and reporting.
+
+| Period | Remaining work |
+| --- | --- |
+| 25–31 Oct | Tasks 29–31: finish manual size comparisons and V3 notes; Tasks 39, 43, 46: GWO tuning and forecast/scenario checks; Tasks 41, 56, 62: experiment planning, full GUI/project-input tests, bug fixes and regression. Finish outstanding BESS writing/ethics material in parallel. The official progress presentation remains 25–29 Oct. |
+| 1–7 Nov | Initial formal performance, optimizer/uncertainty and IEEE 33-bus scalability experiments (58–60). Write V4/V5/V6 implementation sections alongside testing. |
+| 8–14 Nov | Diagnose validation findings, make necessary fixes and repeat affected experiments. Keep inputs, code version, seeds/settings and outputs linked. |
+| 15–21 Nov | Task 61: analyze results and finish the Chapter 5 requirement-evidence summary. Record targets as Met, Partially Met or Not Met. |
+| 22–23 Nov | Task 63: freeze exact final cases, code/settings and outputs. |
+| 22–29 Nov | Complete and review Chapters 4–6 and Appendix D; Chapter 4 polish runs 5–24 Nov. Report submission remains 30 Nov. |
+| 1–10 Dec | Prepare/rehearse presentation and demo; deliver in the official 6–10 Dec window. |
+
+Completed tasks previously placed in future development weeks now use 24 Oct as their audit-confirmation milestone, not an asserted original coding date. Owners and completion percentages are preserved. New dates on unfinished tasks are remaining-work windows, not original actual start dates. Task 31 consolidates writing/progress material; it does not move the historical 22 Oct submission deadline.
+
+The GUI builds the diagram automatically from network data. This plan does not add drag-and-drop editing, change the engineering design, or claim that implementation completion proves formal validation. Validate and disclose the current raw-WSM/simple-investment-cost and ARIMA-fallback limitations honestly.
 
 ## Current status
 
