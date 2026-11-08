@@ -1,7 +1,8 @@
-# Optional experimental implementation; the stable src package is unchanged.
+# Stable accelerated desktop application.
 -r requirements.txt
 PySide6>=6.11,<6.12
 numba>=0.63
+pytest>=8,<10
 
 # CuPy must match the NVIDIA CUDA major version and is intentionally not pinned
 # here. Install cupy-cuda12x or cupy-cuda13x as described in

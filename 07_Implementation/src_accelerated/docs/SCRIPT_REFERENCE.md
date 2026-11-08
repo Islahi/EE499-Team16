@@ -51,7 +51,7 @@ ui.py → progress.py (worker counters/log); study_session.py (snapshots/manifes
 
 ### `ui.py` — desktop interaction
 
-Loads Designer forms from `assets/*.ui` with `QUiLoader`; named widgets are connected to explicit handlers. `LoadDataDialog` previews/imports the feeder, selects PV mode (`none`, prepared power, prepared/Open-Meteo/NASA irradiance) and load mode (imported/synthetic), and accepts only after preparation. `SettingsDialog` gathers voltage/reserve/grid limits, battery SOC/efficiency/sizes, cost coefficients, GWO population/iterations/CPU workers, allowed placement buses and net-load target. `ScenarioGeneratorDialog` generates/imports, plots, saves and activates scenario packages. `TimestampDialog` chooses an available retained simulation hour.
+Loads Designer forms from `assets/*.ui` with `QUiLoader`; named widgets are connected to explicit handlers. `LoadDataDialog` previews/imports the feeder, selects PV mode (`none`, prepared power, prepared/Open-Meteo/NASA irradiance) and load mode (imported/synthetic), and accepts only after preparation. `SettingsDialog` gathers voltage/reserve/grid limits, battery SOC/efficiency/sizes, cost coefficients, GA/GWO parameters and eligible battery buses. `ScenarioGeneratorDialog` generates/imports, plots, saves and activates scenario packages. `TimestampDialog` chooses an available retained simulation hour.
 
 `MainWindow` runs static base case, hourly simulation and optimization in worker threads so the window can show progress, elapsed time and device-clock logs. It displays compact/full text results, stage/candidate counters, a selected bus or line, optional properties/results overlays, zoom/fit/wheel zoom, 90° rotation, and clear-results/workspace actions. The diagram moves the BESS symbol to the best candidate bus after optimization. **Important:** optimizer results keep aggregate metrics/evaluations; they do not retain a complete hourly best-candidate bus-voltage trace to show in the diagram. A manual simulation or separate replay is needed for that.
 
@@ -61,7 +61,7 @@ Worker `JobRunner` keeps Qt UI updates on the main thread. A closed window is gu
 
 Public data types: `DataRequest` (paths, format, study start/months, PV/load modes), `PreparedStudy` (network, hourly profiles, provenance context, optional active scenarios), `RunSettings`, `RunReport`, `BaseCaseReport`. `prepare_study()` loads the network, builds a half-open calendar interval `[start, start + months)`, checks hourly coverage, creates or imports PV and load profiles and records source hashes. When PV is disabled it removes PV units from this prepared study and creates a zero-PV profile; when enabled, ratings come from explicit entries. `size_catalog(min,max,step)` includes the high endpoint even when it is not an exact multiple of the step.
 
-`run_study(..., optimization=False)` runs `simulate_timeseries()` and, only for a completed converged run, `evaluate_results()`. With manual BESS omitted, the dispatch is not applied. `run_study(..., optimization=True)` builds battery power/energy catalogs and `SimulationEvaluator`; if an active `ScenarioSet` exists, it wraps this in `ScenarioEvaluator`; then it calls `optimize()`. A user-set net-load target and both economic coefficients are required for meaningful optimization. `finish_report()` records device-clock start/finish and elapsed wall duration. `run_and_export()` writes a numbered run.
+`run_study(..., optimization=False)` runs `simulate_timeseries()` and, only for a completed converged run, `evaluate_results()`. With manual BESS omitted, the dispatch is not applied. `run_study(..., optimization=True)` builds battery power/energy catalogs and `SimulationEvaluator`; if an active `ScenarioSet` exists, it wraps this in `ScenarioEvaluator`; then it calls `optimize()`. Active grid-aware dispatch and both economic coefficients are required for meaningful optimization. `finish_report()` records device-clock start/finish and elapsed wall duration. `run_and_export()` writes a numbered run.
 
 `run_base_case()` is **one** FBS operating point: each bus receives its original `p_base_kw/q_base_kvar`, each installed PV contributes its **rated** `p_rated_kw` (Q = 0), and BESS contributes 0. `run_base_case_and_export()` writes `summary.txt`, `bus_voltages.csv` (bus ID, voltage pu) and `line_flows.csv` (line ID, P/Q/current/loss). This is a deterministic nameplate snapshot, not the time-series baseline. It is not guaranteed to equal any hourly result, and does not model battery SOC.
 
@@ -167,9 +167,9 @@ SOC_{t+1}=\frac{E_{t+1}}{E_{\mathrm{rated}}}.$$
 
 `simulation.py` uses this public step with an operating SOC floor raised for reserve. There is no chemistry, degradation, temperature or cycle-life model. Settings validation around this simple class is important; the class itself is not a comprehensive supplier-data validator.
 
-### Net-load-target operation in `simulation.py`
+### Grid-aware operation in `simulation.py`
 
-`NetLoadTargetPolicy(target_kw)` returns $P_{B,\mathrm{request},t}=\sum_iP_{L,i,t}-\sum_iP_{PV,i,t}-P_{\mathrm{target}}$ for the current `ProfileSlice`. Positive means request discharge; negative means request charge. `bess.py` and `simulation.py` may clip or pause that request. This policy can charge from the grid below the target. It does not use a price signal, forecast or optimal control.
+`GridAwareDispatchPolicy` requests charging when PV exceeds load and requests discharge when load exceeds PV, with optional import/export grid limits. The BESS step clips its request to SOC, power, efficiency and reserve. This rule is not tariff-optimized economic scheduling. The former net-load-target policy was removed from the active code.
 
 ## 6. Hourly simulation, feasibility and metrics
 

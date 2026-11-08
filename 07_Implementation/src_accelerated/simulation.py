@@ -3,7 +3,6 @@ from collections.abc import Callable
 from copy import copy
 from dataclasses import dataclass, field, replace
 from math import isfinite
-from numbers import Real
 
 from .fbs import FBSConfig, OperatingPoint, PowerFlowResult, run_fbs
 from .bess import BESSConfig, BESSState, BESSStepResult, step_bess
@@ -13,18 +12,30 @@ from .progress import ProgressEvent
 
 
 @dataclass(frozen=True)
-class NetLoadTargetPolicy:
-    """Request discharge above a configurable net-load target."""
-    target_kw: float
+class GridAwareDispatchPolicy:
+    """Self-consumption dispatch: store excess PV, discharge to offset grid import.
 
-    def __post_init__(self):
-        if (isinstance(self.target_kw, bool) or not isinstance(self.target_kw, Real)
-                or not isfinite(self.target_kw) or self.target_kw < 0):
-            raise ValueError("Net-load target must be finite and nonnegative (kW)")
+    Requests charging from solar surplus and discharging against net demand.
+    When an import cap is exceeded, requests enough discharge to address
+    the cap, subject to BESS power/SOC/reserve restrictions. This is rule-based,
+    NOT tariff optimization or intertemporal electricity-price arbitrage.
+    """
+    import_limit_kw: float | None = None
+    export_limit_kw: float | None = None
 
     def __call__(self, index, profile, state):
-        net_load_kw = sum(profile.p_load_kw.values()) - sum(profile.p_pv_kw.values())
-        return net_load_kw - self.target_kw
+        net = sum(profile.p_load_kw.values()) - sum(profile.p_pv_kw.values())
+        if self.import_limit_kw is not None and net > self.import_limit_kw:
+            return net - self.import_limit_kw
+        if net < 0:
+            # Store otherwise exported PV, especially behind an export limit.
+            return net if self.export_limit_kw is None else min(0.0, net + self.export_limit_kw)
+        if net > 0:
+            # Use previous stored renewable energy against positive demand.
+            # The battery's power, SOC, reserve and efficiency constraints
+            # are enforced by step_bess, not by this request policy.
+            return net
+        return 0.0
 
 
 @dataclass
@@ -39,6 +50,8 @@ class SimulationConfig:
     allow_load_shedding: bool = True
     grid_import_limit_kw: float | None = None
     grid_export_limit_kw: float | None = None
+    enforce_line_ampacity: bool = True
+    terminal_soc_tolerance: float | None = None
     control_max_iterations: int = 30
     control_tolerance_kw: float = 1e-6
 
@@ -62,6 +75,12 @@ class SimulationConfig:
                 _check_number(value, name)
                 if value < 0:
                     raise ValueError(f"{name} cannot be negative")
+        if self.terminal_soc_tolerance is not None:
+            _check_number(self.terminal_soc_tolerance, "terminal_soc_tolerance")
+            if self.terminal_soc_tolerance > 1:
+                raise ValueError("terminal_soc_tolerance must be a SOC fraction")
+        if not isinstance(self.enforce_line_ampacity, bool):
+            raise ValueError("enforce_line_ampacity must be boolean")
         if (not isinstance(self.control_max_iterations, int)
                 or isinstance(self.control_max_iterations, bool) or self.control_max_iterations < 1):
             raise ValueError("control_max_iterations must be a positive integer")
@@ -327,7 +346,15 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
         messages.append(f"Voltage limits violated at buses {sorted(voltage_violations)}")
     if power_shortfall > 1e-9 or energy_shortfall > 1e-9:
         messages.append("BESS cannot supply the required power/energy reserve for this hour")
-    feasible = power_flow.converged and not voltage_violations
+    line_overloads = []
+    if power_flow.converged and settings.enforce_line_ampacity:
+        for line in network.lines:
+            if (line.ampacity_a is not None
+                and power_flow.branch_current_a.get(line.line_id, 0.0) > line.ampacity_a + 1e-6):
+                line_overloads.append(line.line_id)
+        if line_overloads:
+            messages.append(f"Line ampacity exceeded: {line_overloads}")
+    feasible = power_flow.converged and not voltage_violations and not line_overloads
     feasible = feasible and power_shortfall <= 1e-9 and energy_shortfall <= 1e-9
     if power_flow.converged:
         excess_generation, excess_demand = _network_violations(power_flow, settings)
@@ -420,6 +447,12 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
     completed = len(steps) == count
     converged = all(step.power_flow.converged for step in steps)
     feasible = all(step.feasible for step in steps)
+    if bess_config is not None and simulation_config.terminal_soc_tolerance is not None and state is not None:
+        deviation = abs(state.soc - bess_config.soc_initial)
+        if deviation > simulation_config.terminal_soc_tolerance + 1e-9:
+            feasible = False
+            steps[-1].feasible = False
+            steps[-1].messages.append(f"Terminal SOC deviation {deviation:.4f} exceeds allowed tolerance")
     if not converged:
         message = "Power-flow failure; inspect step messages."
     elif not feasible:

@@ -17,10 +17,10 @@ from .load_generator import LoadGenerationConfig, generate_load_profile
 from .metrics import EconomicConfig, evaluate_results
 from .network_loader import load_network
 from .network_model import NetworkModel, PVUnit
-from .optimizer import BESSParameters, OptimizationBounds, OptimizerConfig, SimulationEvaluator, optimize
+from .optimizer import BESSParameters, OptimizationBounds, OptimizerConfig, SimulationEvaluator, optimize, genetic_optimize
 from .pv_model import PVModelConfig, make_pv_profile, read_irradiance
 from .results import export_results, format_summary
-from .simulation import NetLoadTargetPolicy, SimulationConfig, simulate_timeseries
+from .simulation import GridAwareDispatchPolicy, SimulationConfig, simulate_timeseries
 from .progress import format_duration
 
 
@@ -47,8 +47,8 @@ class PreparedStudy:
     profiles: ProfileData
     request: DataRequest
     context: dict[str, str]
-    scenarios: object | None = None
-    scenario_path: Path | None = None
+    historical_profiles: ProfileData | None = None
+    forecast_info: dict | None = None
 
 
 @dataclass
@@ -57,7 +57,7 @@ class RunSettings:
     economics: EconomicConfig
     manual_bess: BESSConfig | None
     values: dict
-    dispatch: NetLoadTargetPolicy | None = None
+    dispatch: object | None = None
 
 
 @dataclass
@@ -172,13 +172,19 @@ def prepare_study(request: DataRequest, stage=lambda message: None) -> PreparedS
     stage("Reading network")
     network = load_network(request.network_path, workbook_format=request.workbook_format,
                            frequency_hz=request.frequency_hz)
-    if not isinstance(request.months, int) or isinstance(request.months, bool) or request.months < 1:
-        raise ValueError("Study months must be a positive integer")
-    start = pd.Timestamp(request.start)
-    if pd.isna(start) or start.tzinfo is not None or start.minute or start.second or start.microsecond or start.nanosecond:
-        raise ValueError("Study start must be an exact hour in one timezone-naive source clock")
-    end = start + pd.DateOffset(months=request.months)
-    times = pd.date_range(start, end, inclusive="left", freq="h")
+    # Imported CSV timestamps are the authority: no study-window settings.
+    # A synthetic-only load has no timestamps to infer, so the preparation
+    # interface requires a dated imported load CSV in this application mode.
+    if request.load_source != "imported" or request.load_path is None:
+        raise ValueError("Select an imported hourly load CSV to infer the study interval")
+    stage("Detecting hourly timestamps from load CSV")
+    timeline = pd.read_csv(request.load_path, usecols=["timestamp"], encoding="utf-8-sig")
+    times = pd.DatetimeIndex(pd.to_datetime(timeline["timestamp"], format="ISO8601", errors="raise").unique()).sort_values()
+    if len(times) < 2 or times.hasnans or times.tz is not None:
+        raise ValueError("Load CSV must have at least two timezone-naive hourly timestamps")
+    if any(times[i] - times[i-1] != pd.Timedelta(hours=1) for i in range(1, len(times))):
+        raise ValueError("The load CSV must contain consecutive hourly timestamps")
+    start, end = times[0], times[-1] + pd.Timedelta(hours=1)
     if request.pv_source == "none":
         network = replace(network, pv_units=[])
     else:
@@ -226,7 +232,7 @@ def prepare_study(request: DataRequest, stage=lambda message: None) -> PreparedS
         "PV source": "No PV" if request.pv_source == "none" else request.pv_source.replace("_", " "),
         "Demand": f"Synthetic load; seed {request.load_seed}" if request.load_source == "synthetic" else "Imported load profile",
         "History interval": f"{start.isoformat()} to {end.isoformat()} (exclusive); {len(times)} hours",
-        "Study scope": "Calendar-month study",
+        "Study scope": "Complete timestamps inferred from imported load CSV",
         "Clock": "Source clock preserved; NASA LST is not automatically converted to civil time",
         "PV ratings (kW)": str({unit.pv_id: unit.p_rated_kw for unit in network.pv_units}),
         "Preparation": "GHI proxy if converting; no temperature/inverter model; synthetic load has no seasonality",
@@ -258,7 +264,8 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
     if progress is None:
         progress = getattr(stage, "progress", None)
     context = dict(study.context)
-    context["Dispatch"] = "Idle (diagnostic only)" if settings.dispatch is None else f"Net-load target {settings.dispatch.target_kw:g} kW; may charge from grid"
+    context["Dispatch"] = ("Idle (diagnostic only)" if settings.dispatch is None
+         else f"Grid-aware rule-based dispatch; import cap {settings.dispatch.import_limit_kw} kW")
     context["Simulation settings"] = str(asdict(settings.simulation))
     context["Economic inputs"] = str(asdict(settings.economics))
     if not optimization:
@@ -273,9 +280,9 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
             context["Manual BESS"] = str(vars(settings.manual_bess))
         return finish_report(result, metrics, context, started, started_clock)
     values = settings.values
-    context["Optimization and scenario settings"] = str(values)
+    context["Optimization settings"] = str(values)
     if settings.dispatch is None:
-        raise ValueError("Select net-load target dispatch before optimization")
+        raise ValueError("Select an active BESS dispatch policy before optimization")
     parameters = BESSParameters(eta_charge=values["spin_eta_charge_percent"] / 100,
                                eta_discharge=values["spin_eta_discharge_percent"] / 100,
                                soc_min=values["spin_soc_min_percent"] / 100,
@@ -288,25 +295,44 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
     evaluator = SimulationEvaluator(settings.economics, parameters, settings.dispatch, settings.simulation)
     evaluator.progress = progress
     profiles = study.profiles
-    if study.scenarios is not None:
-        from .uncertainty import ScenarioEvaluator
-        if study.scenarios is None:
-            raise ValueError("No active scenario set. Open Scenarios, generate or import a set, then use it in the main program")
-        stage("Loading active saved scenario set")
-        profiles = study.scenarios
-        evaluator = ScenarioEvaluator(evaluator, progress=progress)
-        scenario_times = profiles.scenarios[0].profiles.timestamps
-        context["Forecast interval"] = f"{scenario_times[0]} through {scenario_times[-1]}; equal-weight stress portfolio"
-        context["Scenario set"] = f"{len(study.scenarios.scenarios)} saved scenarios"
+    if study.forecast_info:
+        context["Forecast interval"] = f"{profiles.timestamps[0]} through {profiles.timestamps[-1]}"
+        context["Forecast model"] = str(study.forecast_info)
     context["Search catalogs"] = f"Power {bounds.power_ratings_kw}; energy {bounds.energy_capacities_kwh}; endpoint-inclusive grid"
-    context["Compute backend"] = (
-        f"{settings.simulation.fbs_config.backend}; "
-        f"{values['spin_cpu_workers']} GWO worker(s)"
-    )
-    stage("Running GWO")
-    result = optimize(study.network, profiles, bounds, evaluator, OptimizerConfig(
-        population_size=values["spin_gwo_population"], max_iterations=values["spin_gwo_iterations"],
-        seed=values["spin_gwo_seed"], workers=values["spin_cpu_workers"]), progress=progress)
+    algorithm = values.get("optimizer_algorithm", "GWO")
+    context["Compute backend"] = f"{settings.simulation.fbs_config.backend}; {algorithm}"
+    config = OptimizerConfig(
+        population_size=(values.get("spin_ga_population", values["spin_gwo_population"])
+                         if algorithm == "GA" else values["spin_gwo_population"]),
+        max_iterations=(values.get("spin_ga_generations", values["spin_gwo_iterations"])
+                        if algorithm == "GA" else values["spin_gwo_iterations"]),
+        seed=values["spin_gwo_seed"], workers=values["spin_cpu_workers"] if algorithm == "GWO" else 1)
+    stage(f"Running {algorithm}")
+    if algorithm == "GA":
+        result = genetic_optimize(study.network, profiles, bounds, evaluator, config,
+                                  progress=progress,
+                                  crossover_rate=values.get("spin_ga_crossover", 0.8),
+                                  mutation_rate=values.get("spin_ga_mutation", 0.12))
+    else:
+        result = optimize(study.network, profiles, bounds, evaluator, config, progress=progress)
+    # A feasible no-storage system is an explicit economic alternative.
+    stage("Evaluating no-BESS annual baseline")
+    baseline_result = simulate_timeseries(study.network, profiles, settings.simulation,
+                                         bess_config=None, dispatch_policy=None)
+    if baseline_result.completed and baseline_result.converged:
+        baseline = evaluate_results(baseline_result, settings.economics, None)
+        result.metadata["no_bess_feasible"] = baseline.feasible
+        result.metadata["no_bess_annual_cost"] = baseline.annual_total_cost
+        if baseline.feasible and baseline.annual_total_cost is not None and (
+            not result.success or baseline.annual_total_cost <= result.best_objective):
+            result.best_candidate = None
+            result.best_objective = baseline.annual_total_cost
+            result.metrics = baseline
+            result.success = True
+            result.message = "No-BESS baseline is the least-cost feasible option."
+            result.metadata["no_bess_selected"] = True
+    else:
+        result.metadata["no_bess_feasible"] = False
     return finish_report(result, None, context, started, started_clock)
 
 

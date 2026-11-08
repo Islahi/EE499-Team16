@@ -9,7 +9,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from copy import copy
 from dataclasses import dataclass, field, replace
 from itertools import product
-from math import floor, isclose, isfinite
+from math import floor, isfinite
 from random import Random
 
 from .bess import BESSConfig
@@ -98,32 +98,15 @@ class BESSParameters:
         )
 
 
-@dataclass(frozen=True)
-class ObjectiveWeights:
-    cost: float = 0.50
-    curtailment: float = 0.25
-    shedding: float = 0.25
-
-    def __post_init__(self):
-        for name in ("cost", "curtailment", "shedding"):
-            _check_number(getattr(self, name), name)
-        if not isclose(self.cost + self.curtailment + self.shedding, 1.0, abs_tol=1e-9):
-            raise ValueError("Objective weights must add up to one")
-
-
-def weighted_sum(metrics: PerformanceMetrics, weights: ObjectiveWeights | None = None) -> float:
-    """Apply the agreed raw WSM; missing components cannot be scored as zero."""
-    settings = weights if weights is not None else ObjectiveWeights()
-    components = [metrics.bess_cost, metrics.curtailment_energy_kwh, metrics.load_shedding_energy_kwh]
-    if any(value is None for value in components):
-        raise ValueError("WSM needs cost, curtailment and shedding values")
-    for value in components:
-        _check_number(value, "WSM component")
+def annual_economic_objective(metrics: PerformanceMetrics) -> float:
+    """All parts are annual money; infeasible candidates have infinite score."""
     if not metrics.feasible:
         return float("inf")
-    return (settings.cost * metrics.bess_cost
-            + settings.curtailment * metrics.curtailment_energy_kwh
-            + settings.shedding * metrics.load_shedding_energy_kwh)
+    if metrics.annual_total_cost is None or not isfinite(metrics.annual_total_cost):
+        raise ValueError("Annual economic costs unavailable; check tariff and control records")
+    return metrics.annual_total_cost
+
+
 
 
 @dataclass
@@ -141,7 +124,6 @@ class SimulationEvaluator:
     battery_parameters: BESSParameters
     dispatch_policy: DispatchPolicy
     simulation_config: SimulationConfig = field(default_factory=SimulationConfig)
-    weights: ObjectiveWeights = field(default_factory=ObjectiveWeights)
     progress: Callable | None = None
 
     def __post_init__(self):
@@ -155,7 +137,7 @@ class SimulationEvaluator:
 
     def __call__(self, network, profiles, candidate):
         if not isinstance(profiles, ProfileData):
-            raise TypeError("SimulationEvaluator expects ProfileData; wrap in uncertainty.ScenarioEvaluator for ScenarioSet")
+            raise TypeError("SimulationEvaluator expects an hourly ProfileData object")
         bess_config = self.battery_parameters.build_config(candidate)
         result = simulate_timeseries(
             network=network, profiles=profiles, simulation_config=self.simulation_config,
@@ -166,7 +148,7 @@ class SimulationEvaluator:
             return CandidateEvaluation(candidate, float("inf"), False, message=result.message)
         metrics = evaluate_results(result, self.economic_config, bess_config)
         return CandidateEvaluation(
-            candidate=candidate, objective=weighted_sum(metrics, self.weights),
+            candidate=candidate, objective=annual_economic_objective(metrics),
             feasible=metrics.feasible, metrics=metrics, message=result.message,
         )
 
@@ -293,7 +275,7 @@ def _move_wolves(positions, leaders, bounds, a, rng):
     return new_positions
 
 
-def optimize(network: NetworkModel, profiles_or_scenarios, bounds: OptimizationBounds,
+def optimize(network: NetworkModel, profiles, bounds: OptimizationBounds,
              evaluator: Evaluator, optimizer_config: OptimizerConfig, *, progress=None) -> OptimizationResult:
     """Search B/P/E catalogs with seeded GWO and per-call evaluation caching."""
     bounds.validate_network(network)
@@ -339,7 +321,7 @@ def optimize(network: NetworkModel, profiles_or_scenarios, bounds: OptimizationB
             if executor is None:
                 for completed, (candidate_index, candidate) in enumerate(pending, 1):
                     evaluation = _evaluate(
-                        network, profiles_or_scenarios, bounds, evaluator, candidate,
+                        network, profiles, bounds, evaluator, candidate,
                     )
                     result_indexes = (pending_by_candidate[candidate]
                                       if optimizer_config.cache_evaluations
@@ -357,7 +339,7 @@ def optimize(network: NetworkModel, profiles_or_scenarios, bounds: OptimizationB
             elif pending:
                 futures = {
                     executor.submit(_evaluate_process, (
-                        network, profiles_or_scenarios, bounds, worker_evaluator, candidate,
+                        network, profiles, bounds, worker_evaluator, candidate,
                     )): (candidate_index, candidate)
                     for candidate_index, candidate in pending
                 }
@@ -434,7 +416,7 @@ def optimize(network: NetworkModel, profiles_or_scenarios, bounds: OptimizationB
     })
 
 
-def exhaustive_search(network: NetworkModel, profiles_or_scenarios,
+def exhaustive_search(network: NetworkModel, profiles,
                       bounds: OptimizationBounds, evaluator: Evaluator) -> OptimizationResult:
     """Evaluate every catalog combination as a small-case verification reference."""
     bounds.validate_network(network)
@@ -444,7 +426,7 @@ def exhaustive_search(network: NetworkModel, profiles_or_scenarios,
     history = []
     best_score = float("inf")
     for values in product(*_catalogs(bounds)):
-        evaluation = _evaluate(network, profiles_or_scenarios, bounds, evaluator, BESSCandidate(*values))
+        evaluation = _evaluate(network, profiles, bounds, evaluator, BESSCandidate(*values))
         evaluations.append(evaluation)
         if evaluation.feasible:
             best_score = min(best_score, evaluation.objective)
@@ -454,3 +436,91 @@ def exhaustive_search(network: NetworkModel, profiles_or_scenarios,
         "evaluations": len(evaluations), "unique_candidates": len(evaluations),
         "catalog_size": len(evaluations),
     })
+
+
+def _one_point_crossover(parent_a: tuple, parent_b: tuple, rng: Random,
+                         crossover_rate: float) -> tuple[tuple, tuple]:
+    """Standard single-point crossover: produce *two* complementary children.
+
+    Make one crossover decision for the parent pair. If it succeeds, choose
+    one cut between genes and exchange the tails. Otherwise, copy both
+    parents unchanged. Mutation is applied to each child later.
+    """
+    if len(parent_a) != len(parent_b) or len(parent_a) < 2:
+        raise ValueError("Parents must have equal chromosome lengths >= 2")
+    if rng.random() < crossover_rate:
+        cut = rng.randrange(1, len(parent_a))
+        return (parent_a[:cut] + parent_b[cut:],
+                parent_b[:cut] + parent_a[cut:])
+    return parent_a, parent_b
+
+
+def genetic_optimize(network: NetworkModel, profiles, bounds: OptimizationBounds,
+                     evaluator: Evaluator, optimizer_config: OptimizerConfig, *,
+                     progress=None, crossover_rate: float = 0.80,
+                     mutation_rate: float = 0.12, elite_count: int = 1) -> OptimizationResult:
+    """Discrete GA with tournament selection, standard single-point
+    crossover (two children per mating), per-gene mutation and elitism.
+
+    GA and GWO share the same evaluator, catalogs, feasibility checks and fitness.
+    """
+    bounds.validate_network(network)
+    for rate in (crossover_rate, mutation_rate):
+        if not 0 <= rate <= 1:
+            raise ValueError("GA rates must be between zero and one")
+    if not 1 <= elite_count < optimizer_config.population_size:
+        raise ValueError("GA elitism must preserve between 1 and population_size-1 candidates")
+    rng = Random(optimizer_config.seed)
+    catalogs = _catalogs(bounds)
+    def random_candidate():
+        return BESSCandidate(*(rng.choice(c) for c in catalogs))
+    population = [random_candidate() for _ in range(optimizer_config.population_size)]
+    population[:len(optimizer_config.initial_candidates)] = list(optimizer_config.initial_candidates)
+    cache = {}
+    evaluated = []
+    history = []
+    for generation in range(optimizer_config.max_iterations):
+        generation_evals = []
+        for candidate in population:
+            if optimizer_config.cache_evaluations and candidate in cache:
+                evaluation = cache[candidate]
+            else:
+                evaluation = _evaluate(network, profiles, bounds, evaluator, candidate)
+                cache[candidate] = evaluation
+                evaluated.append(evaluation)
+            generation_evals.append(evaluation)
+        ranked = sorted(generation_evals, key=lambda v: (not v.feasible, v.objective, v.candidate))
+        feasible = [v for v in cache.values() if v.feasible]
+        history.append(min((v.objective for v in feasible), default=float("inf")))
+        if progress:
+            progress(ProgressEvent("GA", generation + 1, optimizer_config.max_iterations,
+                                   f"generation {generation + 1}; best annual cost {history[-1]:.4g}", True))
+        if generation == optimizer_config.max_iterations - 1:
+            break
+        def select():
+            return min(rng.sample(generation_evals, k=min(3, len(generation_evals))),
+                       key=lambda v: (not v.feasible, v.objective)).candidate
+        children = [v.candidate for v in ranked[:elite_count]]
+        while len(children) < optimizer_config.population_size:
+            parent_a, parent_b = select(), select()
+            va = (parent_a.bus_id, parent_a.power_rating_kw, parent_a.energy_capacity_kwh)
+            vb = (parent_b.bus_id, parent_b.power_rating_kw, parent_b.energy_capacity_kwh)
+            offspring = _one_point_crossover(va, vb, rng, crossover_rate)
+            for child in offspring:
+                child = tuple(rng.choice(catalog) if rng.random() < mutation_rate else gene
+                              for gene, catalog in zip(child, catalogs))
+                children.append(BESSCandidate(*child))
+                # For odd population sizes, retain only the remaining slots.
+                if len(children) == optimizer_config.population_size:
+                    break
+        population = children
+    result = _make_result(evaluated, history, len(history), {
+        "algorithm": "GA", "history_axis": "generation", "seed": optimizer_config.seed,
+        "population_size": optimizer_config.population_size,
+        "evaluations": len(evaluated), "unique_candidates": len(cache),
+        "crossover_rate": crossover_rate, "crossover_method": "one_point_two_offspring",
+        "mutation_rate": mutation_rate,
+        "elite_count": elite_count, "workers": 1,
+        "catalog_size": len(bounds.allowed_bus_ids) * len(bounds.power_ratings_kw) * len(bounds.energy_capacities_kwh),
+    })
+    return result

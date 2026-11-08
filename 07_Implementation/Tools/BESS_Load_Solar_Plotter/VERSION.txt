@@ -1,0 +1,2 @@
+BESS Distributed Load and NASA POWER Plotter GUI v4.0
+Updates: Weekly and Monthly detail options; Monthly/Default is one weekly-only chart. Daily/Weekly/Yearly defaults and v3 date spin controls preserved.

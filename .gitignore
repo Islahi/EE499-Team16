@@ -9,6 +9,7 @@ Thumbs.db
 # Python
 __pycache__/
 *.py[cod]
+.pytest_cache/
 .venv/
 venv/
 .env
@@ -30,6 +31,10 @@ codegen/
 # Exported handoff archives
 Exports/*.zip
 
+# Generated PyInstaller build and distribution artifacts
+build/
+dist/
+
 # Temporary/download artifacts
 *.tmp
 *.temp
@@ -39,6 +44,13 @@ Exports/*.zip
 # Existing tracked reference results remain versioned.
 07_Implementation/Results/*/
 07_Implementation/src_accelerated/Results/*/
+
+# Reproducible external source data retained locally, not in Git.
+07_Implementation/Data/Raw/
+07_Implementation/Tools/GoiEner_Multiyear_Download_Extractor/goiener_original/
+
+# Local source/update drop retained as a backup after canonical integration.
+07_Implementation/Updates, Tools, and Data/
 
 .obsidian/
 

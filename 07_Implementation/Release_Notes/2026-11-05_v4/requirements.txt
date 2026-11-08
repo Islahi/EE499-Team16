@@ -1,0 +1,11 @@
+# Editable source dependencies; use Python 3.11+ with compatible wheels on Windows.
+PySide6>=6.7
+numpy>=1.26
+pandas>=2.0
+openpyxl>=3.1
+scipy>=1.11
+statsforecast>=2.0,<3.0
+# Optional faster FBS:
+# numba>=0.60
+# Optional tests:
+pytest>=8.0

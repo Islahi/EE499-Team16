@@ -1,0 +1,49 @@
+{
+  "input_metadata": "C:\\Users\\ISLAHI\\Downloads\\GoiEner_Multiyear_Download_Extractor\\goiener_original\\metadata.csv",
+  "input_archive": "C:\\Users\\ISLAHI\\Downloads\\GoiEner_Multiyear_Download_Extractor\\goiener_original\\imp-pre.tzst",
+  "source": "GoiEner Zenodo 7362094, pre-pandemic cleaned meter archive",
+  "start": "2014-11-02 01:00:00",
+  "end": "2020-03-01 00:00:00",
+  "hours_in_union": 46704,
+  "longest_common_overlap_hours": 24121,
+  "distributor_ready_file": "goiener_distributor_ready.csv",
+  "selected_classification": "CNAE numerical divisions 97-98 households activities, 45-47 trade, 10-33 manufacturing",
+  "residential_tariff_proxy_enabled": false,
+  "residential_proxy_caveat": "CNAE 97-98 is NOT equivalent to all domestic smart meters; 2.x tariff is an unverified proxy and may contain small businesses.",
+  "wide_csv_values": "average",
+  "wide_csv_note": "Use 'average' for a stable shape when the number of participating customers changes. Category files also include true hourly sums, active count and average.",
+  "sector_statistics": {
+    "residential": {
+      "customers_with_data": 10596,
+      "first_observed_hour": "2014-11-02 01:00:00",
+      "last_observed_hour": "2020-03-01 00:00:00",
+      "hours_without_customer_data_in_union": 0,
+      "hours_interpolated_without_any_customer": 0,
+      "min_active_customers": 1,
+      "max_active_customers": 10430
+    },
+    "commercial": {
+      "customers_with_data": 219,
+      "first_observed_hour": "2017-05-28 01:00:00",
+      "last_observed_hour": "2020-03-01 00:00:00",
+      "hours_without_customer_data_in_union": 22512,
+      "hours_interpolated_without_any_customer": 0,
+      "min_active_customers": 1,
+      "max_active_customers": 216
+    },
+    "manufacturing": {
+      "customers_with_data": 98,
+      "first_observed_hour": "2017-05-30 01:00:00",
+      "last_observed_hour": "2020-03-01 00:00:00",
+      "hours_without_customer_data_in_union": 22560,
+      "hours_interpolated_without_any_customer": 0,
+      "min_active_customers": 3,
+      "max_active_customers": 98
+    }
+  },
+  "skipped_members": {},
+  "customer_quality_manifest": "customer_quality_manifest.csv",
+  "input_time_note": "Timezone-naive timestamps treated as consistent source time; ambiguous duplicate hours collapsed by mean. Not a certified DST conversion.",
+  "interpolation_note": "Missing internal customer hours linearly interpolated without gap-size limit; empty category hours interpolated only internally. Provider preimputation retained.",
+  "source_data_status": "User-supplied archive processed locally; original archive not modified"
+}

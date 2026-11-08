@@ -25,7 +25,7 @@ class StageReporter:
     Numerical hooks update the latest nested counters. Only snapshots at most
     four times per second (plus explicit boundaries) enter the GUI event queue.
     """
-    levels = ("GWO", "Candidate", "Scenario", "Simulation", "Control", "FBS")
+    levels = ("GWO", "GA", "Candidate", "Forecast", "Simulation", "Control", "FBS")
 
     def __init__(self, stage_callback, progress_callback, interval=0.25):
         self.stage_callback = stage_callback
@@ -39,7 +39,7 @@ class StageReporter:
         self.stage_callback(message)
 
     def progress(self, event):
-        if event.phase in ("ARIMA", "Scenarios", "GWO") and event.phase not in self.events:
+        if event.phase in ("Forecast", "GWO", "GA") and event.phase not in self.events:
             self.events.clear()
         if event.phase in self.levels:
             index = self.levels.index(event.phase)

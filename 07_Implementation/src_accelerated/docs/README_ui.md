@@ -1,3 +1,5 @@
+> **UI update (Designer-unified v3):** The current `main_window.ui` has a single integrated top action bar, plus Network/Results tabs; the old `frame_action` sidebar and runtime `QToolBar` are no longer used. Permanent Settings controls live in `settings_dialog.ui`, and Forecasting controls in `forecast_dialog.ui`. The historical text below documents earlier versions and may mention outdated layouts.
+
 # Desktop UI — `ui.py`
 
 The desktop version connects four editable Designer forms to the
@@ -116,12 +118,7 @@ bus, positive power kW and energy kWh. Fill efficiencies explicitly, and check
 minimum/initial/maximum SOC. The UI uses percentages, then divides by 100 for
 the backend. A power rating is not an energy capacity.
 
-**Dispatch:** choose **Net-load target**, then enter target kW. The request is
-`original load − available PV − target`: discharge above target, charge below.
-A positive target may charge from the grid. Zero is a valid explicit target,
-not a guessed recommended value. SOC, reserve, rating and network constraints
-may prevent tracking. Idle is diagnostic only. Without Manual BESS, Run
-Simulation is a no-BESS baseline and does not apply the configured dispatch.
+**Dispatch:** choose **Grid-aware rule-based dispatch** (default) to charge from excess PV and request discharge against positive load minus PV. The actual BESS output remains constrained by power rating, SOC, reserve and network limits. This is not tariff-aware economic scheduling. **Idle** is for diagnostics only; without Manual BESS, Run Simulation is a no-storage baseline. The net-load-target setting has been removed.
 
 **Optimization:** select allowed buses and enter positive min/max/step values
 for both power and energy. Example arithmetic only: min 100, max 250, step 100
@@ -294,7 +291,7 @@ settings clear earlier results so they cannot be exported as a new run.
 | `study_session.py` | Accepted-input snapshots, session manifest/log and numbered run folders |
 | `scenario_store.py` | Scenario CSV/JSON package writing and selected-set loading |
 | `progress.py` | Qt-free counters, throttled nested snapshots and duration formatting |
-| `simulation.py` | User-configured net-load-target policy and hourly electrical simulation |
+| `simulation.py` | Grid-aware rule-based dispatch and hourly electrical simulation |
 | `network_layout.py` | Qt-free global branch balancing, connection-driven bars and layer-aware spacing |
 | `assets/*.ui` | Your editable Designer layouts; not generated Python |
 | `../examples/run_accelerated_ui.py` | Accelerated UI launcher independent of working directory |
@@ -306,8 +303,7 @@ PV source choices and adds these settings without modifying the source forms:
 | Runtime object name | Widget / location |
 |---|---|
 | `group_dispatch_policy` | QGroupBox / Battery page |
-| `combo_dispatch_policy` | QComboBox: Idle first, Net-load target second |
-| `spin_dispatch_target_kw` | QDoubleSpinBox / Dispatch group, kW |
+| `combo_dispatch_policy` | QComboBox: Idle or Grid-aware rule-based dispatch |
 | `spin_opt_power_step_kw` | QDoubleSpinBox / Optimization bounds, kW |
 | `spin_opt_energy_step_kwh` | QDoubleSpinBox / Optimization bounds, kWh |
 

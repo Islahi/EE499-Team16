@@ -1,0 +1,1 @@
+All values here are SYNTHETIC demo data, NOT real GoiEner measurements. Use to test UI only.

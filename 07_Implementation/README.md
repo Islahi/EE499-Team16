@@ -1,18 +1,36 @@
 # Term 2 Implementation
 
-Tasks **10, 12 and 13** implemented on 6 Oct 2026 against
-`02_Reports/Working/Planning/TERM2_SOFTWARE_DESIGN_SPEC.md`.
+## Current stable application — 5 November 2026
+
+The supported desktop application is `src_accelerated`, updated to the v4
+Qt Designer wiring release. It includes annual economic optimization, GA and
+GWO search, chronological StatsForecast forecasting, session-based results,
+and the unified Designer-owned interface. The previous scenario/Monte-Carlo
+workflow was intentionally removed from the active application.
+
+See [`README_ACCELERATED.md`](README_ACCELERATED.md) and
+[`Release_Notes/2026-11-05_v4/`](Release_Notes/2026-11-05_v4/) for the current
+workflow, limitations, and change history. The original `src` package remains
+as a legacy implementation baseline for earlier Term 2 work.
 
 ## Run
 
-Python 3.10 or newer. From the repository root:
+Python 3.11 or newer is recommended. From the repository root:
 
 ```bash
 cd 07_Implementation
-python -m pip install -r requirements.txt
-python -m src.main
-python -m unittest discover -s tests -v
+python -m pip install -r requirements-accelerated.txt
+python -m src_accelerated.ui
+python -m pytest -q tests
 ```
+
+On Windows, `start_windows.bat` installs the stable dependencies and launches
+the application. `test_windows.bat` runs the complete regression suite.
+
+Standalone data-preparation and plotting utilities are under `Tools/`. Cleaned
+GoiEner profiles and NASA POWER inputs are under `Data/`. Original large source
+archives are deliberately excluded from Git and can be restored with the
+documented downloader and checksums.
 
 Network/FBS and their unit tests use the Python standard library. Pandas is
 needed to import/use the existing profile loader and hourly simulation.

@@ -13,7 +13,8 @@ from .simulation import TimeSeriesSimulationResult
 Result = TimeSeriesSimulationResult | PerformanceMetrics | OptimizationResult
 
 COMPARISON_FIELDS = (
-    "bess_cost", "curtailment_energy_kwh", "load_shedding_energy_kwh",
+    "bess_cost", "annual_total_cost", "annualized_bess_cost", "annual_grid_cost",
+    "annual_curtailment_cost", "annual_shedding_cost", "curtailment_energy_kwh", "load_shedding_energy_kwh",
     "loss_energy_kwh", "grid_import_energy_kwh", "grid_export_energy_kwh",
     "peak_grid_import_kw", "voltage_violation_hours", "reserve_violation_hours",
 )
@@ -36,8 +37,8 @@ def _result_metrics(result, supplied):
     if supplied is not None:
         raise ValueError("Only simulation results accept a separate metrics argument")
     if isinstance(result, OptimizationResult):
-        if result.success and result.best_candidate is None:
-            raise ValueError("Successful optimization must have a best candidate")
+        if result.success and result.best_candidate is None and not result.metadata.get("no_bess_selected"):
+            raise ValueError("Successful optimization must have a battery or a declared no-BESS selection")
         if not result.success and (result.best_candidate is not None or result.metrics is not None):
             raise ValueError("Failed optimization cannot claim a selected candidate or its metrics")
         if result.success and result.metrics is not None and not result.metrics.feasible:
@@ -67,7 +68,9 @@ def _display(value):
 
 
 def _unit(name, metrics):
-    if name == "bess_cost":
+    if name in ("bess_cost", "annual_total_cost", "annualized_bess_cost",
+                "annual_grid_cost", "annual_curtailment_cost", "annual_shedding_cost",
+                "annual_terminal_energy_cost"):
         return metrics.currency
     for suffix, unit in (("_bus_hours", "bus-hours"), ("_hours", "h"),
                          ("_kwh", "kWh"), ("_kw", "kW"), ("_pu", "pu")):
@@ -100,18 +103,19 @@ def format_summary(result: Result, *, metrics: PerformanceMetrics | None = None,
         lines.extend(["Type: optimization", f"Success: {result.success}",
                       f"Message: {result.message}", f"Iterations: {result.iterations}",
                       f"Evaluator calls retained: {len(result.evaluations)}",
-                      f"Best raw WSM: {_display(result.best_objective)}"])
+                      f"Best annual economic objective: {_display(result.best_objective)}"])
         if result.best_candidate is not None:
             candidate = result.best_candidate
             lines.extend([f"Selected bus: {candidate.bus_id}",
                           f"Battery power: {candidate.power_rating_kw:g} kW",
                           f"Battery energy: {candidate.energy_capacity_kwh:g} kWh"])
         else:
-            lines.append("No feasible battery selected.")
+            lines.append("No battery installed (economic no-BESS selection)." if result.metadata.get("no_bess_selected")
+                         else "No feasible battery selected.")
         for key, value in sorted(result.metadata.items()):
             lines.append(f"Optimizer {key}: {_display(value)}")
-        lines.append("Raw WSM mixes cost and energy units; this is not a normalized economic cost.")
-        lines.append("The chosen battery is best among evaluated candidates, not a global-optimum guarantee.")
+        lines.append("Annual economic score uses common monetary units; inspect the tariff assumptions.")
+        lines.append("The selected alternative is the best among evaluated candidates and the no-BESS baseline, not a global-optimum guarantee.")
     else:
         lines.extend(["Type: performance metrics only", f"Feasible: {result.feasible}",
                       "Completion/convergence details were not supplied with this metrics-only export."])
@@ -203,9 +207,11 @@ def _branch_rows(result):
 
 EVALUATION_HEADER = [
     "evaluation_index", "bus_id", "power_rating_kw", "energy_capacity_kwh", "feasible",
-    "raw_wsm", "message", "metrics_available", "metrics_feasible", "bess_cost", "currency",
-    "curtailment_energy_kwh", "load_shedding_energy_kwh", "loss_energy_kwh",
-    "voltage_min_pu", "voltage_max_pu", "reserve_violation_hours", "notes",
+    "annual_cost", "message", "metrics_available", "metrics_feasible", "bess_cost", "currency",
+    "annual_total_cost", "annualized_bess_cost", "annual_grid_cost",
+    "annual_curtailment_cost", "annual_shedding_cost", "curtailment_energy_kwh",
+    "load_shedding_energy_kwh", "loss_energy_kwh", "voltage_min_pu", "voltage_max_pu",
+    "reserve_violation_hours", "notes",
 ]
 
 
@@ -213,18 +219,14 @@ def _evaluation_row(index, evaluation):
     candidate, metrics = evaluation.candidate, evaluation.metrics
     row = [index, candidate.bus_id, candidate.power_rating_kw, candidate.energy_capacity_kwh,
            evaluation.feasible, evaluation.objective, evaluation.message, metrics is not None]
-    for name in ("feasible", "bess_cost", "currency", "curtailment_energy_kwh",
+    for name in ("feasible", "bess_cost", "currency", "annual_total_cost", "annualized_bess_cost",
+    "annual_grid_cost", "annual_curtailment_cost", "annual_shedding_cost", "curtailment_energy_kwh",
                  "load_shedding_energy_kwh", "loss_energy_kwh", "voltage_min_pu",
                  "voltage_max_pu", "reserve_violation_hours", "notes"):
         row.append(getattr(metrics, name) if metrics is not None else None)
     return row
 
 
-def _scenario_rows(result):
-    for index, evaluation in enumerate(result.evaluations):
-        # ScenarioCandidateEvaluation extends the ordinary evaluation contract.
-        for scenario_id, case in sorted(getattr(evaluation, "scenario_evaluations", {}).items()):
-            yield [scenario_id] + _evaluation_row(index, case)
 
 
 def _comparison_rows(baseline, candidate):
@@ -289,12 +291,19 @@ def export_results(result: Result, output_path: str | Path, *,
     if isinstance(result, OptimizationResult):
         write_table("evaluations.csv", EVALUATION_HEADER,
                     (_evaluation_row(index, item) for index, item in enumerate(result.evaluations)))
-        write_table("convergence.csv", ["index", "axis", "best_so_far_raw_wsm"],
+        write_table("convergence.csv", ["index", "axis", "best_annual_cost"],
                     ([index, result.metadata.get("history_axis", "unspecified"), value]
                      for index, value in enumerate(result.convergence_history)))
-        if any(getattr(item, "scenario_evaluations", {}) for item in result.evaluations):
-            write_table("scenario_evaluations.csv", ["scenario_id"] + EVALUATION_HEADER, _scenario_rows(result))
-            summary += "\nOnly retained/evaluated cases are exported; rejected candidates may stop at the first failed case.\n"
+    if isinstance(result, OptimizationResult) and "no_bess_annual_cost" in result.metadata:
+        baseline = result.metadata.get("no_bess_annual_cost")
+        write_table("economic_comparison.csv", ["alternative", "annual_cost", "currency", "feasible", "selected"], [
+            ["No BESS", baseline, performance.currency if performance else "", result.metadata.get("no_bess_feasible"),
+             bool(result.metadata.get("no_bess_selected"))],
+            ["Best search or selected option", result.best_objective,
+             performance.currency if performance else "", result.success, not result.metadata.get("no_bess_selected", False)],
+        ])
+        if baseline is not None and result.success:
+            summary += f"\nAnnual savings relative to no BESS: {baseline - result.best_objective:.6g} {performance.currency if performance else ''}/year\n"
     if comparison is not None:
         write_table("comparison.csv", ["metric", "unit", "baseline", "candidate", "reduction_percent",
                                        "baseline_feasible", "candidate_feasible"], comparison)

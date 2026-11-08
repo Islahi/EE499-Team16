@@ -125,9 +125,9 @@ another battery size. SOC/efficiency settings stay fixed across candidates.
 from src.optimizer import SimulationEvaluator
 from src.simulation import SimulationConfig
 
-def dispatch_policy(index, profile, state):
-    net_load_kw = sum(profile.p_load_kw.values()) - sum(profile.p_pv_kw.values())
-    return net_load_kw - 400.0  # Demonstration net-load target.
+from src_accelerated.simulation import GridAwareDispatchPolicy
+
+dispatch_policy = GridAwareDispatchPolicy(import_limit_kw=400.0, export_limit_kw=0.0)
 
 evaluator = SimulationEvaluator(
     economic_config=economics,
@@ -141,8 +141,9 @@ evaluator = SimulationEvaluator(
 ```
 
 The policy is required, because searching battery size with an accidentally
-idle battery would not evaluate its intended operation. The sample targets
-400 kW before losses; positive requests discharge and negative requests charge.
+idle battery would not evaluate its intended operation. The sample uses rule-based
+self-consumption dispatch; positive requests discharge and negative requests charge.
+The rule is not electricity-price-aware or a multi-hour optimal scheduler.
 The existing simulator clips requests for power, SOC, reserve and network
 conditions and records actual curtailment/shedding. This policy is a simple
 study input, not a separately optimized dispatch schedule.

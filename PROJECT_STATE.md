@@ -47,6 +47,15 @@ The GUI builds the diagram automatically from network data. This plan does not a
   residual bootstrap. Simulation and optimization exports are numbered inside
   the active session. This remains an accelerated experimental copy; independent
   cross-bus residual correlation and real-data scenario validation are pending.
+- On 5 Nov 2026, `07_Implementation/src_accelerated` became the supported stable
+  desktop application through the v4 Designer wiring update. The active scope
+  now uses chronological StatsForecast forecasting instead of generated
+  scenario/Monte-Carlo workflows, supports GA and GWO against one annualized
+  economic objective, and stores timestamped study sessions. Standalone GoiEner
+  preparation/distribution tools, the load/NASA plotter, cleaned profiles, and
+  representative NASA POWER data are versioned under `07_Implementation/Tools`
+  and `07_Implementation/Data`. Raw external archives and generated run sessions
+  remain local and reproducible rather than versioned.
 - On 19 Oct 2026, six published radial feeder sources (10/12/15/22/33/69 buses)
   were downloaded from a pinned official MATPOWER 8.1 commit into
   `04_Research/Working_Data/Network_Data/Radial_Test_Systems/`. Sources are

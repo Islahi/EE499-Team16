@@ -1,0 +1,3 @@
+This package contains original preprocessing source code and no copyrighted GoiEner measurements.
+Public source data: https://zenodo.org/records/7362094
+The data are distributed by their original authors subject to the dataset's own terms.

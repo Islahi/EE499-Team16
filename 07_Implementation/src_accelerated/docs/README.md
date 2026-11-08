@@ -70,7 +70,7 @@ Run the command from `07_Implementation`, the folder containing
 | `pv_model.py` | Prepares PV power from irradiance CSVs | Implemented; see README_pv_model.md |
 | `load_generator.py` | Prepares literature-based synthetic hourly load | Implemented; see README_load_generator.md |
 | `bess.py` | Existing BESS configuration, state and energy-update function | Existing implementation preserved |
-| `simulation.py` | Contains the net-load-target dispatch policy; combines profiles/BESS/FBS, applies controls and checks feasibility | Implemented; see the simulation test guide |
+| `simulation.py` | Contains grid-aware rule-based dispatch; combines profiles/BESS/FBS, applies controls and checks feasibility | Implemented; see the simulation test guide |
 | `metrics.py` | Summarizes simulation energy/voltage/reserve performance and simple investment cost | Implemented; see README_metrics.md |
 | `optimizer.py` | Searches allowed BESS bus/power/energy catalogs with GWO and a public evaluator | Implemented; see README_optimizer.md |
 | `uncertainty.py` | Generates/selects ARIMA/Monte Carlo scenarios and evaluates common candidates | Implemented; see README_uncertainty.md |

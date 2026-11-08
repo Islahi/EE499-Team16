@@ -99,8 +99,7 @@ class StudySession:
             "source_files": source_files,
             "request": _json_value(asdict(study.request)),
             "context": _json_value(study.context),
-            "active_scenario_set": None,
-            "scenario_sets": [],
+            "forecast_runs": [],
             "simulation_runs": [],
             "base_case_runs": [],
             "optimization_runs": [],
@@ -127,32 +126,8 @@ class StudySession:
             index += 1
         return parent / f"{prefix}_{index:03d}"
 
-    def next_scenario_path(self):
-        return self.next_path("scenarios", "set")
-
     def next_run_path(self, optimization):
         return self.next_path("optimization" if optimization else "simulation", "run")
-
-    def record_scenario_set(self, path, metadata):
-        relative = str(Path(path).relative_to(self.root))
-        self.manifest["scenario_sets"].append({
-            "path": relative,
-            "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),
-            **_json_value(metadata),
-        })
-        self.manifest["active_scenario_set"] = relative
-        self.save()
-        self.append_log(f"Scenario set saved and activated: {relative}")
-
-    def activate_scenario_set(self, path):
-        path = Path(path).resolve()
-        try:
-            relative = str(path.relative_to(self.root.resolve()))
-        except ValueError:
-            relative = str(path)
-        self.manifest["active_scenario_set"] = relative
-        self.save()
-        self.append_log(f"Scenario set activated: {relative}")
 
     def record_run(self, path, optimization):
         key = "optimization_runs" if optimization else "simulation_runs"

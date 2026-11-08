@@ -1,0 +1,33 @@
+[
+  {
+    "id": "R5",
+    "doi": "10.1016/j.apenergy.2019.113926",
+    "fulltext": "https://www.sciencedirect.com/science/article/pii/S0306261919316137",
+    "pdf_included": false
+  },
+  {
+    "id": "R6",
+    "doi": "10.3390/a19040320",
+    "fulltext": "https://www.mdpi.com/1999-4893/19/4/320",
+    "pdf": "https://www.mdpi.com/1999-4893/19/4/320/pdf",
+    "pdf_included": false
+  },
+  {
+    "id": "R7",
+    "fulltext": "https://energystorageinterconnection.org/iii-requirements-for-limited-and-non-export-controls/e-recommendations/",
+    "pdf_included": false
+  },
+  {
+    "id": "R8",
+    "doi": "10.1049/stg2.70058",
+    "fulltext": "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/stg2.70058",
+    "pdf_included": false
+  },
+  {
+    "id": "R9",
+    "doi": "10.3390/en18236335",
+    "fulltext": "https://www.mdpi.com/1996-1073/18/23/6335",
+    "pdf": "https://www.mdpi.com/1996-1073/18/23/6335/pdf",
+    "pdf_included": false
+  }
+]

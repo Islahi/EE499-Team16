@@ -1,0 +1,41 @@
+{
+  "access_note": "Four open-access PDF binaries are included; URLs remain listed for independent retrieval and verification.",
+  "papers": [
+    {
+      "id": "R1",
+      "file": "sustainability-14-13209_2.pdf",
+      "title": "Optimal Operational Planning of RES and HESS in Smart Grids Considering Demand Response and DSTATCOM Functionality of the Interfacing Inverters",
+      "doi": "10.3390/su142013209",
+      "url": "https://www.mdpi.com/2071-1050/14/20/13209/pdf",
+      "landing": "https://www.mdpi.com/2071-1050/14/20/13209",
+      "included_pdf": true
+    },
+    {
+      "id": "R2",
+      "file": "R2_Minh_etal_2026.pdf",
+      "title": "A mixed-integer linear programming model for BESS sizing optimization considering aging effects and emission costs",
+      "doi": "10.1016/j.segy.2025.100225",
+      "url": "https://storage.googleapis.com/hust-files/2026-01-06/1767694932859/5261733430034432/1-s2.0-s266695522500053x-main_4.2m.pdf",
+      "landing": "https://www.sciencedirect.com/science/article/pii/S266695522500053X",
+      "included_pdf": true
+    },
+    {
+      "id": "R3",
+      "file": "Frequency-Constrained_Energy_Management_System_for_Isolated_Microgrids.pdf",
+      "title": "Frequency-Constrained Energy Management System for Isolated Microgrids",
+      "doi": "10.1109/TSG.2022.3170871",
+      "url": "https://uwspace.uwaterloo.ca/bitstreams/61ce0587-9c74-4d54-aead-b9e31ad79e71/download",
+      "landing": "https://uwspace.uwaterloo.ca/items/6b498463-e57d-4ca3-82d6-31121d3501b4",
+      "included_pdf": true
+    },
+    {
+      "id": "R4",
+      "file": "2583471.pdf",
+      "title": "Cost Projections for Utility-Scale Battery Storage: 2025 Update",
+      "doi": "10.2172/2583471",
+      "url": "https://www.nrel.gov/docs/fy25osti/93281.pdf",
+      "landing": "https://research-hub.nlr.gov/en/publications/cost-projections-for-utility-scale-battery-storage-2025-update/",
+      "included_pdf": true
+    }
+  ]
+}
