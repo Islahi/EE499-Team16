@@ -1,0 +1,70 @@
+dataset,model,seasonality,unit,status,fit_seconds,forecast_seconds,model_seconds,wall_seconds,training_and_tuning_seconds,rollout_seconds,peak_memory_mb,timing_note
+Distributed_Total,MSTL,daily_weekly_monthly_yearly,kW,OK,455.3447867000005,0.0108494999994945,455.3556362,458.50393500000064,,,,Recorded stage timings
+Distributed_Total,LightGBM,daily_weekly_monthly_yearly,kW,OK,7.429402100000516,0.0,7.429402100000516,7.485979499999303,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,XGBoost,daily_weekly_monthly_yearly,kW,OK,11.168370699999286,0.0,11.168370699999286,11.226359399999636,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,AutoCES,weekly,kW,OK,10.771541800000705,0.0002695000002859,10.77181130000099,13.509204800000589,,,,Recorded stage timings
+Distributed_Total,FourierSARIMAX,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,97.68792050000047,0.0,97.68792050000047,97.74454890000015,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,FourierSARIMAX,daily_weekly_monthly,kW,OK_WITH_WARNINGS,39.2563212999994,0.0,39.2563212999994,39.31506050000098,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,CalendarRidge,daily_weekly,kW,OK,1.6517020000010234,0.0,1.6517020000010234,1.7069002999996885,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,FourierSARIMAX,daily_weekly,kW,OK_WITH_WARNINGS,19.24821590000101,0.0,19.24821590000101,19.30408900000112,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,CalendarRidge,daily_weekly_monthly_yearly,kW,OK,1.7477232000001095,0.0,1.7477232000001095,1.8020054000007804,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,CalendarRidge,daily_weekly_monthly,kW,OK,1.6865938999999344,0.0,1.6865938999999344,1.7416413000009925,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,Prophet,daily_weekly,kW,OK_WITH_WARNINGS,25.399140200001057,0.0,25.399140200001057,25.45408049999969,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,Prophet,daily_weekly_monthly,kW,OK_WITH_WARNINGS,30.29993389999981,0.0,30.29993389999981,30.35515870000017,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,AutoTBATS,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,324.3664332000008,0.0386909999997442,324.4051242000005,327.2124219999987,,,,Recorded stage timings
+Distributed_Total,Prophet,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,38.118275699998776,0.0,38.118275699998776,38.17222009999932,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,FourierOLS,daily_weekly_monthly_yearly,kW,OK,1.6026428999994096,0.0,1.6026428999994096,1.6594414999999572,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,FourierOLS,daily_weekly,kW,OK,1.5488217000001896,0.0,1.5488217000001896,1.6056482000003598,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,FourierOLS,daily_weekly_monthly,kW,OK,1.5930920999999216,0.0,1.5930920999999216,1.6475024000010308,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,SeasonalNaive,yearly_365d,kW,OK,0.0,2.689999928406905e-05,2.689999928406905e-05,0.0533365999999659,,,,Recorded stage timings
+Distributed_Total,Prophet,daily,kW,OK_WITH_WARNINGS,20.317468200000803,0.0,20.317468200000803,20.371859200000472,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,XGBoost,daily_weekly_monthly,kW,OK,7.23295600000165,0.0,7.23295600000165,7.288772699999754,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,LightGBM,daily_weekly_monthly,kW,OK,5.140856399999393,0.0,5.140856399999393,5.199177800001053,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,Prophet,weekly,kW,OK_WITH_WARNINGS,14.00411940000049,0.0,14.00411940000049,14.05521829999998,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,FourierSARIMAX,daily,kW,OK_WITH_WARNINGS,10.918779699999504,0.0,10.918779699999504,10.978079399999842,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,YearAgoCalendarNaive,yearly_365d,kW,OK,0.0,0.2346942000003764,0.2346942000003764,0.2875954999999521,,,,Recorded stage timings
+Distributed_Total,XGBoost,weekly,kW,OK,4.31514789999892,0.0,4.31514789999892,4.373708299999635,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,LightGBM,weekly,kW,OK,4.01770199999919,0.0,4.01770199999919,4.073414899999989,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,FourierSARIMAX,weekly,kW,OK_WITH_WARNINGS,20.470419900000707,0.0,20.470419900000707,20.528929800000697,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,AutoARIMA,weekly,kW,OK_WITH_WARNINGS,397.78673960000106,2.925846600001023,400.7125862000021,403.4508796999999,,,,Recorded stage timings
+Distributed_Total,MSTL,weekly,kW,OK,4.669106399999691,0.0104844999996203,4.679590899999312,7.462863300000208,,,,Recorded stage timings
+Distributed_Total,XGBoost,daily_weekly,kW,OK,8.871885100001236,0.0,8.871885100001236,8.930567199999132,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,AutoTBATS,daily,kW,OK_WITH_WARNINGS,8.401216700000077,0.021048000000519,8.422264700000596,11.167573200000334,,,,Recorded stage timings
+Distributed_Total,CalendarRidge,daily,kW,OK,1.6011560000006284,0.0,1.6011560000006284,1.6649151999990863,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,LightGBM,daily_weekly,kW,OK,5.906332399999883,0.0,5.906332399999883,5.9649286000003485,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,FourierOLS,daily,kW,OK,1.557079900001554,0.0,1.557079900001554,1.6135288999994373,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,SeasonalNaive,weekly,kW,OK,0.0,3.130000004603062e-05,3.130000004603062e-05,0.0558401999996931,,,,Recorded stage timings
+Distributed_Total,AutoTBATS,daily_weekly,kW,OK_WITH_WARNINGS,44.10038629999963,0.0272611999998844,44.12764749999951,46.87249800000063,,,,Recorded stage timings
+Distributed_Total,CalendarRidge,weekly,kW,OK,1.5582305000007182,0.0,1.5582305000007182,1.612521700000798,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,MSTL,daily,kW,OK,1.082408199999918,0.0101808999997956,1.0925890999997137,3.8630963000005054,,,,Recorded stage timings
+Distributed_Total,FourierOLS,weekly,kW,OK,1.5108969000011712,0.0,1.5108969000011712,1.5678800999994564,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,AutoTBATS,weekly,kW,OK_WITH_WARNINGS,18.54758339999989,0.0250741999998354,18.57265759999973,21.39384259999952,,,,Recorded stage timings
+Distributed_Total,HoltWinters,weekly,kW,OK,26.76150989999951,0.0003077999999732,26.761817699999483,29.588005099999464,,,,Recorded stage timings
+Distributed_Total,AutoARIMA,daily,kW,OK_WITH_WARNINGS,39.648342700000285,0.2275104000000283,39.87585310000031,42.66898390000097,,,,Recorded stage timings
+Distributed_Total,LightGBM,daily,kW,OK,4.741566000000603,0.0,4.741566000000603,4.798649399999704,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,XGBoost,daily,kW,OK,6.091493799998716,0.0,6.091493799998716,6.151260499998898,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,FourierSARIMAX,yearly_365d,kW,OK_WITH_WARNINGS,31.53516450000097,0.0,31.53516450000097,31.5891001,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,SeasonalNaive,monthly_30d,kW,OK,0.0,2.75999991572462e-05,2.75999991572462e-05,0.0524335999998584,,,,Recorded stage timings
+Distributed_Total,MSTL,monthly_30d,kW,OK,17.862018300000273,0.0103251000000454,17.872343400000318,20.61464449999949,,,,Recorded stage timings
+Distributed_Total,Prophet,monthly_30d,kW,OK_WITH_WARNINGS,13.734098700000686,0.0,13.734098700000686,13.786321999999927,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,FourierSARIMAX,monthly_30d,kW,OK_WITH_WARNINGS,9.94698619999872,0.0,9.94698619999872,10.005677400000422,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,LightGBM,yearly_365d,kW,OK,5.56112899999971,0.0,5.56112899999971,5.620326000000205,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,AutoTheta,monthly_30d,kW,OK,168.35593860000063,0.0006430000003092,168.35658160000094,171.10249150000072,,,,Recorded stage timings
+Distributed_Total,AutoTheta,weekly,kW,OK,168.48270130000037,0.0006640999999945,168.48336540000037,171.23756669999966,,,,Recorded stage timings
+Distributed_Total,XGBoost,yearly_365d,kW,OK,4.946588900000279,0.0,4.946588900000279,5.007123800000045,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,Prophet,yearly_365d,kW,OK_WITH_WARNINGS,19.582979599999817,0.0,19.582979599999817,19.63585440000133,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,SeasonalNaive,daily,kW,OK,0.0,5.280000004859176e-05,5.280000004859176e-05,0.0507992000002559,,,,Recorded stage timings
+Distributed_Total,MSTL,daily_weekly_monthly,kW,OK,43.7697105999996,0.0104086999999708,43.78011929999957,46.542994100000215,,,,Recorded stage timings
+Distributed_Total,LightGBM,monthly_30d,kW,OK,2.8740985999993427,0.0,2.8740985999993427,2.931486399998903,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,MSTL,daily_weekly,kW,OK,9.833584100000737,0.0100888999986636,9.8436729999994,12.60893600000054,,,,Recorded stage timings
+Distributed_Total,AutoTheta,daily,kW,OK,161.8592021000004,0.0007583999995404,161.85996049999994,164.5795350999997,,,,Recorded stage timings
+Distributed_Total,AutoTBATS,daily_weekly_monthly,kW,OK_WITH_WARNINGS,86.23301600000013,0.0256661999992502,86.25868219999938,89.07412199999999,,,,Recorded stage timings
+Distributed_Total,XGBoost,monthly_30d,kW,OK,3.5765724000011687,0.0,3.5765724000011687,3.633129400001053,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,CalendarRidge,monthly_30d,kW,OK,1.5212581000014325,0.0,1.5212581000014325,1.5761395999998058,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,FourierOLS,yearly_365d,kW,OK,1.530992399999377,0.0,1.530992399999377,1.587969800000792,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,CalendarRidge,yearly_365d,kW,OK,1.6026033999987703,0.0,1.6026033999987703,1.6597634000008838,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,FourierOLS,monthly_30d,kW,OK,1.5126330999992206,0.0,1.5126330999992206,1.5668739000011556,,,,"Fit field bundles tuning, fitting and prediction"
+Distributed_Total,Naive,daily,kW,OK,0.0,1.6399999367422424e-05,1.6399999367422424e-05,0.0494682000007742,,,,Recorded stage timings
+Distributed_Total,AutoNBEATSx,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,56.47497099999964,0.0,56.47497099999964,56.54012579999926,42.618,1.676,,Fit field bundles prediction; see neural stage times
+Distributed_Total,AutoNHITS,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,56.02866089999952,0.0,56.02866089999952,56.09591230000024,42.05,1.715,,Fit field bundles prediction; see neural stage times
+Distributed_Total,AutoETS,weekly,kW,OK,533.7899170000001,0.0098389000013412,533.7997559000014,536.5591999000007,,,,Recorded stage timings

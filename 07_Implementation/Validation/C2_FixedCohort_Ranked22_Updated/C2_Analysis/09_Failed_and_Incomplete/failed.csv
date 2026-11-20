@@ -1,0 +1,6 @@
+dataset,model,seasonality,status,reason,coverage_pct
+Bus_01,AutoCES,weekly,FAILED,AttributeError: 'AutoCES' object has no attribute 'model_',0.0
+Bus_01,AutoNBEATSx,daily_weekly_monthly_yearly,FAILED,"TypeError: `cpus` is no longer supported as of v3.2.0. Either pin neuralforecast to v3.1.9, or pass `ray_options=RayOptions(cpus=...)` instead.",0.0
+Bus_01,AutoNHITS,daily_weekly_monthly_yearly,FAILED,"TypeError: `cpus` is no longer supported as of v3.2.0. Either pin neuralforecast to v3.1.9, or pass `ray_options=RayOptions(cpus=...)` instead.",0.0
+Bus_01,FourierSARIMAX,daily_weekly_monthly_yearly,FAILED,FloatingPointError: Numerical instability: unrealistic prediction scale,0.0
+Bus_01,FourierSARIMAX,yearly_365d,FAILED,FloatingPointError: Numerical instability: unrealistic prediction scale,0.0

@@ -1,0 +1,3 @@
+dataset,actual_max_abs_difference_kw,daily_arima_forecast_max_abs_difference_kw
+A_GoiEner_Total_Load,9.094947017729282e-13,6.999785910011269e-06
+B_GoiEner_Distributed_15Bus,9.094947017729282e-13,2.540778041293379e-05

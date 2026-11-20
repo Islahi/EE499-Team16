@@ -1,0 +1,28 @@
+{
+  "experiment": "EE499_C2_SECTOR_SUM_VS_BUS_SUM_2021",
+  "repository": "https://github.com/Islahi/EE499-Team16.git",
+  "input_load_profile": "input/load_profile.csv",
+  "input_assignments": "input/bus_assignments_used.csv",
+  "archived_reference": "reference/archived_reproduction_bus14.npz",
+  "training_start": "2017-06-01 00:00:00",
+  "training_end": "2020-12-31 23:00:00",
+  "test_start": "2021-01-01 00:00:00",
+  "test_end": "2021-12-31 23:00:00",
+  "model_selections": {
+    "residential": "CalendarRidge__daily_weekly_monthly_yearly",
+    "commercial": "XGBoost__daily_weekly_monthly_yearly",
+    "manufacturing": "LightGBM__daily_weekly_monthly_yearly",
+    "Bilbao_modeled_PV_excluded": "XGBoost__daily_weekly_monthly_yearly"
+  },
+  "buses": {"residential": [2,5,10,13], "commercial": [3,8,9,12,14], "manufacturing": [4,6,7,11,15]},
+  "forecast_origin": "2021-01-01 00:00:00",
+  "horizon_hours": 8760,
+  "random_seed": 16,
+  "boosting_n_jobs_per_fit": 2,
+  "parallel_fits": 1,
+  "cache": "calendar feature arrays only; no models or predictions reused",
+  "tuning_days_on_training_only": 120,
+  "tuning_policy": "select per sector using one representative bus; freeze settings for all sector and bus runs",
+  "postprocessing": "clip negative forecast values to zero",
+  "PV_scope": "Bilbao XGBoost retained in selection only; supplied pv_profile.csv is all-zero placeholder"
+}

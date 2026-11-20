@@ -1,0 +1,70 @@
+dataset,model,seasonality,unit,status,fit_seconds,forecast_seconds,model_seconds,wall_seconds,training_and_tuning_seconds,rollout_seconds,peak_memory_mb,timing_note
+Bilbao_Modeled_PV,XGBoost,daily_weekly_monthly_yearly,kW,OK,13.419333599998936,0.0,13.419333599998936,13.506460999999035,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,LightGBM,daily_weekly_monthly_yearly,kW,OK,8.105154299999413,0.0,8.105154299999413,8.174521499999173,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,CalendarRidge,daily_weekly_monthly_yearly,kW,OK,1.9136087999995648,0.0,1.9136087999995648,1.9619848000002087,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,Prophet,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,24.18307149999964,0.0,24.18307149999964,24.23977829999967,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,FourierSARIMAX,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,81.0387026999997,0.0,81.0387026999997,81.09856500000024,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,YearAgoCalendarNaive,yearly_365d,kW,OK,0.0,0.227346599998782,0.227346599998782,0.2725685000004887,,,,Recorded stage timings
+Bilbao_Modeled_PV,SeasonalNaive,yearly_365d,kW,OK,0.0,3.060000017285347e-05,3.060000017285347e-05,0.0451579000000492,,,,Recorded stage timings
+Bilbao_Modeled_PV,FourierOLS,daily_weekly_monthly_yearly,kW,OK,1.5567332999999053,0.0,1.5567332999999053,1.6054244999995717,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,AutoTheta,weekly,kW,OK,161.96990580000056,0.0006935000001249,161.97059930000069,164.8047315999993,,,,Recorded stage timings
+Bilbao_Modeled_PV,FourierOLS,daily_weekly_monthly,kW,OK,1.5251759000002494,0.0,1.5251759000002494,1.5726828999995632,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,FourierOLS,daily_weekly,kW,OK,1.541161999999531,0.0,1.541161999999531,1.5955507999988183,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,AutoTheta,daily,kW,OK,155.33318879999933,0.0006603999991057,155.33384919999844,158.0416552000006,,,,Recorded stage timings
+Bilbao_Modeled_PV,FourierSARIMAX,daily_weekly_monthly,kW,OK_WITH_WARNINGS,22.96960239999862,0.0,22.96960239999862,23.026978699999745,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,FourierOLS,daily,kW,OK,1.5445990999996866,0.0,1.5445990999996866,1.5976484000002529,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,FourierSARIMAX,daily,kW,OK_WITH_WARNINGS,17.7956422999996,0.0,17.7956422999996,17.86339719999887,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,FourierSARIMAX,daily_weekly,kW,OK_WITH_WARNINGS,25.46086450000076,0.0,25.46086450000076,25.51895599999989,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,CalendarRidge,daily_weekly_monthly,kW,OK,1.8059425000010376,0.0,1.8059425000010376,1.855795400000716,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,CalendarRidge,daily_weekly,kW,OK,1.6101123999997071,0.0,1.6101123999997071,1.660142699998687,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,CalendarRidge,daily,kW,OK,1.577668799998719,0.0,1.577668799998719,1.626820499999667,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,AutoTheta,monthly_30d,kW,OK,164.0289690999998,0.0008563000010326,164.02982540000085,166.75417620000007,,,,Recorded stage timings
+Bilbao_Modeled_PV,MSTL,monthly_30d,kW,OK,18.11866209999971,0.0105371999998169,18.129199299999527,20.85035710000011,,,,Recorded stage timings
+Bilbao_Modeled_PV,AutoNHITS,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,54.05562230000032,0.0,54.05562230000032,54.13160030000017,37.416,1.548,,Fit field bundles prediction; see neural stage times
+Bilbao_Modeled_PV,AutoTBATS,daily,kW,OK_WITH_WARNINGS,4.751191800000015,0.0221001000008982,4.773291900000913,7.608977200001391,,,,Recorded stage timings
+Bilbao_Modeled_PV,AutoTBATS,daily_weekly,kW,OK_WITH_WARNINGS,8.237215099999958,0.0218968999997741,8.259111999999732,11.034575600000608,,,,Recorded stage timings
+Bilbao_Modeled_PV,MSTL,daily_weekly_monthly_yearly,kW,OK,453.883867999999,0.0112372000003233,453.8951051999993,456.65021200000047,,,,Recorded stage timings
+Bilbao_Modeled_PV,AutoCES,weekly,kW,OK,8.249523399999816,0.0003443000005063,8.249867700000323,10.942344200000662,,,,Recorded stage timings
+Bilbao_Modeled_PV,Prophet,daily_weekly,kW,OK_WITH_WARNINGS,25.769779899999776,0.0,25.769779899999776,25.82200860000012,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,FourierOLS,yearly_365d,kW,OK,1.578796699999657,0.0,1.578796699999657,1.6275110999995377,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,Prophet,daily_weekly_monthly,kW,OK_WITH_WARNINGS,27.18709619999936,0.0,27.18709619999936,27.23978679999891,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,HoltWinters,weekly,kW,OK,28.49823150000157,0.0004347000012785,28.498666200002845,31.35196499999984,,,,Recorded stage timings
+Bilbao_Modeled_PV,CalendarRidge,yearly_365d,kW,OK,1.5496413999990182,0.0,1.5496413999990182,1.598861599999509,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,Prophet,daily,kW,OK_WITH_WARNINGS,24.252148399998987,0.0,24.252148399998987,24.30846959999872,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,FourierSARIMAX,yearly_365d,kW,OK_WITH_WARNINGS,32.27098819999992,0.0,32.27098819999992,32.32680249999976,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,AutoNBEATSx,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,60.870445100000325,0.0,60.870445100000325,60.94954169999983,46.012,2.107,,Fit field bundles prediction; see neural stage times
+Bilbao_Modeled_PV,Prophet,yearly_365d,kW,OK_WITH_WARNINGS,10.451424599999882,0.0,10.451424599999882,10.508049800000665,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,AutoTBATS,daily_weekly_monthly,kW,OK_WITH_WARNINGS,25.02189449999969,0.023272899999938,25.045167399999627,27.783505499999592,,,,Recorded stage timings
+Bilbao_Modeled_PV,XGBoost,yearly_365d,kW,OK,6.177895899998475,0.0,6.177895899998475,6.245234100000744,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,FourierSARIMAX,monthly_30d,kW,OK_WITH_WARNINGS,10.819662600000813,0.0,10.819662600000813,10.880703300001189,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,FourierSARIMAX,weekly,kW,OK_WITH_WARNINGS,17.397409499999412,0.0,17.397409499999412,17.470999099999972,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,MSTL,weekly,kW,OK,4.644272099998489,0.0103244999991147,4.654596599997603,7.425990399999137,,,,Recorded stage timings
+Bilbao_Modeled_PV,CalendarRidge,monthly_30d,kW,OK,1.4868917999992846,0.0,1.4868917999992846,1.536859199999526,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,CalendarRidge,weekly,kW,OK,1.5491349999992965,0.0,1.5491349999992965,1.5997100999993563,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,FourierOLS,monthly_30d,kW,OK,1.5873158999984298,0.0,1.5873158999984298,1.6360188000016933,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,XGBoost,weekly,kW,OK,5.086606300001222,0.0,5.086606300001222,5.147455000000264,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,FourierOLS,weekly,kW,OK,1.4975350000004255,0.0,1.4975350000004255,1.5461280999988958,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,Prophet,weekly,kW,OK_WITH_WARNINGS,19.21817369999917,0.0,19.21817369999917,19.27693579999868,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,Prophet,monthly_30d,kW,OK_WITH_WARNINGS,12.662453599999935,0.0,12.662453599999935,12.730928200000562,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,SeasonalNaive,monthly_30d,kW,OK,0.0,2.689999928406905e-05,2.689999928406905e-05,0.0468352999996568,,,,Recorded stage timings
+Bilbao_Modeled_PV,LightGBM,yearly_365d,kW,OK,6.184557099999438,0.0,6.184557099999438,6.263691899999685,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,LightGBM,weekly,kW,OK,5.8125247999996645,0.0,5.8125247999996645,5.877618999998958,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,XGBoost,daily_weekly_monthly,kW,OK,12.27172619999874,0.0,12.27172619999874,12.33913720000055,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,LightGBM,daily_weekly_monthly,kW,OK,8.146303600000465,0.0,8.146303600000465,8.228724900000088,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,AutoTBATS,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,652.9117511000004,0.0462458000001788,652.9579969000006,655.6512892999999,,,,Recorded stage timings
+Bilbao_Modeled_PV,SeasonalNaive,weekly,kW,OK,0.0,3.400000059627928e-05,3.400000059627928e-05,0.0473607000003539,,,,Recorded stage timings
+Bilbao_Modeled_PV,MSTL,daily_weekly_monthly,kW,OK,43.746083,0.0105280000007041,43.7566110000007,46.43047060000026,,,,Recorded stage timings
+Bilbao_Modeled_PV,LightGBM,daily,kW,OK,4.691103600000133,0.0,4.691103600000133,4.74758859999929,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,XGBoost,daily,kW,OK,6.939437699998962,0.0,6.939437699998962,6.99578019999899,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,MSTL,daily,kW,OK,1.0233272000004945,0.0103147000008902,1.0336419000013848,3.741308800001207,,,,Recorded stage timings
+Bilbao_Modeled_PV,MSTL,daily_weekly,kW,OK,10.026471599998333,0.0109964000002946,10.037467999998626,12.79786679999961,,,,Recorded stage timings
+Bilbao_Modeled_PV,XGBoost,daily_weekly,kW,OK,10.810785899999246,0.0,10.810785899999246,10.895982199999708,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,LightGBM,daily_weekly,kW,OK,7.126071000000593,0.0,7.126071000000593,7.216583900000842,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,AutoARIMA,weekly,kW,OK_WITH_WARNINGS,477.2512124999994,3.100221699998656,480.3514341999981,483.0651101000003,,,,Recorded stage timings
+Bilbao_Modeled_PV,LightGBM,monthly_30d,kW,OK,4.958094900001015,0.0,4.958094900001015,5.026222500000586,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,SeasonalNaive,daily,kW,OK,0.0,5.4600001021754e-05,5.4600001021754e-05,0.0507503999997425,,,,Recorded stage timings
+Bilbao_Modeled_PV,XGBoost,monthly_30d,kW,OK,4.407690600000933,0.0,4.407690600000933,4.467587200000708,,,,"Fit field bundles tuning, fitting and prediction"
+Bilbao_Modeled_PV,AutoARIMA,daily,kW,OK_WITH_WARNINGS,43.86089859999993,0.2276272999988577,44.08852589999879,46.8079359000003,,,,Recorded stage timings
+Bilbao_Modeled_PV,AutoTBATS,weekly,kW,OK_WITH_WARNINGS,3.689952100001392,0.0211965999988024,3.7111487000001935,6.427398900001208,,,,Recorded stage timings
+Bilbao_Modeled_PV,AutoETS,weekly,kW,OK,40.88722720000078,0.0095013999998627,40.89672860000064,43.63282660000005,,,,Recorded stage timings
+Bilbao_Modeled_PV,Naive,daily,kW,OK,0.0,1.8000000636675395e-05,1.8000000636675395e-05,0.0444236000003002,,,,Recorded stage timings

@@ -1,0 +1,70 @@
+dataset,model,seasonality,unit,status,fit_seconds,forecast_seconds,model_seconds,wall_seconds,training_and_tuning_seconds,rollout_seconds,peak_memory_mb,timing_note
+Cohort_SumOfMeterLoads,XGBoost,daily_weekly_monthly_yearly,kW,OK,13.432743899999878,0.0,13.432743899999878,13.48968139999988,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,SeasonalNaive,yearly_365d,kW,OK,0.0,2.809999932651408e-05,2.809999932651408e-05,0.049370299999282,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,YearAgoCalendarNaive,yearly_365d,kW,OK,0.0,0.2351744999998573,0.2351744999998573,0.2834504000002198,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,LightGBM,daily_weekly_monthly_yearly,kW,OK,7.284783900000093,0.0,7.284783900000093,7.340387799999917,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,AutoNBEATSx,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,45.55248130000018,0.0,45.55248130000018,45.60935770000015,34.304,1.507,,Fit field bundles prediction; see neural stage times
+Cohort_SumOfMeterLoads,Prophet,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,43.01849870000001,0.0,43.01849870000001,43.07139080000002,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,FourierSARIMAX,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,90.45740300000011,0.0,90.45740300000011,90.5115017999999,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,FourierSARIMAX,daily_weekly_monthly,kW,OK_WITH_WARNINGS,46.2647563999999,0.0,46.2647563999999,46.31864919999998,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,LightGBM,yearly_365d,kW,OK,4.425931600000013,0.0,4.425931600000013,4.487054700000044,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,FourierSARIMAX,daily_weekly,kW,OK_WITH_WARNINGS,37.30681209999989,0.0,37.30681209999989,37.36043769999992,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,FourierSARIMAX,daily,kW,OK_WITH_WARNINGS,19.28724939999984,0.0,19.28724939999984,19.34362009999996,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,Prophet,yearly_365d,kW,OK_WITH_WARNINGS,17.923352000000023,0.0,17.923352000000023,17.973456999999826,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,AutoCES,weekly,kW,OK,10.665339700000004,0.0004159000000072,10.665755600000011,13.30989379999994,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,FourierSARIMAX,yearly_365d,kW,OK_WITH_WARNINGS,29.07400910000001,0.0,29.07400910000001,29.12853240000004,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,XGBoost,yearly_365d,kW,OK,5.092633700000079,0.0,5.092633700000079,5.147749599999997,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,CalendarRidge,daily_weekly_monthly_yearly,kW,OK,1.7015808000001016,0.0,1.7015808000001016,1.753278000000137,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,AutoTheta,weekly,kW,OK,165.8666892000001,0.0007573000002594,165.86744650000037,168.5681747999988,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,FourierOLS,daily_weekly_monthly_yearly,kW,OK,1.5631763999999748,0.0,1.5631763999999748,1.6152526999999282,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,FourierSARIMAX,weekly,kW,OK_WITH_WARNINGS,22.61527430000001,0.0,22.61527430000001,22.671966499999822,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,AutoTheta,monthly_30d,kW,OK,165.9149972999985,0.0006630999996559,165.91566039999816,168.65206220000255,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,AutoTheta,daily,kW,OK,168.4815359999999,0.0006796999999778,168.48221569999987,171.18287710000004,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,FourierSARIMAX,monthly_30d,kW,OK_WITH_WARNINGS,15.65627530000006,0.0,15.65627530000006,15.710495900000067,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,Prophet,daily,kW,OK_WITH_WARNINGS,25.23148970000011,0.0,25.23148970000011,25.28490409999995,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,Prophet,daily_weekly,kW,OK_WITH_WARNINGS,30.57486730000005,0.0,30.57486730000005,30.627421099999992,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,AutoTBATS,weekly,kW,OK_WITH_WARNINGS,20.39444770000045,0.0249058000008517,20.419353500001307,23.103160599999683,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,AutoTBATS,daily_weekly,kW,OK_WITH_WARNINGS,95.83997459999956,0.0275252999999793,95.86749989999952,98.62336330000107,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,CalendarRidge,daily,kW,OK,1.5657622000001084,0.0,1.5657622000001084,1.6190394999998716,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,Prophet,weekly,kW,OK_WITH_WARNINGS,16.88338930000009,0.0,16.88338930000009,16.934150400000135,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,Prophet,daily_weekly_monthly,kW,OK_WITH_WARNINGS,36.55335020000007,0.0,36.55335020000007,36.60693900000001,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,CalendarRidge,daily_weekly,kW,OK,1.6336549000000105,0.0,1.6336549000000105,1.6874643999999537,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,CalendarRidge,daily_weekly_monthly,kW,OK,1.6578476000001956,0.0,1.6578476000001956,1.7145453000000543,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,CalendarRidge,yearly_365d,kW,OK,1.5408036999999697,0.0,1.5408036999999697,1.596139100000073,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,AutoETS,weekly,kW,OK,132.04229469999996,0.0003990999998677,132.04269379999982,134.71933749999994,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,AutoTBATS,daily_weekly_monthly,kW,OK_WITH_WARNINGS,94.75529200000004,0.0286877999999433,94.7839798,102.83328689999996,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,SeasonalNaive,weekly,kW,OK,0.0,3.3300002542091534e-05,3.3300002542091534e-05,0.0515812000012374,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,FourierOLS,daily_weekly_monthly,kW,OK,1.542832899999894,0.0,1.542832899999894,1.5952153000000635,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,FourierOLS,daily_weekly,kW,OK,1.5140996000000086,0.0,1.5140996000000086,1.5685954999999012,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,Prophet,monthly_30d,kW,OK_WITH_WARNINGS,18.8042382000001,0.0,18.8042382000001,18.856222200000047,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,SeasonalNaive,monthly_30d,kW,OK,0.0,2.640000002429588e-05,2.640000002429588e-05,0.0505944000000226,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,FourierOLS,daily,kW,OK,2.2804102000000057,0.0,2.2804102000000057,2.3368436999999176,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,FourierOLS,yearly_365d,kW,OK,1.4925094000000172,0.0,1.4925094000000172,1.5469737999999325,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,AutoTBATS,daily,kW,OK_WITH_WARNINGS,12.707361200000037,0.0229282000000239,12.73028940000006,16.07890550000002,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,MSTL,daily,kW,OK,1.421937000002799,0.0102223000030789,1.4321593000058783,4.074903700002324,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,LightGBM,weekly,kW,OK,4.7857733000000735,0.0,4.7857733000000735,4.840919999999869,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,XGBoost,daily_weekly_monthly,kW,OK,9.158627699999895,0.0,9.158627699999895,9.217135799999824,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,LightGBM,daily_weekly_monthly,kW,OK,6.682133600000043,0.0,6.682133600000043,6.738964799999849,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,XGBoost,weekly,kW,OK,4.652604900000142,0.0,4.652604900000142,4.709819899999957,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,LightGBM,daily_weekly,kW,OK,5.998434999999972,0.0,5.998434999999972,6.052578699999913,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,XGBoost,daily_weekly,kW,OK,8.269154200000003,0.0,8.269154200000003,8.32437600000003,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,HoltWinters,weekly,kW,OK,27.765863600001467,0.0003342000018164,27.766197800003283,30.616009099998337,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,CalendarRidge,weekly,kW,OK,1.510646700000052,0.0,1.510646700000052,1.5638490000001184,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,MSTL,daily_weekly_monthly_yearly,kW,OK,450.2264802999998,0.0104261999986192,450.2369064999984,453.0272874999973,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,CalendarRidge,monthly_30d,kW,OK,1.4832162000000153,0.0,1.4832162000000153,1.539081299999907,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,XGBoost,daily,kW,OK,6.748086299999841,0.0,6.748086299999841,6.808527299999923,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,MSTL,monthly_30d,kW,OK,18.744383599999992,0.010835199999974,18.75521879999997,21.395161400000006,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,LightGBM,daily,kW,OK,4.620816599999898,0.0,4.620816599999898,4.681148000000121,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,FourierOLS,weekly,kW,OK,1.4829628999998477,0.0,1.4829628999998477,1.5381457000000864,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,FourierOLS,monthly_30d,kW,OK,1.4907005999998546,0.0,1.4907005999998546,1.546689199999946,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,SeasonalNaive,daily,kW,OK,0.0,6.289999987529882e-05,6.289999987529882e-05,0.0508303999999952,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,XGBoost,monthly_30d,kW,OK,3.5462223000001813,0.0,3.5462223000001813,3.602627299999994,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,LightGBM,monthly_30d,kW,OK,2.9961925000000065,0.0,2.9961925000000065,3.052655300000197,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_SumOfMeterLoads,AutoARIMA,weekly,kW,OK_WITH_WARNINGS,417.4877805,2.9387002999999368,420.4264807999999,429.9397571,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,AutoARIMA,daily,kW,OK_WITH_WARNINGS,46.21753709999996,0.2404420999999956,46.457979199999954,49.10604579999995,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,MSTL,daily_weekly_monthly,kW,OK,44.65688109999997,0.0104557000000795,44.66733680000005,47.27948249999997,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,MSTL,daily_weekly,kW,OK,10.341945600000033,0.0103739999999561,10.352319599999989,12.960078299999964,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,Naive,daily,kW,OK,0.0,1.7899999875226058e-05,1.7899999875226058e-05,0.0499717000000146,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,MSTL,weekly,kW,OK,5.348993999999948,0.0102135999986785,5.359207599998626,8.08021910000025,,,,Recorded stage timings
+Cohort_SumOfMeterLoads,AutoNHITS,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,42.314488699999856,0.0,42.314488699999856,42.37740899999972,31.183,1.405,,Fit field bundles prediction; see neural stage times
+Cohort_SumOfMeterLoads,AutoTBATS,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,348.73062990000005,0.0334834000000228,348.7641133000001,351.3744095,,,,Recorded stage timings

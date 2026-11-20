@@ -1,0 +1,28 @@
+C2 FULL GOIENER HISTORY BENCHMARK — EE499 Team 16
+Repository: https://github.com/Islahi/EE499-Team16.git
+
+1. Go to https://zenodo.org/records/22313409
+2. Download annual_consumption_raw.csv.zst (about 1.4 GB).
+3. Put it, WITHOUT extracting, in:
+       Data\GoiEner_v71\annual_consumption_raw.csv.zst
+4. Double click 05_PREPARE_GOIENER_FULL_HISTORY_WINDOWS.bat
+5. Double click 06_DOWNLOAD_NASA_FOR_MATCHING_YEARS_WINDOWS.bat (optional PV comparison).
+6. Double click 08_QUICK_CHECK_FULL_HISTORY_WINDOWS.bat
+7. Double click 07_RUN_FULL_HISTORY_ALL_MODELS_WINDOWS.bat
+8. Double click 09_PLOT_FULL_HISTORY_RESULTS_WINDOWS.bat
+
+SEND BACK THESE RESULTS:
+   C2_full_history_results\load_model_scores.csv
+   C2_full_history_results\pv_model_scores.csv
+   C2_full_history_results\plots\
+   C2_full_history_data\goiener_preprocessing_report.json
+
+IMPORTANT:
+- First download is very large. No new actual GoiEner records are included in this ZIP.
+- The last data year is inferred from downloaded file, not from dataset publication date.
+- The script uses a fixed panel of meters spanning the selected years by default.
+- Running the models will be CPU/RAM intensive; the new full-history runner isolates model jobs.
+- Existing original benchmark launchers 01-04 are retained for comparison, not the new data.
+- One full calendar year is held out, so results are not train-set scores.
+
+Full details: NEW_FULL_HISTORY_GUIDE.md

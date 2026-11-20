@@ -1,0 +1,35 @@
+{
+  "status": "MATCHED_RERUN_NOT_CERTIFIED_BITWISE_HISTORICAL_REPRODUCTION",
+  "reasons": [
+    "Archived per-job selected hyperparameters and fitted model binary versions unavailable",
+    "Distributor normalization used complete 2017-2022 history including holdout",
+    "Exact training-side imputation across 2020/2021 boundary cannot be independently audited"
+  ],
+  "version_utc": "2026-11-20T03:38:37.743185+00:00",
+  "python": "3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]",
+  "platform": "Windows-11-10.0.26300-SP0",
+  "cpu_count": 16,
+  "numpy": "2.5.2",
+  "pandas": "2.3.3",
+  "library_versions": {
+    "scikit-learn": "1.9.0",
+    "lightgbm": "4.7.0",
+    "xgboost": "3.4.1",
+    "matplotlib": "3.11.1"
+  },
+  "source_hashes_sha256": {
+    "load_profile.csv": "c02f00a7379dc4272bf924de0f1c6c72509a7d398e2079c433107043e5eeb692",
+    "bus_assignments_used.csv": "4bfefd10123fe4fa178e43cfc57051de9f470f7668ee18fb5ea52123ef5cba93",
+    "legacy_extra_models.py": "4291d47aa0eb4c226e57fae2ad1173e887dd959729075ae5cb4b972cef97db5e"
+  },
+  "repository_reference": "https://github.com/Islahi/EE499-Team16.git",
+  "repository_source_reviewed": "07_Implementation/src_accelerated/forecasting.py on main, AutoARIMA feeder-sum and allocation workflow",
+  "reference_historical_model_code": "C2_FixedCohort_Ranked22_Updated/extra_models.py",
+  "features": "known calendar covariates; no 2021 actual load in features",
+  "normalization": "per-target mean absolute 2017-06 to 2020-12 demand, applied before fitting",
+  "distributor_normalization": "mean of 2017-06-01 to 2022-06-05, as specified by archive manifest",
+  "historical_training_hours": 31440,
+  "historical_test_hours": 8760,
+  "tuning": "120-day chronological train-only selection on representative bus, fixed for A and B",
+  "PV": "not refitted or scored"
+}

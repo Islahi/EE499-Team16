@@ -1,0 +1,35 @@
+{
+  "status": "PASS",
+  "errors": [],
+  "targets": {
+    "residential": {
+      "hours": 8760,
+      "actual_equal_bus_sum": true,
+      "alloc_A_max_abs_sum_residual_kw": 2.0463630789890885e-12,
+      "direct_B_max_abs_sum_residual_kw": 2.0463630789890885e-12
+    },
+    "commercial": {
+      "hours": 8760,
+      "actual_equal_bus_sum": true,
+      "alloc_A_max_abs_sum_residual_kw": 3.069544618483633e-12,
+      "direct_B_max_abs_sum_residual_kw": 3.069544618483633e-12
+    },
+    "manufacturing": {
+      "hours": 8760,
+      "actual_equal_bus_sum": true,
+      "alloc_A_max_abs_sum_residual_kw": 3.183231456205249e-12,
+      "direct_B_max_abs_sum_residual_kw": 3.183231456205249e-12
+    },
+    "feeder": {
+      "hours": 8760,
+      "actual_equal_bus_sum": true,
+      "alloc_A_max_abs_sum_residual_kw": 7.275957614183426e-12,
+      "direct_B_max_abs_sum_residual_kw": 7.275957614183426e-12
+    }
+  },
+  "scoring_reproduced_from_hourly_CSV": true,
+  "train_hours": 31440,
+  "test_hours": 8760,
+  "all_2021_hourly_actuals_and_A_B_forecasts_verified": true,
+  "PV_retraining_excluded": true
+}

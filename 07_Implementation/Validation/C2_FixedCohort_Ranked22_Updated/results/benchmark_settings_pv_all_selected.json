@@ -1,0 +1,380 @@
+{
+  "project": "https://github.com/Islahi/EE499-Team16.git",
+  "dataset_preparation": {
+    "train_start": "2017-06-01 00:00:00",
+    "train_end": "2020-12-31 23:00:00",
+    "test_start": "2021-01-01 00:00:00",
+    "test_end": "2021-12-31 23:00:00",
+    "train_hours": 31440,
+    "test_hours": 8760,
+    "cases": [
+      {
+        "name": "Cohort_Residential",
+        "category": "load",
+        "unit": "kW/customer",
+        "source": "cohort_output\\goiener_distributor_ready.csv",
+        "dataset_sha256": "268d6f87eba8767323d5d7dd10acd4d9958924c3dfe3fcff11e4f87409c8659c",
+        "notes": "Mean over available cohort customers; customer ID set fixed, hourly availability may vary",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Cohort_Commercial",
+        "category": "load",
+        "unit": "kW/customer",
+        "source": "cohort_output\\goiener_distributor_ready.csv",
+        "dataset_sha256": "0e0bd65746a4afb0ea22def73985b527f7c9bda6649cfc4918b14675c7adb8ff",
+        "notes": "Mean over available cohort customers; customer ID set fixed, hourly availability may vary",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Cohort_Manufacturing",
+        "category": "load",
+        "unit": "kW/customer",
+        "source": "cohort_output\\goiener_distributor_ready.csv",
+        "dataset_sha256": "4948df6c178fbb93b8cf45b30f4be7fe77a2ab9890af80ab90a17ab5eac6fb84",
+        "notes": "Mean over available cohort customers; customer ID set fixed, hourly availability may vary",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Cohort_SumOfMeterLoads",
+        "category": "load",
+        "unit": "kW",
+        "source": "cohort_output",
+        "dataset_sha256": "2cec480fe56b469d38aadeafe357b3d12f9957c2e32b833d4cb3923165e5d57c",
+        "notes": "Sum of available fixed-cohort meter readings; not scaled network demand",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Bus_01",
+        "category": "load",
+        "unit": "kW",
+        "source": "Input\\distributed_load_from_NEW_cohort.csv",
+        "dataset_sha256": "8091dc419e70fb3815f354a66dbc5a7c5c1c73883ecb7dcdd659a8deea7b26d3",
+        "notes": "Direct bus time series; input MUST come from the new cohort distributor run",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Bus_02",
+        "category": "load",
+        "unit": "kW",
+        "source": "Input\\distributed_load_from_NEW_cohort.csv",
+        "dataset_sha256": "2e00c106327b2a319a5fd3437c1cd6b27c75607f46880f4720064ad8c6db1d0d",
+        "notes": "Direct bus time series; input MUST come from the new cohort distributor run",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Bus_03",
+        "category": "load",
+        "unit": "kW",
+        "source": "Input\\distributed_load_from_NEW_cohort.csv",
+        "dataset_sha256": "a4dc04031ab4bbc3226b75509a89ecfd97c0d8b1cd8ddd150e43f3e40b30802a",
+        "notes": "Direct bus time series; input MUST come from the new cohort distributor run",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Bus_04",
+        "category": "load",
+        "unit": "kW",
+        "source": "Input\\distributed_load_from_NEW_cohort.csv",
+        "dataset_sha256": "f574ba154141cf9c6650610da473349f286ba51807602086a09718bb2410e3eb",
+        "notes": "Direct bus time series; input MUST come from the new cohort distributor run",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Bus_05",
+        "category": "load",
+        "unit": "kW",
+        "source": "Input\\distributed_load_from_NEW_cohort.csv",
+        "dataset_sha256": "2e00c106327b2a319a5fd3437c1cd6b27c75607f46880f4720064ad8c6db1d0d",
+        "notes": "Direct bus time series; input MUST come from the new cohort distributor run",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Bus_06",
+        "category": "load",
+        "unit": "kW",
+        "source": "Input\\distributed_load_from_NEW_cohort.csv",
+        "dataset_sha256": "f574ba154141cf9c6650610da473349f286ba51807602086a09718bb2410e3eb",
+        "notes": "Direct bus time series; input MUST come from the new cohort distributor run",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Bus_07",
+        "category": "load",
+        "unit": "kW",
+        "source": "Input\\distributed_load_from_NEW_cohort.csv",
+        "dataset_sha256": "f574ba154141cf9c6650610da473349f286ba51807602086a09718bb2410e3eb",
+        "notes": "Direct bus time series; input MUST come from the new cohort distributor run",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Bus_08",
+        "category": "load",
+        "unit": "kW",
+        "source": "Input\\distributed_load_from_NEW_cohort.csv",
+        "dataset_sha256": "a4dc04031ab4bbc3226b75509a89ecfd97c0d8b1cd8ddd150e43f3e40b30802a",
+        "notes": "Direct bus time series; input MUST come from the new cohort distributor run",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Bus_09",
+        "category": "load",
+        "unit": "kW",
+        "source": "Input\\distributed_load_from_NEW_cohort.csv",
+        "dataset_sha256": "a4dc04031ab4bbc3226b75509a89ecfd97c0d8b1cd8ddd150e43f3e40b30802a",
+        "notes": "Direct bus time series; input MUST come from the new cohort distributor run",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Bus_10",
+        "category": "load",
+        "unit": "kW",
+        "source": "Input\\distributed_load_from_NEW_cohort.csv",
+        "dataset_sha256": "2e00c106327b2a319a5fd3437c1cd6b27c75607f46880f4720064ad8c6db1d0d",
+        "notes": "Direct bus time series; input MUST come from the new cohort distributor run",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Bus_11",
+        "category": "load",
+        "unit": "kW",
+        "source": "Input\\distributed_load_from_NEW_cohort.csv",
+        "dataset_sha256": "f574ba154141cf9c6650610da473349f286ba51807602086a09718bb2410e3eb",
+        "notes": "Direct bus time series; input MUST come from the new cohort distributor run",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Bus_12",
+        "category": "load",
+        "unit": "kW",
+        "source": "Input\\distributed_load_from_NEW_cohort.csv",
+        "dataset_sha256": "a4dc04031ab4bbc3226b75509a89ecfd97c0d8b1cd8ddd150e43f3e40b30802a",
+        "notes": "Direct bus time series; input MUST come from the new cohort distributor run",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Bus_13",
+        "category": "load",
+        "unit": "kW",
+        "source": "Input\\distributed_load_from_NEW_cohort.csv",
+        "dataset_sha256": "2e00c106327b2a319a5fd3437c1cd6b27c75607f46880f4720064ad8c6db1d0d",
+        "notes": "Direct bus time series; input MUST come from the new cohort distributor run",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Bus_14",
+        "category": "load",
+        "unit": "kW",
+        "source": "Input\\distributed_load_from_NEW_cohort.csv",
+        "dataset_sha256": "a4dc04031ab4bbc3226b75509a89ecfd97c0d8b1cd8ddd150e43f3e40b30802a",
+        "notes": "Direct bus time series; input MUST come from the new cohort distributor run",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Bus_15",
+        "category": "load",
+        "unit": "kW",
+        "source": "Input\\distributed_load_from_NEW_cohort.csv",
+        "dataset_sha256": "f574ba154141cf9c6650610da473349f286ba51807602086a09718bb2410e3eb",
+        "notes": "Direct bus time series; input MUST come from the new cohort distributor run",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Distributed_Total",
+        "category": "load",
+        "unit": "kW",
+        "source": "Input\\distributed_load_from_NEW_cohort.csv",
+        "dataset_sha256": "e5b93b86f33e903fda2159837480c27b7915e4facf30226475169a1d8a1ec5b2",
+        "notes": "Sum of bus loads in user-supplied DISTRIBUTED file",
+        "training_hours": 31440,
+        "forecast_hours": 8760
+      },
+      {
+        "name": "Bilbao_Modeled_PV",
+        "category": "pv",
+        "unit": "kW",
+        "source": "Input\\nasa_pv_043d26N_002d94W.csv",
+        "dataset_sha256": "ef25dde27a8a1c713b5ad1062b13ce6b9d2abcb47f8949ec41e52b64a746e3cf",
+        "notes": "NASA POWER solar-derived PV output, not measured PV; source timestamps may be UTC",
+        "training_hours": 31440,
+        "forecast_hours": 8760,
+        "lat": 43.26,
+        "lon": -2.94,
+        "cap_kw": 490.0
+      }
+    ],
+    "distributed_provenance_warning": "Only specify --distributed when it was regenerated from the NEW cohort profiles",
+    "source_clock_warning": "NASA and GoiEner clocks may differ; aligned timestamp labels alone do not establish same physical instant"
+  },
+  "scope": "pv",
+  "group": "all",
+  "suite": "selected",
+  "include_neural": false,
+  "experiment_version": "C2_FIXED_COHORT_RANKED22_V2",
+  "ranked_22": [
+    {
+      "rank": 1,
+      "model": "MSTL",
+      "seasonality": "daily_weekly_monthly_yearly"
+    },
+    {
+      "rank": 2,
+      "model": "HoltWinters",
+      "seasonality": "weekly"
+    },
+    {
+      "rank": 3,
+      "model": "AutoTheta",
+      "seasonality": "weekly"
+    },
+    {
+      "rank": 4,
+      "model": "AutoTBATS",
+      "seasonality": "daily_weekly"
+    },
+    {
+      "rank": 5,
+      "model": "MSTL",
+      "seasonality": "weekly"
+    },
+    {
+      "rank": 6,
+      "model": "AutoTBATS",
+      "seasonality": "weekly"
+    },
+    {
+      "rank": 7,
+      "model": "AutoTheta",
+      "seasonality": "monthly_30d"
+    },
+    {
+      "rank": 8,
+      "model": "SeasonalNaive",
+      "seasonality": "weekly"
+    },
+    {
+      "rank": 9,
+      "model": "MSTL",
+      "seasonality": "daily"
+    },
+    {
+      "rank": 10,
+      "model": "SeasonalNaive",
+      "seasonality": "yearly_365d"
+    },
+    {
+      "rank": 11,
+      "model": "AutoARIMA",
+      "seasonality": "weekly"
+    },
+    {
+      "rank": 12,
+      "model": "AutoTBATS",
+      "seasonality": "daily"
+    },
+    {
+      "rank": 13,
+      "model": "AutoCES",
+      "seasonality": "weekly"
+    },
+    {
+      "rank": 14,
+      "model": "AutoTheta",
+      "seasonality": "daily"
+    },
+    {
+      "rank": 15,
+      "model": "AutoTBATS",
+      "seasonality": "daily_weekly_monthly"
+    },
+    {
+      "rank": 16,
+      "model": "MSTL",
+      "seasonality": "monthly_30d"
+    },
+    {
+      "rank": 17,
+      "model": "MSTL",
+      "seasonality": "daily_weekly_monthly"
+    },
+    {
+      "rank": 18,
+      "model": "AutoARIMA",
+      "seasonality": "daily"
+    },
+    {
+      "rank": 19,
+      "model": "MSTL",
+      "seasonality": "daily_weekly"
+    },
+    {
+      "rank": 20,
+      "model": "SeasonalNaive",
+      "seasonality": "monthly_30d"
+    },
+    {
+      "rank": 21,
+      "model": "AutoTBATS",
+      "seasonality": "daily_weekly_monthly_yearly"
+    },
+    {
+      "rank": 22,
+      "model": "AutoETS",
+      "seasonality": "weekly"
+    }
+  ],
+  "new_optimized_count": 42,
+  "baseline_count": 3,
+  "save_fitted_models": false,
+  "created_utc": "2026-11-19T12:53:08.063842+00:00",
+  "seasonalities": {
+    "daily": [
+      24
+    ],
+    "weekly": [
+      168
+    ],
+    "monthly_30d": [
+      720
+    ],
+    "yearly_365d": [
+      8760
+    ],
+    "daily_weekly": [
+      24,
+      168
+    ],
+    "daily_weekly_monthly": [
+      24,
+      168,
+      720
+    ],
+    "daily_weekly_monthly_yearly": [
+      24,
+      168,
+      720,
+      8760
+    ]
+  },
+  "tuning": "New candidate hyperparameters selected on last 120 days of training, then refitted; test year 2021 never used for selection",
+  "prior_rankings": "Exact prior top20 overall under user ordinal-priority ranking, plus AutoTBATS all four and AutoETS weekly. Previous results were from changing-cohort inputs."
+}

@@ -1,0 +1,5 @@
+Download from https://zenodo.org/records/22313409:
+annual_consumption_raw.csv.zst (approximately 1.4 GB).
+Place it here WITHOUT decompressing:
+C2_Annual_Test/Data/GoiEner_v71/annual_consumption_raw.csv.zst
+Then run 05_PREPARE_GOIENER_FULL_HISTORY_WINDOWS.bat.

@@ -1,0 +1,23 @@
+﻿workbook,paper_table,paper_pages,summary_page,paper_case,published_base_kv,published_total_active_load_kw,published_total_reactive_load_kvar,published_active_losses_kw,published_reactive_losses_kvar,published_min_voltage_pu,published_weakest_bus,note
+Guide_5Bus_Radial_Test.xlsx,,,,not in supplied paper,,,,,,,,"Guide 5-bus, not found in the supplied paper"
+IEEE_33Bus_Network_Data.xlsx,12,25,25,33-bus,12.66,3715.0,2300.0,202.6771,135.141,0.913,18,"Additional 33-bus workbook, same PDF Table 12 reference"
+T02_10-Bus.xlsx,2,9,9,10-bus,23.0,12368.0,4186.0,783.7754,1036.471,0.838,10,
+T03_12-Bus.xlsx,3,10,10,12-bus,11.0,435.0,405.0,20.7135,8.041,0.943,12,
+T04_15-Bus_System_1.xlsx,4,11,12,15-bus system 1,11.0,1226.4,1251.1785,61.496,57.0393,0.945,13,
+T05_15-Bus_System_2.xlsx,5,12,12,15-bus system 2,11.0,1226.4,1251.1785,41.4752,38.4636,0.962,13,
+T09_18-Bus.xlsx,9,18,19,18-bus,11.0,1410.5,1438.8,58.608,54.671,0.951,18,
+T10_22-Bus.xlsx,10,20,21,22-bus,11.0,662.46,657.45,17.6732,9.0439,0.973,22,
+T11_28-Bus.xlsx,11,23,23,28-bus,11.0,761.04,776.419,68.8195,46.042,0.912,26,
+T12_33-Bus.xlsx,12,25,25,33-bus,12.66,3715.0,2300.0,202.6771,135.141,0.913,18,
+T13_34-Bus.xlsx,13,27,27,34-bus,11.0,2873.5,4636.5,217.0102,63.7539,0.956,27,
+T14_38-Bus.xlsx,14,29,29,38-bus,12.66,3715.0,2300.0,202.6771,135.141,0.913,18,
+T15_51-Bus_System_1.xlsx,15,31,32,51-bus system 1,11.0,2463.0,1569.0,129.5559,111.6835,0.908,16,
+T16_51-Bus_System_2.xlsx,16,33,34,51-bus system 2,22.0,1924.05,1060.36,34.2918,47.5025,0.969,19,
+T17_69-Bus.xlsx,17,36;37,37,69-bus,12.66,3802.1,2694.7,225.0007,102.1648,0.909,65,
+T18_70-Bus_Two_Substations_Feeder_root_1.xlsx,18,39;40,40,"70-bus, two substations",11.0,5385.4,3687.6,,,0.884,67,Feeder rooted at bus 1; full paper losses require both roots
+T18_70-Bus_Two_Substations_Feeder_root_70.xlsx,18,39;40,40,"70-bus, two substations",11.0,5385.4,3687.6,,,0.884,67,Feeder rooted at bus 70; full paper losses require both roots
+T19_74-Bus.xlsx,19,42;43,43,74-bus,11.0,6617.0,4447.0,145.1363,109.9673,0.954,57,
+T20_85-Bus.xlsx,20,45;46,46,85-bus,11.0,2514.28,2565.0783,299.3075,187.8123,0.874,54,
+T21_94-Bus.xlsx,21,48;49,49,94-bus,15.0,4797.0,2323.9,362.8578,504.042,0.848,92,
+T22_118-Bus.xlsx,22,51;52;53,53,118-bus,11.0,22709.72,17041.068,1298.0916,978.7361,0.869,77,
+T23_136-Bus.xlsx,23,55;56;57,57,136-bus,13.8,18313.807,7932.568,320.3639,702.9474,0.931,117,

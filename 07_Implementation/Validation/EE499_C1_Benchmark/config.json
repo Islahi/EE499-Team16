@@ -1,0 +1,13 @@
+{
+  "frequency_hz": 60.0,
+  "max_iterations": 100,
+  "voltage_tolerance_pu": 1e-8,
+  "max_voltage_difference_pu": 1e-6,
+  "max_mismatch_kw_kvar": 0.001,
+  "scenario_hours": 24,
+  "timing_repetitions": 5,
+  "random_seed": 42,
+  "threads": 1,
+  "flat_start": true,
+  "notes": "Single-machine warm timings; input conversion, solve and result extraction included; report generation excluded. Power balance independent Ybus residual."
+}

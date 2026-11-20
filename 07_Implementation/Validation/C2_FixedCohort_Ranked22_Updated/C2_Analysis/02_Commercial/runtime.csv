@@ -1,0 +1,70 @@
+dataset,model,seasonality,unit,status,fit_seconds,forecast_seconds,model_seconds,wall_seconds,training_and_tuning_seconds,rollout_seconds,peak_memory_mb,timing_note
+Cohort_Commercial,XGBoost,daily_weekly_monthly_yearly,kW/customer,OK,10.764196399999491,0.0,10.764196399999491,10.825229099998978,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,LightGBM,daily_weekly_monthly_yearly,kW/customer,OK,7.350599200000943,0.0,7.350599200000943,7.405451000000539,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,AutoTBATS,daily_weekly,kW/customer,OK_WITH_WARNINGS,131.37895599999865,0.0310989999998128,131.4100549999985,134.2334993000004,,,,Recorded stage timings
+Cohort_Commercial,AutoETS,weekly,kW/customer,OK,200.3130097000012,0.0012349000007816,200.314244600002,204.07177349999984,,,,Recorded stage timings
+Cohort_Commercial,CalendarRidge,daily_weekly_monthly,kW/customer,OK,1.6728186000000278,0.0,1.6728186000000278,1.7253535999989251,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,CalendarRidge,daily_weekly_monthly_yearly,kW/customer,OK,1.7512387000006129,0.0,1.7512387000006129,1.8043971000006425,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,AutoTBATS,weekly,kW/customer,OK_WITH_WARNINGS,64.67116449999958,0.031715000000986,64.70287950000056,67.48668739999994,,,,Recorded stage timings
+Cohort_Commercial,MSTL,daily_weekly_monthly,kW/customer,OK,45.80163720000019,0.0115889999997307,45.81322619999992,48.6632410000002,,,,Recorded stage timings
+Cohort_Commercial,CalendarRidge,daily_weekly,kW/customer,OK,1.68471689999933,0.0,1.68471689999933,1.7374297000005754,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,MSTL,daily_weekly,kW/customer,OK,10.294570199999724,0.0109437999999499,10.305513999999675,13.109020300000338,,,,Recorded stage timings
+Cohort_Commercial,MSTL,weekly,kW/customer,OK,4.695258799998555,0.010465600000316,4.705724399998871,7.540060699999231,,,,Recorded stage timings
+Cohort_Commercial,XGBoost,weekly,kW/customer,OK,4.023283500000616,0.0,4.023283500000616,4.082385699999577,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,AutoTBATS,daily_weekly_monthly,kW/customer,OK_WITH_WARNINGS,200.14167669999915,0.0343063999989681,200.1759830999981,203.1538142999998,,,,Recorded stage timings
+Cohort_Commercial,HoltWinters,weekly,kW/customer,OK,30.92220180000004,0.000339600001098,30.922541400001137,33.728282500000205,,,,Recorded stage timings
+Cohort_Commercial,XGBoost,daily_weekly_monthly,kW/customer,OK,7.450064399999974,0.0,7.450064399999974,7.508866000000125,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,XGBoost,daily_weekly,kW/customer,OK,6.739747999999963,0.0,6.739747999999963,6.798559799999566,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,FourierOLS,daily_weekly_monthly,kW/customer,OK,1.5980359999994107,0.0,1.5980359999994107,1.6537628999994922,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,LightGBM,weekly,kW/customer,OK,3.621674999998504,0.0,3.621674999998504,3.676232699999673,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,FourierOLS,daily_weekly,kW/customer,OK,1.536570300000676,0.0,1.536570300000676,1.5896066000004794,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,LightGBM,daily_weekly_monthly,kW/customer,OK,5.105044199999611,0.0,5.105044199999611,5.161881300000459,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,AutoTBATS,daily,kW/customer,OK_WITH_WARNINGS,7.63168769999902,0.0226982999993197,7.65438599999834,10.495194999999512,,,,Recorded stage timings
+Cohort_Commercial,MSTL,daily_weekly_monthly_yearly,kW/customer,OK,453.5202618000003,0.0114721999998437,453.53173400000014,456.2098724000007,,,,Recorded stage timings
+Cohort_Commercial,MSTL,daily,kW/customer,OK,1.0562212000004365,0.0106168000002071,1.0668380000006437,3.899439800001346,,,,Recorded stage timings
+Cohort_Commercial,LightGBM,daily_weekly,kW/customer,OK,4.58878679999907,0.0,4.58878679999907,4.645807900000364,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,FourierOLS,daily_weekly_monthly_yearly,kW/customer,OK,1.642774100000679,0.0,1.642774100000679,1.6983701000008296,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,CalendarRidge,daily,kW/customer,OK,1.6188827999994828,0.0,1.6188827999994828,1.6726392000000487,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,FourierOLS,daily,kW/customer,OK,1.992896300000212,0.0,1.992896300000212,2.048504000000321,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,Prophet,daily_weekly_monthly_yearly,kW/customer,OK_WITH_WARNINGS,31.35547670000051,0.0,31.35547670000051,31.412661500000468,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,AutoTheta,weekly,kW/customer,OK,163.1413775000001,0.0006511000010505,163.14202860000114,165.90323400000125,,,,Recorded stage timings
+Cohort_Commercial,FourierSARIMAX,daily_weekly_monthly,kW/customer,OK_WITH_WARNINGS,28.08298169999944,0.0,28.08298169999944,28.141656600000715,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,FourierSARIMAX,daily_weekly,kW/customer,OK_WITH_WARNINGS,16.363693900000726,0.0,16.363693900000726,16.416553799999747,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,SeasonalNaive,weekly,kW/customer,OK,0.0,3.470000046945643e-05,3.470000046945643e-05,0.0487241999999241,,,,Recorded stage timings
+Cohort_Commercial,XGBoost,daily,kW/customer,OK,5.426298200000019,0.0,5.426298200000019,5.484247200000027,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,FourierSARIMAX,daily_weekly_monthly_yearly,kW/customer,OK_WITH_WARNINGS,50.70775490000051,0.0,50.70775490000051,50.7612466999999,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,Prophet,daily,kW/customer,OK_WITH_WARNINGS,11.685826499999166,0.0,11.685826499999166,11.737357600000903,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,SeasonalNaive,yearly_365d,kW/customer,OK,0.0,2.390000008745119e-05,2.390000008745119e-05,0.0489118000004964,,,,Recorded stage timings
+Cohort_Commercial,LightGBM,daily,kW/customer,OK,3.576811599999928,0.0,3.576811599999928,3.6336548999988736,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,Prophet,daily_weekly_monthly,kW/customer,OK_WITH_WARNINGS,25.622170300001017,0.0,25.622170300001017,25.677881600000543,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,MSTL,monthly_30d,kW/customer,OK,18.580421399999977,0.0107169000002613,18.59113830000024,21.372829300000376,,,,Recorded stage timings
+Cohort_Commercial,YearAgoCalendarNaive,yearly_365d,kW/customer,OK,0.0,0.2299187999997229,0.2299187999997229,0.2768961000001582,,,,Recorded stage timings
+Cohort_Commercial,SeasonalNaive,daily,kW/customer,OK,0.0,5.8099998568650335e-05,5.8099998568650335e-05,0.0481162999985826,,,,Recorded stage timings
+Cohort_Commercial,Prophet,daily_weekly,kW/customer,OK_WITH_WARNINGS,21.073581200000262,0.0,21.073581200000262,21.128627799998867,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,AutoARIMA,weekly,kW/customer,OK_WITH_WARNINGS,499.5136700999992,3.1289663999996264,502.6426364999989,505.35089359999984,,,,Recorded stage timings
+Cohort_Commercial,FourierSARIMAX,daily,kW/customer,OK_WITH_WARNINGS,11.922103099999733,0.0,11.922103099999733,11.9765892000014,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,Prophet,weekly,kW/customer,OK_WITH_WARNINGS,9.546187699999791,0.0,9.546187699999791,9.603064200000516,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,AutoTheta,monthly_30d,kW/customer,OK,185.34728499999983,0.0008306999989144,185.3481156999988,188.16719620000003,,,,Recorded stage timings
+Cohort_Commercial,CalendarRidge,weekly,kW/customer,OK,1.5638914999999542,0.0,1.5638914999999542,1.6172182999998768,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,AutoARIMA,daily,kW/customer,OK_WITH_WARNINGS,47.14584619999914,0.2535570000000007,47.39940319999914,50.27017870000054,,,,Recorded stage timings
+Cohort_Commercial,SeasonalNaive,monthly_30d,kW/customer,OK,0.0,3.219999962311704e-05,3.219999962311704e-05,0.0475700999995751,,,,Recorded stage timings
+Cohort_Commercial,FourierOLS,weekly,kW/customer,OK,1.546066200000496,0.0,1.546066200000496,1.5991836000011972,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,Prophet,yearly_365d,kW/customer,OK_WITH_WARNINGS,12.869798699999592,0.0,12.869798699999592,12.921115900000586,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,AutoTheta,daily,kW/customer,OK,181.32496729999912,0.0007910000003903,181.3257582999995,184.0861593999998,,,,Recorded stage timings
+Cohort_Commercial,FourierSARIMAX,weekly,kW/customer,OK_WITH_WARNINGS,18.979465099999288,0.0,18.979465099999288,19.033433200000218,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,CalendarRidge,monthly_30d,kW/customer,OK,1.4960890999991534,0.0,1.4960890999991534,1.5494807999984914,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,FourierOLS,monthly_30d,kW/customer,OK,1.5093854000006104,0.0,1.5093854000006104,1.564497700001084,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,FourierSARIMAX,monthly_30d,kW/customer,OK_WITH_WARNINGS,15.302429900000789,0.0,15.302429900000789,15.355716300000497,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,FourierSARIMAX,yearly_365d,kW/customer,OK_WITH_WARNINGS,43.96445109999877,0.0,43.96445109999877,44.02525260000039,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,CalendarRidge,yearly_365d,kW/customer,OK,1.6227477000011277,0.0,1.6227477000011277,1.679021300000386,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,FourierOLS,yearly_365d,kW/customer,OK,1.5620419999995647,0.0,1.5620419999995647,1.616073500001221,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,AutoCES,weekly,kW/customer,OK,8.557912399999623,0.0003651999995781,8.558277599999201,11.235108599999876,,,,Recorded stage timings
+Cohort_Commercial,XGBoost,monthly_30d,kW/customer,OK,3.642613399999391,0.0,3.642613399999391,3.698435199999949,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,LightGBM,monthly_30d,kW/customer,OK,3.0040202000000136,0.0,3.0040202000000136,3.058008800000607,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,LightGBM,yearly_365d,kW/customer,OK,5.630682699998943,0.0,5.630682699998943,5.690700299999662,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,AutoNHITS,daily_weekly_monthly_yearly,kW/customer,OK_WITH_WARNINGS,42.7577212999995,0.0,42.7577212999995,42.8077215000003,31.387,1.482,,Fit field bundles prediction; see neural stage times
+Cohort_Commercial,Prophet,monthly_30d,kW/customer,OK_WITH_WARNINGS,11.237112300001172,0.0,11.237112300001172,11.288108900000225,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,XGBoost,yearly_365d,kW/customer,OK,6.5130540000009205,0.0,6.5130540000009205,6.569676099999924,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Commercial,Naive,daily,kW/customer,OK,0.0,1.8200000340584666e-05,1.8200000340584666e-05,0.0463842000008298,,,,Recorded stage timings
+Cohort_Commercial,AutoNBEATSx,daily_weekly_monthly_yearly,kW/customer,OK_WITH_WARNINGS,44.34385540000039,0.0,44.34385540000039,44.39522120000038,33.194,1.527,,Fit field bundles prediction; see neural stage times
+Cohort_Commercial,AutoTBATS,daily_weekly_monthly_yearly,kW/customer,OK_WITH_WARNINGS,1581.927810700001,0.0854682999997749,1582.0132790000007,1584.7672330000005,,,,Recorded stage timings

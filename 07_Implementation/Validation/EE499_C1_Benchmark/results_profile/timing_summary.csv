@@ -1,0 +1,5 @@
+﻿network,solver,test,seconds,case,status,median_s,mean_s,p95_s,std_s,batch_s,valid_solves,failed_solves,throughput_solve_per_s
+T04_15-Bus_System_1,fbs_python,cold_start,0.001021500000206288,T04_15-Bus_System_1,success,,,,,,,,
+T04_15-Bus_System_1,fbs_python,warm_repeated,,,success,0.0007587500003864989,0.0007634416664738334,0.0008738749997064587,6.372131946716746e-05,0.025714800000059768,24,0,933.3146670378233
+T04_15-Bus_System_1,scipy_nr,cold_start,0.0019272999998065643,T04_15-Bus_System_1,success,,,,,,,,
+T04_15-Bus_System_1,scipy_nr,warm_repeated,,,success,0.0011691500003507826,0.0012216874999163945,0.0014459199993325455,0.00013919139794212935,0.03694510000059381,24,0,649.6125331806993

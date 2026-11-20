@@ -1,0 +1,195 @@
+{
+  "network": "T04_15-Bus_System_1",
+  "buses": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "slack": 1,
+  "kv_ll": 11.0,
+  "base_kva": 100000.0,
+  "v_set_pu": 1.0,
+  "lines": [
+    {
+      "id": "L1",
+      "from": 1,
+      "to": 2,
+      "r_ohm": 1.353143,
+      "x_ohm": 1.323498
+    },
+    {
+      "id": "L2",
+      "from": 2,
+      "to": 3,
+      "r_ohm": 1.170191,
+      "x_ohm": 1.14466
+    },
+    {
+      "id": "L3",
+      "from": 3,
+      "to": 4,
+      "r_ohm": 0.841071,
+      "x_ohm": 0.822679
+    },
+    {
+      "id": "L4",
+      "from": 4,
+      "to": 5,
+      "r_ohm": 1.523511,
+      "x_ohm": 1.027653
+    },
+    {
+      "id": "L5",
+      "from": 2,
+      "to": 9,
+      "r_ohm": 2.013198,
+      "x_ohm": 1.357862
+    },
+    {
+      "id": "L6",
+      "from": 9,
+      "to": 10,
+      "r_ohm": 1.68674,
+      "x_ohm": 1.137642
+    },
+    {
+      "id": "L7",
+      "from": 2,
+      "to": 6,
+      "r_ohm": 2.557214,
+      "x_ohm": 1.724855
+    },
+    {
+      "id": "L8",
+      "from": 6,
+      "to": 7,
+      "r_ohm": 1.088153,
+      "x_ohm": 0.733986
+    },
+    {
+      "id": "L9",
+      "from": 6,
+      "to": 8,
+      "r_ohm": 1.251382,
+      "x_ohm": 0.844096
+    },
+    {
+      "id": "L10",
+      "from": 3,
+      "to": 11,
+      "r_ohm": 1.795519,
+      "x_ohm": 1.211089
+    },
+    {
+      "id": "L11",
+      "from": 11,
+      "to": 12,
+      "r_ohm": 2.448435,
+      "x_ohm": 1.651529
+    },
+    {
+      "id": "L12",
+      "from": 12,
+      "to": 13,
+      "r_ohm": 2.013198,
+      "x_ohm": 1.357862
+    },
+    {
+      "id": "L13",
+      "from": 4,
+      "to": 14,
+      "r_ohm": 2.230756,
+      "x_ohm": 1.504756
+    },
+    {
+      "id": "L14",
+      "from": 4,
+      "to": 15,
+      "r_ohm": 1.197053,
+      "x_ohm": 0.807433
+    }
+  ],
+  "model": "balanced three-phase total kW/kvar, wye-equivalent positive sequence; constant PQ; no shunts, transformers, tap changers, or line charging",
+  "net_demand_kw": {
+    "1": [
+      0.0,
+      0.0
+    ],
+    "2": [
+      44.1,
+      45.0
+    ],
+    "3": [
+      70.0,
+      71.4
+    ],
+    "4": [
+      140.0,
+      142.8
+    ],
+    "5": [
+      44.1,
+      45.0
+    ],
+    "6": [
+      140.0,
+      142.8
+    ],
+    "7": [
+      140.0,
+      142.8
+    ],
+    "8": [
+      70.0,
+      71.4
+    ],
+    "9": [
+      70.0,
+      71.4
+    ],
+    "10": [
+      44.1,
+      45.0
+    ],
+    "11": [
+      140.0,
+      142.8
+    ],
+    "12": [
+      70.0,
+      71.4
+    ],
+    "13": [
+      44.1,
+      45.0
+    ],
+    "14": [
+      70.0,
+      71.4
+    ],
+    "15": [
+      140.0,
+      142.8
+    ]
+  },
+  "base_assumptions": [
+    "constant-PQ",
+    "balanced three-phase positive sequence",
+    "one slack",
+    "zero line shunt and charging",
+    "no transformer/tap/control model"
+  ],
+  "source_workbook_sha256": "efc731a5216529b6ac4abe4c0573d061a877c7cc7c2aeeca012650b4141058ac"
+}

@@ -1,0 +1,3 @@
+﻿algorithm,runs,within_5_percent,exact_matches,pass_rate,protocol_pass,mean_gap_percent,mean_unique_evaluations,mean_search_seconds,all_candidates_within_5_percent,catalog_spread_percent,exact_best_cost_usd_per_year,bess_bus,bess_power_kw,bess_capacity_kwh
+GA,20,20,14,1.0,True,0.007667821422488795,37.55,0.001158884799997395,False,5.124728304351786,26153990.70985933,15,250.0,1500.0
+GWO,20,20,17,1.0,True,0.003673639545830754,59.8,0.0014885890000073231,False,5.124728304351786,26153990.70985933,15,250.0,1500.0

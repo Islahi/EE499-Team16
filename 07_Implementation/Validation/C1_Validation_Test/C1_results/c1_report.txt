@@ -1,0 +1,371 @@
+========================================================================
+Guide_5Bus_Radial_Test.xlsx  [Table -]
+                                   Published          Project FBS
+S_base (paper printed / MVA)                   -                 1.00
+V_base (kV)                                    -               12.660
+Total active power load (kW)                   -             900.0000
+Total reactive power load (kVAr)               -             450.0000
+Total active power losses (kW)                 -              20.9640
+Total reactive power losses (kVAr)             -              41.9517
+Minimum voltage (pu)                           -             0.956034
+Weakest bus: published=None, FBS=4
+FBS iterations: 7 (not provided by the paper)
+Maximum bus voltage error: - pu
+Active power loss error: - %
+Input impedance mismatches: None
+Result: NO PAPER REFERENCE
+========================================================================
+IEEE_33Bus_Network_Data.xlsx  [Table 12]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               12.660               12.660
+Total active power load (kW)           3715.0000            3715.0000
+Total reactive power load (kVAr)       2300.0000            2300.0000
+Total active power losses (kW)          202.6771             202.6783
+Total reactive power losses (kVAr)      135.1410             135.1559
+Minimum voltage (pu)                    0.913000             0.913080
+Weakest bus: published=18, FBS=18
+FBS iterations: 8 (not provided by the paper)
+Maximum bus voltage error: 0.0000501 pu
+Active power loss error: 0.0006 %
+Input impedance mismatches: 1
+Result: REVIEW: network data differ
+========================================================================
+T02_10-Bus.xlsx  [Table 2]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               23.000               23.000
+Total active power load (kW)          12368.0000           12368.0000
+Total reactive power load (kVAr)       4186.0000            4186.0000
+Total active power losses (kW)          783.7754             783.6924
+Total reactive power losses (kVAr)     1036.4710            1036.4673
+Minimum voltage (pu)                    0.838000             0.837510
+Weakest bus: published=10, FBS=10
+FBS iterations: 10 (not provided by the paper)
+Maximum bus voltage error: 0.0000359 pu
+Active power loss error: 0.0106 %
+Input impedance mismatches: 0
+Result: PASS
+========================================================================
+T03_12-Bus.xlsx  [Table 3]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               11.000               11.000
+Total active power load (kW)            435.0000             435.0000
+Total reactive power load (kVAr)        405.0000             405.0000
+Total active power losses (kW)           20.7135              20.7136
+Total reactive power losses (kVAr)        8.0410               8.0409
+Minimum voltage (pu)                    0.943000             0.943355
+Weakest bus: published=12, FBS=12
+FBS iterations: 7 (not provided by the paper)
+Maximum bus voltage error: 0.0000497 pu
+Active power loss error: 0.0006 %
+Input impedance mismatches: 0
+Result: PASS
+========================================================================
+T04_15-Bus_System_1.xlsx  [Table 4]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               11.000               11.000
+Total active power load (kW)           1226.4000            1226.4000
+Total reactive power load (kVAr)       1251.1785            1251.0000
+Total active power losses (kW)           61.4960              61.7854
+Total reactive power losses (kVAr)       57.0393              57.2889
+Minimum voltage (pu)                    0.945000             0.944520
+Weakest bus: published=13, FBS=13
+FBS iterations: 7 (not provided by the paper)
+Maximum bus voltage error: 0.0000448 pu
+Active power loss error: 0.4706 %
+Input impedance mismatches: 0
+Result: PASS
+========================================================================
+T05_15-Bus_System_2.xlsx  [Table 5]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               11.000               11.000
+Total active power load (kW)           1226.4000            1226.4000
+Total reactive power load (kVAr)       1251.1785            1251.0000
+Total active power losses (kW)           41.4752              41.6032
+Total reactive power losses (kVAr)       38.4636              38.5740
+Minimum voltage (pu)                    0.962000             0.962087
+Weakest bus: published=13, FBS=13
+FBS iterations: 6 (not provided by the paper)
+Maximum bus voltage error: 0.0000472 pu
+Active power loss error: 0.3086 %
+Input impedance mismatches: 0
+Result: PASS
+========================================================================
+T09_18-Bus.xlsx  [Table 9]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               11.000               11.000
+Total active power load (kW)           1410.5000            1410.5000
+Total reactive power load (kVAr)       1438.8000            1438.8000
+Total active power losses (kW)           58.6080              58.6080
+Total reactive power losses (kVAr)       54.6710              54.6710
+Minimum voltage (pu)                    0.951000             0.951175
+Weakest bus: published=18, FBS=18
+FBS iterations: 6 (not provided by the paper)
+Maximum bus voltage error: 0.0000466 pu
+Active power loss error: 0.0000 %
+Input impedance mismatches: 0
+Result: PASS
+========================================================================
+T10_22-Bus.xlsx  [Table 10]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               11.000               11.000
+Total active power load (kW)            662.4600             662.4600
+Total reactive power load (kVAr)        657.4500             657.4500
+Total active power losses (kW)           17.6732              17.6734
+Total reactive power losses (kVAr)        9.0439               9.0439
+Minimum voltage (pu)                    0.973000             0.972930
+Weakest bus: published=22, FBS=22
+FBS iterations: 6 (not provided by the paper)
+Maximum bus voltage error: 0.0000460 pu
+Active power loss error: 0.0009 %
+Input impedance mismatches: 0
+Result: PASS
+========================================================================
+T11_28-Bus.xlsx  [Table 11]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               11.000               11.000
+Total active power load (kW)            761.0400             761.0400
+Total reactive power load (kVAr)        776.4190             776.4190
+Total active power losses (kW)           68.8195              68.8201
+Total reactive power losses (kVAr)       46.0420              46.0430
+Minimum voltage (pu)                    0.912000             0.912469
+Weakest bus: published=26, FBS=26
+FBS iterations: 8 (not provided by the paper)
+Maximum bus voltage error: 0.0000478 pu
+Active power loss error: 0.0009 %
+Input impedance mismatches: 0
+Result: PASS
+========================================================================
+T12_33-Bus.xlsx  [Table 12]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               12.660               12.660
+Total active power load (kW)           3715.0000            3715.0000
+Total reactive power load (kVAr)       2300.0000            2300.0000
+Total active power losses (kW)          202.6771             202.6789
+Total reactive power losses (kVAr)      135.1410             135.1410
+Minimum voltage (pu)                    0.913000             0.913090
+Weakest bus: published=18, FBS=18
+FBS iterations: 8 (not provided by the paper)
+Maximum bus voltage error: 0.0000510 pu
+Active power loss error: 0.0009 %
+Input impedance mismatches: 0
+Result: PASS
+========================================================================
+T13_34-Bus.xlsx  [Table 13]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               11.000               11.000
+Total active power load (kW)           2873.5000            2873.5000
+Total reactive power load (kVAr)       4636.5000            4636.5000
+Total active power losses (kW)          217.0102             217.0190
+Total reactive power losses (kVAr)       63.7539              63.7683
+Minimum voltage (pu)                    0.956000             0.955548
+Weakest bus: published=27, FBS=27
+FBS iterations: 7 (not provided by the paper)
+Maximum bus voltage error: 0.0000520 pu
+Active power loss error: 0.0041 %
+Input impedance mismatches: 0
+Result: PASS
+========================================================================
+T14_38-Bus.xlsx  [Table 14]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               12.660               12.660
+Total active power load (kW)           3715.0000            3715.0000
+Total reactive power load (kVAr)       2300.0000            2300.0000
+Total active power losses (kW)          202.6771             202.6789
+Total reactive power losses (kVAr)      135.1410             135.1410
+Minimum voltage (pu)                    0.913000             0.913090
+Weakest bus: published=18, FBS=18
+FBS iterations: 8 (not provided by the paper)
+Maximum bus voltage error: 0.0000510 pu
+Active power loss error: 0.0009 %
+Input impedance mismatches: 0
+Result: PASS
+========================================================================
+T15_51-Bus_System_1.xlsx  [Table 15]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               11.000               11.000
+Total active power load (kW)           2463.0000            2463.0000
+Total reactive power load (kVAr)       1569.0000            1569.0000
+Total active power losses (kW)          129.5559             129.5471
+Total reactive power losses (kVAr)      111.6835             111.6843
+Minimum voltage (pu)                    0.908000             0.908116
+Weakest bus: published=16, FBS=16
+FBS iterations: 8 (not provided by the paper)
+Maximum bus voltage error: 0.0000508 pu
+Active power loss error: 0.0068 %
+Input impedance mismatches: 0
+Result: PASS
+========================================================================
+T16_51-Bus_System_2.xlsx  [Table 16]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               22.000               22.000
+Total active power load (kW)           1924.0500            1924.0500
+Total reactive power load (kVAr)       1060.3600            1060.3600
+Total active power losses (kW)           34.2918              34.2939
+Total reactive power losses (kVAr)       47.5025              47.5022
+Minimum voltage (pu)                    0.969000             0.969210
+Weakest bus: published=19, FBS=19
+FBS iterations: 6 (not provided by the paper)
+Maximum bus voltage error: 0.0000499 pu
+Active power loss error: 0.0062 %
+Input impedance mismatches: 0
+Result: PASS
+========================================================================
+T17_69-Bus.xlsx  [Table 17]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               12.660               12.660
+Total active power load (kW)           3802.1000            3802.1000
+Total reactive power load (kVAr)       2694.7000            2694.7000
+Total active power losses (kW)          225.0007             225.0603
+Total reactive power losses (kVAr)      102.1648             102.1070
+Minimum voltage (pu)                    0.909000             0.909168
+Weakest bus: published=65, FBS=65
+FBS iterations: 8 (not provided by the paper)
+Maximum bus voltage error: 0.0000617 pu
+Active power loss error: 0.0265 %
+Input impedance mismatches: 68
+Result: REVIEW: network data differ
+========================================================================
+T18_70-Bus_Two_Substations_Feeder_root_1.xlsx  [Table 18]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               11.000               11.000
+Total active power load (kW)           5385.4000            2170.6000
+Total reactive power load (kVAr)       3687.6000            1495.4000
+Total active power losses (kW)          341.4270             116.7693
+Total reactive power losses (kVAr)      307.5841             100.3453
+Minimum voltage (pu)                    0.884000             0.918126
+Weakest bus: published=67, FBS=29
+FBS iterations: 8 (not provided by the paper)
+Maximum bus voltage error: 0.0000495 pu
+Active power loss error: - %
+Input impedance mismatches: 0
+Result: FEEDER: see combined result
+NOTE: Table 18 reference loads/losses apply to the combined two-feeder system.
+========================================================================
+T18_70-Bus_Two_Substations_Feeder_root_70.xlsx  [Table 18]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               11.000               11.000
+Total active power load (kW)           5385.4000            3214.8000
+Total reactive power load (kVAr)       3687.6000            2192.2000
+Total active power losses (kW)          341.4270             224.6583
+Total reactive power losses (kVAr)      307.5841             207.2402
+Minimum voltage (pu)                    0.884000             0.883889
+Weakest bus: published=67, FBS=67
+FBS iterations: 9 (not provided by the paper)
+Maximum bus voltage error: 0.0000488 pu
+Active power loss error: - %
+Input impedance mismatches: 0
+Result: FEEDER: see combined result
+NOTE: Table 18 reference loads/losses apply to the combined two-feeder system.
+========================================================================
+T19_74-Bus.xlsx  [Table 19]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               11.000               11.000
+Total active power load (kW)           6617.0000            6617.0000
+Total reactive power load (kVAr)       4447.0000            4447.0000
+Total active power losses (kW)          145.1363             145.1572
+Total reactive power losses (kVAr)      109.9673             109.9722
+Minimum voltage (pu)                    0.954000             0.953721
+Weakest bus: published=57, FBS=57
+FBS iterations: 6 (not provided by the paper)
+Maximum bus voltage error: 0.0000524 pu
+Active power loss error: 0.0144 %
+Input impedance mismatches: 0
+Result: PASS
+========================================================================
+T20_85-Bus.xlsx  [Table 20]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               11.000               11.000
+Total active power load (kW)           2514.2800            2514.2800
+Total reactive power load (kVAr)       2565.0783            2565.0783
+Total active power losses (kW)          299.3075             299.3184
+Total reactive power losses (kVAr)      187.8123             187.8272
+Minimum voltage (pu)                    0.874000             0.873887
+Weakest bus: published=54, FBS=54
+FBS iterations: 9 (not provided by the paper)
+Maximum bus voltage error: 0.0000524 pu
+Active power loss error: 0.0036 %
+Input impedance mismatches: 0
+Result: PASS
+========================================================================
+T21_94-Bus.xlsx  [Table 21]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               15.000               15.000
+Total active power load (kW)           4797.0000            4797.0000
+Total reactive power load (kVAr)       2323.9000            2323.9000
+Total active power losses (kW)          362.8578             362.8595
+Total reactive power losses (kVAr)      504.0420             504.0021
+Minimum voltage (pu)                    0.848000             0.848479
+Weakest bus: published=92, FBS=92
+FBS iterations: 10 (not provided by the paper)
+Maximum bus voltage error: 0.0000511 pu
+Active power loss error: 0.0005 %
+Input impedance mismatches: 0
+Result: PASS
+========================================================================
+T22_118-Bus.xlsx  [Table 22]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               11.000               11.000
+Total active power load (kW)          22709.7200           22709.7200
+Total reactive power load (kVAr)      17041.0680           17041.0900
+Total active power losses (kW)         1298.0916            1298.1491
+Total reactive power losses (kVAr)      978.7361             978.7055
+Minimum voltage (pu)                    0.869000             0.868811
+Weakest bus: published=77, FBS=77
+FBS iterations: 9 (not provided by the paper)
+Maximum bus voltage error: 0.0000612 pu
+Active power loss error: 0.0044 %
+Input impedance mismatches: 0
+Result: PASS
+========================================================================
+T23_136-Bus.xlsx  [Table 23]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               13.800               13.800
+Total active power load (kW)          18313.8070           18313.8700
+Total reactive power load (kVAr)       7932.5680            7932.5800
+Total active power losses (kW)          320.3639             320.3909
+Total reactive power losses (kVAr)      702.9474             702.9634
+Minimum voltage (pu)                    0.931000             0.930645
+Weakest bus: published=117, FBS=117
+FBS iterations: 8 (not provided by the paper)
+Maximum bus voltage error: 0.0000569 pu
+Active power loss error: 0.0084 %
+Input impedance mismatches: 0
+Result: PASS
+========================================================================
+T18_COMBINED (not a separate workbook)  [Table 18]
+                                   Published          Project FBS
+S_base (paper printed / MVA)              100.00               100.00
+V_base (kV)                               11.000               11.000
+Total active power load (kW)           5385.4000            5385.4000
+Total reactive power load (kVAr)       3687.6000            3687.6000
+Total active power losses (kW)          341.4270             341.4275
+Total reactive power losses (kVAr)      307.5841             307.5855
+Minimum voltage (pu)                    0.884000             0.883889
+Weakest bus: published=67, FBS=67
+FBS iterations: 9 (not provided by the paper)
+Maximum bus voltage error: 0.0000495 pu
+Active power loss error: 0.0002 %
+Input impedance mismatches: 0
+Result: PASS
+NOTE: Table 18 reference loads/losses apply to the combined two-feeder system.

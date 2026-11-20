@@ -1,0 +1,836 @@
+dataset,model,seasonality,type,message,count
+Bus_01,AutoTBATS,daily,RuntimeWarning,divide by zero encountered in log,2
+Bus_01,AutoTBATS,daily,RuntimeWarning,invalid value encountered in subtract,1
+Bus_01,AutoTBATS,daily_weekly,RuntimeWarning,divide by zero encountered in log,2
+Bus_01,AutoTBATS,daily_weekly,RuntimeWarning,invalid value encountered in subtract,1
+Bus_01,AutoTBATS,daily_weekly_monthly,RuntimeWarning,divide by zero encountered in log,2
+Bus_01,AutoTBATS,daily_weekly_monthly,RuntimeWarning,invalid value encountered in subtract,1
+Bus_01,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,divide by zero encountered in log,2
+Bus_01,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,invalid value encountered in subtract,1
+Bus_01,AutoTBATS,weekly,RuntimeWarning,divide by zero encountered in log,2
+Bus_01,AutoTBATS,weekly,RuntimeWarning,invalid value encountered in subtract,1
+Bus_01,AutoTheta,daily,RuntimeWarning,invalid value encountered in divide,1
+Bus_01,AutoTheta,monthly_30d,RuntimeWarning,invalid value encountered in divide,1
+Bus_01,AutoTheta,weekly,RuntimeWarning,invalid value encountered in divide,1
+Bus_01,FourierSARIMAX,daily,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,4
+Bus_01,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_01,FourierSARIMAX,daily_weekly,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,4
+Bus_01,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_01,FourierSARIMAX,daily_weekly_monthly,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,4
+Bus_01,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_01,FourierSARIMAX,daily_weekly_monthly_yearly,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,4
+Bus_01,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_01,FourierSARIMAX,monthly_30d,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,4
+Bus_01,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_01,FourierSARIMAX,weekly,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,4
+Bus_01,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_01,FourierSARIMAX,yearly_365d,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,4
+Bus_01,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_01,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_01,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_01,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_01,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_01,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_01,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_01,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_02,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_02,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_02,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_02,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_02,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_02,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_02,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_02,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_02,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Bus_02,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Bus_02,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Bus_02,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_02,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Bus_02,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Bus_02,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Bus_02,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Bus_02,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Bus_02,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_02,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_02,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_02,FourierSARIMAX,daily_weekly,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,1
+Bus_02,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_02,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_02,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_02,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_02,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_02,FourierSARIMAX,yearly_365d,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,1
+Bus_02,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_02,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_02,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_02,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_02,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_02,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_02,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_03,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_03,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_03,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_03,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_03,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_03,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_03,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_03,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_03,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Bus_03,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Bus_03,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Bus_03,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_03,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Bus_03,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Bus_03,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Bus_03,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Bus_03,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Bus_03,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_03,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_03,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_03,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_03,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_03,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_03,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_03,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_03,FourierSARIMAX,yearly_365d,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,1
+Bus_03,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_03,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_03,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_03,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_03,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_03,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_03,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_04,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_04,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_04,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_04,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_04,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_04,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_04,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_04,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_04,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Bus_04,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Bus_04,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Bus_04,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_04,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Bus_04,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Bus_04,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Bus_04,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Bus_04,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Bus_04,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_04,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_04,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_04,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_04,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_04,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_04,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_04,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_04,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_04,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_04,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_04,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_04,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_04,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_04,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_05,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_05,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_05,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_05,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_05,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_05,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_05,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_05,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_05,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Bus_05,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Bus_05,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Bus_05,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_05,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Bus_05,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Bus_05,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Bus_05,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Bus_05,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Bus_05,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_05,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_05,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_05,FourierSARIMAX,daily_weekly,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,1
+Bus_05,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_05,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_05,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_05,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_05,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_05,FourierSARIMAX,yearly_365d,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,1
+Bus_05,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_05,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_05,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_05,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_05,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_05,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_05,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_06,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_06,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_06,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_06,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_06,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_06,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_06,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_06,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_06,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Bus_06,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Bus_06,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Bus_06,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_06,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Bus_06,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Bus_06,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Bus_06,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Bus_06,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Bus_06,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_06,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_06,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_06,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_06,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_06,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_06,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_06,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_06,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_06,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_06,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_06,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_06,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_06,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_06,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_07,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_07,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_07,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_07,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_07,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_07,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_07,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_07,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_07,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Bus_07,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Bus_07,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Bus_07,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_07,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Bus_07,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Bus_07,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Bus_07,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Bus_07,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Bus_07,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_07,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_07,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_07,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_07,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_07,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_07,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_07,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_07,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_07,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_07,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_07,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_07,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_07,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_07,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_08,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_08,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_08,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_08,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_08,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_08,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_08,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_08,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_08,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Bus_08,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Bus_08,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Bus_08,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_08,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Bus_08,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Bus_08,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Bus_08,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Bus_08,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Bus_08,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_08,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_08,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_08,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_08,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_08,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_08,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_08,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_08,FourierSARIMAX,yearly_365d,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,1
+Bus_08,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_08,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_08,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_08,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_08,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_08,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_08,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_09,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_09,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_09,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_09,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_09,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_09,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_09,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_09,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_09,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Bus_09,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Bus_09,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Bus_09,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_09,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Bus_09,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Bus_09,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Bus_09,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Bus_09,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Bus_09,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_09,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_09,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_09,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_09,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_09,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_09,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_09,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_09,FourierSARIMAX,yearly_365d,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,1
+Bus_09,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_09,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_09,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_09,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_09,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_09,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_09,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_10,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_10,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_10,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_10,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_10,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_10,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_10,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_10,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_10,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Bus_10,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Bus_10,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Bus_10,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_10,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Bus_10,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Bus_10,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Bus_10,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Bus_10,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Bus_10,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_10,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_10,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_10,FourierSARIMAX,daily_weekly,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,1
+Bus_10,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_10,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_10,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_10,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_10,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_10,FourierSARIMAX,yearly_365d,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,1
+Bus_10,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_10,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_10,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_10,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_10,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_10,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_10,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_11,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_11,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_11,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_11,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_11,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_11,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_11,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_11,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_11,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Bus_11,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Bus_11,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Bus_11,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_11,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Bus_11,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Bus_11,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Bus_11,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Bus_11,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Bus_11,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_11,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_11,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_11,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_11,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_11,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_11,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_11,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_11,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_11,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_11,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_11,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_11,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_11,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_11,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_12,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_12,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_12,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_12,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_12,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_12,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_12,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_12,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_12,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Bus_12,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Bus_12,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Bus_12,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_12,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Bus_12,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Bus_12,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Bus_12,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Bus_12,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Bus_12,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_12,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_12,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_12,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_12,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_12,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_12,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_12,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_12,FourierSARIMAX,yearly_365d,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,1
+Bus_12,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_12,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_12,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_12,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_12,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_12,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_12,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_13,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_13,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_13,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_13,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_13,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_13,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_13,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_13,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_13,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Bus_13,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Bus_13,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Bus_13,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_13,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Bus_13,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Bus_13,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Bus_13,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Bus_13,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Bus_13,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_13,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_13,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_13,FourierSARIMAX,daily_weekly,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,1
+Bus_13,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_13,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_13,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_13,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_13,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_13,FourierSARIMAX,yearly_365d,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,1
+Bus_13,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_13,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_13,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_13,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_13,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_13,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_13,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_14,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_14,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_14,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_14,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_14,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_14,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_14,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_14,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_14,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Bus_14,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Bus_14,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Bus_14,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_14,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Bus_14,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Bus_14,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Bus_14,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Bus_14,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Bus_14,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_14,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_14,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_14,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_14,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_14,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_14,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_14,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_14,FourierSARIMAX,yearly_365d,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,1
+Bus_14,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_14,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_14,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_14,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_14,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_14,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_14,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_15,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_15,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_15,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Bus_15,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bus_15,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_15,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_15,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bus_15,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bus_15,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Bus_15,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Bus_15,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Bus_15,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_15,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Bus_15,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Bus_15,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Bus_15,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Bus_15,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Bus_15,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Bus_15,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_15,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_15,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_15,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_15,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_15,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_15,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bus_15,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_15,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_15,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_15,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_15,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_15,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bus_15,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Commercial,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Cohort_Commercial,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Cohort_Commercial,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Cohort_Commercial,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Cohort_Commercial,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Cohort_Commercial,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Cohort_Commercial,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Cohort_Commercial,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Cohort_Commercial,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Cohort_Commercial,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Cohort_Commercial,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Cohort_Commercial,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Cohort_Commercial,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Cohort_Commercial,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Cohort_Commercial,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Cohort_Commercial,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Cohort_Commercial,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Cohort_Commercial,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Cohort_Commercial,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Commercial,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Commercial,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Commercial,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Commercial,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Commercial,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Commercial,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Commercial,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Commercial,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Commercial,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Commercial,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Commercial,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Commercial,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Commercial,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Manufacturing,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Cohort_Manufacturing,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Cohort_Manufacturing,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Cohort_Manufacturing,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Cohort_Manufacturing,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Cohort_Manufacturing,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Cohort_Manufacturing,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Cohort_Manufacturing,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Cohort_Manufacturing,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Cohort_Manufacturing,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Cohort_Manufacturing,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Cohort_Manufacturing,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Cohort_Manufacturing,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Cohort_Manufacturing,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Cohort_Manufacturing,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Cohort_Manufacturing,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Cohort_Manufacturing,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Cohort_Manufacturing,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Cohort_Manufacturing,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Manufacturing,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Manufacturing,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Manufacturing,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Manufacturing,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Manufacturing,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Manufacturing,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Manufacturing,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Manufacturing,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Manufacturing,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Manufacturing,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Manufacturing,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Manufacturing,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Manufacturing,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Residential,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Cohort_Residential,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Cohort_Residential,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Cohort_Residential,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Cohort_Residential,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Cohort_Residential,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Cohort_Residential,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Cohort_Residential,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Cohort_Residential,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Cohort_Residential,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Cohort_Residential,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Cohort_Residential,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Cohort_Residential,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Cohort_Residential,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Cohort_Residential,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Cohort_Residential,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Cohort_Residential,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Cohort_Residential,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Cohort_Residential,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Residential,FourierSARIMAX,daily,ConvergenceWarning,Maximum Likelihood optimization failed to converge. Check mle_retvals,1
+Cohort_Residential,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Residential,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Residential,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Residential,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Residential,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Residential,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_Residential,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Residential,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Residential,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Residential,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Residential,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Residential,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_Residential,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_SumOfMeterLoads,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Cohort_SumOfMeterLoads,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Cohort_SumOfMeterLoads,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Cohort_SumOfMeterLoads,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Cohort_SumOfMeterLoads,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Cohort_SumOfMeterLoads,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Cohort_SumOfMeterLoads,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Cohort_SumOfMeterLoads,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Cohort_SumOfMeterLoads,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Cohort_SumOfMeterLoads,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Cohort_SumOfMeterLoads,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Cohort_SumOfMeterLoads,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Cohort_SumOfMeterLoads,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Cohort_SumOfMeterLoads,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Cohort_SumOfMeterLoads,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Cohort_SumOfMeterLoads,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Cohort_SumOfMeterLoads,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Cohort_SumOfMeterLoads,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Cohort_SumOfMeterLoads,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_SumOfMeterLoads,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_SumOfMeterLoads,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_SumOfMeterLoads,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_SumOfMeterLoads,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_SumOfMeterLoads,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_SumOfMeterLoads,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Cohort_SumOfMeterLoads,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_SumOfMeterLoads,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_SumOfMeterLoads,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_SumOfMeterLoads,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_SumOfMeterLoads,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_SumOfMeterLoads,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Cohort_SumOfMeterLoads,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Distributed_Total,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Distributed_Total,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Distributed_Total,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Distributed_Total,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Distributed_Total,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Distributed_Total,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Distributed_Total,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Distributed_Total,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Distributed_Total,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Distributed_Total,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Distributed_Total,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Distributed_Total,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Distributed_Total,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Distributed_Total,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Distributed_Total,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Distributed_Total,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Distributed_Total,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Distributed_Total,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Distributed_Total,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Distributed_Total,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Distributed_Total,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Distributed_Total,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Distributed_Total,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Distributed_Total,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Distributed_Total,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Distributed_Total,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Distributed_Total,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Distributed_Total,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Distributed_Total,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Distributed_Total,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Distributed_Total,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Distributed_Total,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bilbao_Modeled_PV,AutoARIMA,daily,UserWarning,possible convergence problem: minimize gave code 2],19
+Bilbao_Modeled_PV,AutoARIMA,daily,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bilbao_Modeled_PV,AutoARIMA,weekly,UserWarning,possible convergence problem: minimize gave code 2],19
+Bilbao_Modeled_PV,AutoARIMA,weekly,UserWarning,Stepwise search was stopped early due to reaching the model number limit: nmodels=20,1
+Bilbao_Modeled_PV,AutoNBEATSx,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bilbao_Modeled_PV,AutoNBEATSx,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bilbao_Modeled_PV,AutoNHITS,daily_weekly_monthly_yearly,FutureWarning,"`isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.",56
+Bilbao_Modeled_PV,AutoNHITS,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`). Please use a specific unit instead.",3
+Bilbao_Modeled_PV,AutoTBATS,daily,RuntimeWarning,overflow encountered in square,1
+Bilbao_Modeled_PV,AutoTBATS,daily,RuntimeWarning,overflow encountered in reduce,1
+Bilbao_Modeled_PV,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in square,1
+Bilbao_Modeled_PV,AutoTBATS,daily_weekly,RuntimeWarning,overflow encountered in reduce,1
+Bilbao_Modeled_PV,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in square,1
+Bilbao_Modeled_PV,AutoTBATS,daily_weekly_monthly,RuntimeWarning,overflow encountered in reduce,1
+Bilbao_Modeled_PV,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in square,1
+Bilbao_Modeled_PV,AutoTBATS,daily_weekly_monthly_yearly,RuntimeWarning,overflow encountered in reduce,1
+Bilbao_Modeled_PV,AutoTBATS,weekly,RuntimeWarning,overflow encountered in square,1
+Bilbao_Modeled_PV,AutoTBATS,weekly,RuntimeWarning,overflow encountered in reduce,1
+Bilbao_Modeled_PV,FourierSARIMAX,daily,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bilbao_Modeled_PV,FourierSARIMAX,daily_weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bilbao_Modeled_PV,FourierSARIMAX,daily_weekly_monthly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bilbao_Modeled_PV,FourierSARIMAX,daily_weekly_monthly_yearly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bilbao_Modeled_PV,FourierSARIMAX,monthly_30d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bilbao_Modeled_PV,FourierSARIMAX,weekly,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bilbao_Modeled_PV,FourierSARIMAX,yearly_365d,DeprecationWarning,"Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+As an alternative, you can create a new view using np.reshape (with copy=False if needed).",1
+Bilbao_Modeled_PV,Prophet,daily,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bilbao_Modeled_PV,Prophet,daily_weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bilbao_Modeled_PV,Prophet,daily_weekly_monthly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bilbao_Modeled_PV,Prophet,daily_weekly_monthly_yearly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bilbao_Modeled_PV,Prophet,monthly_30d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bilbao_Modeled_PV,Prophet,weekly,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15
+Bilbao_Modeled_PV,Prophet,yearly_365d,DeprecationWarning,"The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.",15

@@ -1,0 +1,70 @@
+dataset,model,seasonality,unit,status,fit_seconds,forecast_seconds,model_seconds,wall_seconds,training_and_tuning_seconds,rollout_seconds,peak_memory_mb,timing_note
+Cohort_Residential,CalendarRidge,daily_weekly_monthly_yearly,kW/customer,OK,1.7489511000003404,0.0,1.7489511000003404,1.8026047000003016,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,FourierOLS,daily_weekly_monthly_yearly,kW/customer,OK,2.425323200000093,0.0,2.425323200000093,2.47920780000004,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,SeasonalNaive,yearly_365d,kW/customer,OK,0.0,3.939999999147403e-05,3.939999999147403e-05,0.0620219999999562,,,,Recorded stage timings
+Cohort_Residential,YearAgoCalendarNaive,yearly_365d,kW/customer,OK,0.0,0.2508701000000428,0.2508701000000428,0.3021512000000257,,,,Recorded stage timings
+Cohort_Residential,FourierSARIMAX,daily_weekly_monthly_yearly,kW/customer,OK_WITH_WARNINGS,70.45986789999915,0.0,70.45986789999915,70.52296930000011,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,Prophet,daily_weekly_monthly_yearly,kW/customer,OK_WITH_WARNINGS,50.897207799999705,0.0,50.897207799999705,50.94763489999968,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,CalendarRidge,daily_weekly,kW/customer,OK,1.6911619000002247,0.0,1.6911619000002247,1.7479499000000942,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,LightGBM,daily_weekly_monthly_yearly,kW/customer,OK,8.071001800000886,0.0,8.071001800000886,8.152692199999365,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,CalendarRidge,daily_weekly_monthly,kW/customer,OK,1.6931956000003083,0.0,1.6931956000003083,1.746551300000192,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,XGBoost,daily_weekly_monthly_yearly,kW/customer,OK,13.09142249999968,0.0,13.09142249999968,13.153730500000163,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,FourierSARIMAX,daily_weekly_monthly,kW/customer,OK_WITH_WARNINGS,47.54599179999968,0.0,47.54599179999968,47.60567269999956,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,CalendarRidge,daily,kW/customer,OK,1.5781144000002314,0.0,1.5781144000002314,1.6303180999998403,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,FourierOLS,daily_weekly,kW/customer,OK,1.8294846999999663,0.0,1.8294846999999663,1.8918257000000267,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,FourierSARIMAX,daily_weekly,kW/customer,OK_WITH_WARNINGS,37.0650999999998,0.0,37.0650999999998,37.1237616999988,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,FourierOLS,daily_weekly_monthly,kW/customer,OK,1.76985830000001,0.0,1.76985830000001,1.8314980000000105,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,FourierOLS,daily,kW/customer,OK,7.643852699999911,0.0,7.643852699999911,7.7219327999999905,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,FourierSARIMAX,daily,kW/customer,OK_WITH_WARNINGS,34.358724699999584,0.0,34.358724699999584,34.4178694000002,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,FourierSARIMAX,yearly_365d,kW/customer,OK_WITH_WARNINGS,33.12836289999905,0.0,33.12836289999905,33.20040059999883,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,CalendarRidge,yearly_365d,kW/customer,OK,1.5844054999997752,0.0,1.5844054999997752,1.6386222000000998,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,FourierOLS,yearly_365d,kW/customer,OK,1.848444699999959,0.0,1.848444699999959,1.908706199999984,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,AutoCES,weekly,kW/customer,OK,11.605407499999728,0.0004621000002771,11.605869600000004,14.364637199999834,,,,Recorded stage timings
+Cohort_Residential,FourierSARIMAX,weekly,kW/customer,OK_WITH_WARNINGS,18.6185190999986,0.0,18.6185190999986,18.673178499999267,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,MSTL,daily_weekly_monthly_yearly,kW/customer,OK,524.0507165,0.012427400000206,524.0631439000002,529.2891232,,,,Recorded stage timings
+Cohort_Residential,FourierSARIMAX,monthly_30d,kW/customer,OK_WITH_WARNINGS,12.201609399999144,0.0,12.201609399999144,12.256119200001194,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,Prophet,yearly_365d,kW/customer,OK_WITH_WARNINGS,14.92994280000039,0.0,14.92994280000039,14.979223699999238,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,LightGBM,yearly_365d,kW/customer,OK,4.462319500000376,0.0,4.462319500000376,4.523594599999342,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,CalendarRidge,weekly,kW/customer,OK,1.5100610999998023,0.0,1.5100610999998023,1.5644916999999623,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,XGBoost,yearly_365d,kW/customer,OK,4.741669799999727,0.0,4.741669799999727,4.795760699998937,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,CalendarRidge,monthly_30d,kW/customer,OK,1.4999548000000686,0.0,1.4999548000000686,1.5542018999999527,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,FourierOLS,weekly,kW/customer,OK,1.8073870999999144,0.0,1.8073870999999144,1.865861399999972,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,AutoTheta,weekly,kW/customer,OK,175.05751110000006,0.0008571999999276,175.05836829999998,177.72424469999987,,,,Recorded stage timings
+Cohort_Residential,AutoTheta,monthly_30d,kW/customer,OK,176.27539539999998,0.0009396000000378,176.27633500000002,179.12723530000017,,,,Recorded stage timings
+Cohort_Residential,FourierOLS,monthly_30d,kW/customer,OK,1.779275900000016,0.0,1.779275900000016,1.840929200000005,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,AutoTheta,daily,kW/customer,OK,172.84385499999962,0.0008176999999705,172.8446726999996,175.5998614,,,,Recorded stage timings
+Cohort_Residential,Prophet,daily_weekly_monthly,kW/customer,OK_WITH_WARNINGS,29.63542359999974,0.0,29.63542359999974,29.687526000000616,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,Prophet,daily,kW/customer,OK_WITH_WARNINGS,24.07086810000056,0.0,24.07086810000056,24.12447880000036,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,Prophet,weekly,kW/customer,OK_WITH_WARNINGS,17.93613120000009,0.0,17.93613120000009,17.98577690000002,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,Prophet,daily_weekly,kW/customer,OK_WITH_WARNINGS,25.5321586,0.0,25.5321586,25.581900599999244,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,Prophet,monthly_30d,kW/customer,OK_WITH_WARNINGS,15.069169000000327,0.0,15.069169000000327,15.118689099999756,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,SeasonalNaive,monthly_30d,kW/customer,OK,0.0,3.2400000009147334e-05,3.2400000009147334e-05,0.0535950999999386,,,,Recorded stage timings
+Cohort_Residential,AutoTBATS,daily_weekly,kW/customer,OK_WITH_WARNINGS,162.29453839999996,0.0332891000000472,162.3278275,165.76555959999996,,,,Recorded stage timings
+Cohort_Residential,AutoTBATS,daily,kW/customer,OK_WITH_WARNINGS,12.730003699999996,0.0234512000001814,12.75345490000018,15.52829900000006,,,,Recorded stage timings
+Cohort_Residential,AutoTBATS,daily_weekly_monthly,kW/customer,OK_WITH_WARNINGS,188.96976700000005,0.0321206000003257,189.0018876000004,191.79395360000035,,,,Recorded stage timings
+Cohort_Residential,SeasonalNaive,weekly,kW/customer,OK,0.0,3.340000000662258e-05,3.340000000662258e-05,0.0563697000000047,,,,Recorded stage timings
+Cohort_Residential,AutoTBATS,weekly,kW/customer,OK_WITH_WARNINGS,13.42113089999998,0.0231358999999429,13.444266799999925,16.33482529999992,,,,Recorded stage timings
+Cohort_Residential,XGBoost,daily_weekly_monthly,kW/customer,OK,12.983502700000829,0.0,12.983502700000829,13.110690699999395,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,MSTL,daily,kW/customer,OK,1.7570663999999852,0.0105269000000589,1.767593300000044,9.823503600000096,,,,Recorded stage timings
+Cohort_Residential,LightGBM,weekly,kW/customer,OK,4.951499499999045,0.0,4.951499499999045,5.010652400000254,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,LightGBM,daily_weekly_monthly,kW/customer,OK,7.283046900000045,0.0,7.283046900000045,7.338689000000159,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,XGBoost,daily_weekly,kW/customer,OK,8.269200599999749,0.0,8.269200599999749,8.347927400000117,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,AutoETS,weekly,kW/customer,OK,151.3786651999999,0.0010440000000926,151.37970919999998,154.2634164000001,,,,Recorded stage timings
+Cohort_Residential,LightGBM,daily_weekly,kW/customer,OK,6.443714899998668,0.0,6.443714899998668,6.512216099999932,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,XGBoost,weekly,kW/customer,OK,4.878897799999322,0.0,4.878897799999322,4.933402099999512,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,XGBoost,daily,kW/customer,OK,7.228760100000727,0.0,7.228760100000727,7.287163599999985,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,HoltWinters,weekly,kW/customer,OK,26.913169200000084,0.0002778000000489,26.913447000000133,29.67628790000004,,,,Recorded stage timings
+Cohort_Residential,MSTL,monthly_30d,kW/customer,OK,18.97956639999984,0.010713200000282,18.99027960000012,21.795461799999885,,,,Recorded stage timings
+Cohort_Residential,LightGBM,daily,kW/customer,OK,5.769248100001278,0.0,5.769248100001278,5.848349799998687,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,AutoARIMA,weekly,kW/customer,OK_WITH_WARNINGS,145.64580119999982,10.253100999999788,155.8989021999996,158.66483870000002,,,,Recorded stage timings
+Cohort_Residential,MSTL,weekly,kW/customer,OK,5.631439300000011,0.0108008999998219,5.642240199999833,8.599726400000009,,,,Recorded stage timings
+Cohort_Residential,SeasonalNaive,daily,kW/customer,OK,0.0,7.91999999592008e-05,7.91999999592008e-05,0.0568141999999625,,,,Recorded stage timings
+Cohort_Residential,XGBoost,monthly_30d,kW/customer,OK,3.462751499999285,0.0,3.462751499999285,3.516160999999556,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,AutoARIMA,daily,kW/customer,OK_WITH_WARNINGS,47.21847799999978,0.2525328000001536,47.47101079999993,50.1941154000001,,,,Recorded stage timings
+Cohort_Residential,LightGBM,monthly_30d,kW/customer,OK,2.7894193000011,0.0,2.7894193000011,2.8547889000001305,,,,"Fit field bundles tuning, fitting and prediction"
+Cohort_Residential,Naive,daily,kW/customer,OK,0.0,2.2599999965677853e-05,2.2599999965677853e-05,0.0534737000000404,,,,Recorded stage timings
+Cohort_Residential,MSTL,daily_weekly_monthly,kW/customer,OK,45.44784230000005,0.0109986000002209,45.45884090000027,48.16193969999995,,,,Recorded stage timings
+Cohort_Residential,MSTL,daily_weekly,kW/customer,OK,10.577837499999989,0.0106147999999848,10.588452299999972,13.435241600000154,,,,Recorded stage timings
+Cohort_Residential,AutoNBEATSx,daily_weekly_monthly_yearly,kW/customer,OK_WITH_WARNINGS,44.89120410000032,0.0,44.89120410000032,44.94740940000065,33.453,1.514,,Fit field bundles prediction; see neural stage times
+Cohort_Residential,AutoNHITS,daily_weekly_monthly_yearly,kW/customer,OK_WITH_WARNINGS,39.8032874999999,0.0,39.8032874999999,39.8757415,27.574,1.427,,Fit field bundles prediction; see neural stage times
+Cohort_Residential,AutoTBATS,daily_weekly_monthly_yearly,kW/customer,OK_WITH_WARNINGS,347.8474781,0.0439188999998805,347.89139699999987,350.6401928,,,,Recorded stage timings

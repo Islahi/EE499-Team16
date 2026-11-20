@@ -1,0 +1,130 @@
+{
+  "experiment": "C2 annual 9-model comparison",
+  "repo": "https://github.com/Islahi/EE499-Team16.git",
+  "source_package": "C2_Annual_Forecasting_and_Plotter_Updated(1).zip",
+  "source_clock": "NASA UTC; GoiEner timezone-naive clock unspecified",
+  "train_start": "2017-06-01 00:00:00",
+  "train_end": "2019-02-28 23:00:00",
+  "test_start": "2019-03-01 00:00:00",
+  "test_end": "2020-02-29 23:00:00",
+  "train_hours": 15312,
+  "test_hours": 8784,
+  "seasonality_periods_hours": {
+    "daily": [
+      24
+    ],
+    "weekly": [
+      168
+    ],
+    "monthly_30d": [
+      720
+    ],
+    "yearly_365d": [
+      8760
+    ],
+    "daily_weekly": [
+      24,
+      168
+    ],
+    "daily_weekly_monthly": [
+      24,
+      168,
+      720
+    ],
+    "daily_weekly_monthly_yearly": [
+      24,
+      168,
+      720,
+      8760
+    ]
+  },
+  "fixed_period_warning": "monthly=720h and yearly=8760h are approximations, not calendar months or leap years",
+  "forecast_mode": "single long-horizon forecast from training history, no daily refits or test-year feedback",
+  "pv_model": "project piecewise irradiance_to_power, GHI proxy, rated 490kW/site, no temperature/tilt/inverter losses",
+  "pv_night_correction": "Solar geometry night zero; site lat/lon from NASA source name; no actual future irradiance used",
+  "mase": "MAE divided by train-only one-week (168-hour) seasonal-naive MAE; fixed scaling across models",
+  "bias": "actual minus forecast: positive means model underforecast",
+  "model_timing": "measured model.fit and model.predict only, excluding data reading/postprocessing",
+  "python_version": "3.14.7",
+  "statsforecast_version": "2.1.1",
+  "generated_utc": "2026-11-15T18:04:05.172457+00:00",
+  "available_datasets": [
+    {
+      "dataset": "A_GoiEner_Total_Load",
+      "category": "load",
+      "source": "C2_annual_results\\prepared_inputs\\A_GoiEner_Total_Load\\load_profile.csv",
+      "train_mean_kw": 2234.3706773303293,
+      "test_mean_kw": 2891.2637743592436,
+      "train_min_kw": 607.004,
+      "train_max_kw": 5993.3393044,
+      "pv_site_lat": null,
+      "pv_site_lon": null
+    },
+    {
+      "dataset": "B_GoiEner_Distributed_15Bus",
+      "category": "load",
+      "source": "C2_annual_results\\prepared_inputs\\B_GoiEner_Distributed_15Bus\\load_profile.csv",
+      "train_mean_kw": 1226.3999999999983,
+      "test_mean_kw": 1324.3012364046915,
+      "train_min_kw": 338.1629160791,
+      "train_max_kw": 3416.6448453738,
+      "pv_site_lat": null,
+      "pv_site_lon": null
+    },
+    {
+      "dataset": "PV_040d42N_003d70W",
+      "category": "pv",
+      "source": "Data\\NASA_POWER\\POWER_Point_Hourly_20141101_20201129_040d42N_003d70W_UTC.csv",
+      "train_mean_kw": 93.46963262716214,
+      "test_mean_kw": 96.45775827336523,
+      "train_min_kw": 0.0,
+      "train_max_kw": 490.0,
+      "pv_site_lat": 40.42,
+      "pv_site_lon": -3.7
+    },
+    {
+      "dataset": "PV_042d81N_001d65W",
+      "category": "pv",
+      "source": "Data\\NASA_POWER\\POWER_Point_Hourly_20141101_20201129_042d81N_001d65W_UTC.csv",
+      "train_mean_kw": 82.60781211018111,
+      "test_mean_kw": 87.26401650037037,
+      "train_min_kw": 0.0,
+      "train_max_kw": 484.74719999999996,
+      "pv_site_lat": 42.81,
+      "pv_site_lon": -1.65
+    },
+    {
+      "dataset": "PV_042d85N_002d67W",
+      "category": "pv",
+      "source": "Data\\NASA_POWER\\POWER_Point_Hourly_20141101_20201129_042d85N_002d67W_UTC.csv",
+      "train_mean_kw": 78.41366548602795,
+      "test_mean_kw": 83.54909169851396,
+      "train_min_kw": 0.0,
+      "train_max_kw": 485.24699999999996,
+      "pv_site_lat": 42.85,
+      "pv_site_lon": -2.67
+    },
+    {
+      "dataset": "PV_043d26N_002d94W",
+      "category": "pv",
+      "source": "Data\\NASA_POWER\\POWER_Point_Hourly_20141101_20201129_043d26N_002d94W_UTC.csv",
+      "train_mean_kw": 69.85864305839951,
+      "test_mean_kw": 76.10706668688827,
+      "train_min_kw": 0.0,
+      "train_max_kw": 467.6315,
+      "pv_site_lat": 43.26,
+      "pv_site_lon": -2.94
+    },
+    {
+      "dataset": "PV_043d32N_001d98W",
+      "category": "pv",
+      "source": "Data\\NASA_POWER\\POWER_Point_Hourly_20141101_20201129_043d32N_001d98W_UTC.csv",
+      "train_mean_kw": 70.95071520436217,
+      "test_mean_kw": 76.62225881705753,
+      "train_min_kw": 0.0,
+      "train_max_kw": 480.69,
+      "pv_site_lat": 43.32,
+      "pv_site_lon": -1.98
+    }
+  ]
+}

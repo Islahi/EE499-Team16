@@ -1,0 +1,2 @@
+﻿network,solver,max_voltage_difference_pu,rms_voltage_difference_pu,max_angle_difference_deg,worst_bus_id,loss_p_difference_kw,loss_q_difference_kvar
+T04_15-Bus_System_1,scipy_nr,7.0005112817739246e-12,3.655513365820134e-12,3.2230218494078144e-11,13,-6.525944229451852e-09,-6.389967666109442e-09

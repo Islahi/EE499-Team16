@@ -1,0 +1,70 @@
+dataset,model,seasonality,unit,status,fit_seconds,forecast_seconds,model_seconds,wall_seconds,training_and_tuning_seconds,rollout_seconds,peak_memory_mb,timing_note
+Bus_06,LightGBM,daily_weekly_monthly_yearly,kW,OK,8.270210800001223,0.0,8.270210800001223,8.32423039999776,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,XGBoost,daily_weekly_monthly_yearly,kW,OK,10.542567899999996,0.0,10.542567899999996,10.604855500001577,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,AutoTBATS,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,962.5506683999992,0.0647164999973028,962.6153848999966,965.367758299999,,,,Recorded stage timings
+Bus_06,Prophet,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,58.65615519999847,0.0,58.65615519999847,58.71262109999952,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,MSTL,daily_weekly_monthly_yearly,kW,OK,454.7885466000007,0.0114591999990807,454.8000057999998,457.5649209000003,,,,Recorded stage timings
+Bus_06,FourierSARIMAX,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,80.71225910000067,0.0,80.71225910000067,80.7688335999992,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,Prophet,daily_weekly,kW,OK_WITH_WARNINGS,21.87022290000096,0.0,21.87022290000096,21.9303409000022,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,Prophet,daily_weekly_monthly,kW,OK_WITH_WARNINGS,27.55610800000068,0.0,27.55610800000068,27.61042489999818,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,FourierSARIMAX,daily_weekly,kW,OK_WITH_WARNINGS,18.305933599996933,0.0,18.305933599996933,18.36003379999965,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,FourierSARIMAX,daily_weekly_monthly,kW,OK_WITH_WARNINGS,21.27162970000063,0.0,21.27162970000063,21.32524060000287,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,CalendarRidge,daily_weekly,kW,OK,1.6356462000003376,0.0,1.6356462000003376,1.6918886000021305,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,CalendarRidge,daily_weekly_monthly,kW,OK,1.6475614000009955,0.0,1.6475614000009955,1.703955299999507,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,FourierSARIMAX,weekly,kW,OK_WITH_WARNINGS,16.356284600002255,0.0,16.356284600002255,16.412924599997496,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,CalendarRidge,daily_weekly_monthly_yearly,kW,OK,1.7307393999981286,0.0,1.7307393999981286,1.7854342999999062,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,Prophet,weekly,kW,OK_WITH_WARNINGS,16.90996880000239,0.0,16.90996880000239,16.971532900002785,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,FourierOLS,daily_weekly,kW,OK,1.5244146000004548,0.0,1.5244146000004548,1.5794177999996464,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,SeasonalNaive,yearly_365d,kW,OK,0.0,2.429999949526973e-05,2.429999949526973e-05,0.0490707999997539,,,,Recorded stage timings
+Bus_06,FourierOLS,daily_weekly_monthly_yearly,kW,OK,1.5884258000005502,0.0,1.5884258000005502,1.6408346999996866,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,FourierOLS,daily_weekly_monthly,kW,OK,1.5508980999984487,0.0,1.5508980999984487,1.6063106000001426,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,FourierSARIMAX,daily,kW,OK_WITH_WARNINGS,12.639094699999989,0.0,12.639094699999989,12.697563300000184,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,YearAgoCalendarNaive,yearly_365d,kW,OK,0.0,0.2505411000020103,0.2505411000020103,0.3036657000011473,,,,Recorded stage timings
+Bus_06,CalendarRidge,weekly,kW,OK,1.5639544000005117,0.0,1.5639544000005117,1.6208536000012828,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,Prophet,daily,kW,OK_WITH_WARNINGS,16.054972899997665,0.0,16.054972899997665,16.108822099999088,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,FourierOLS,weekly,kW,OK,1.501063100000465,0.0,1.501063100000465,1.555049999999028,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,FourierSARIMAX,yearly_365d,kW,OK_WITH_WARNINGS,25.15245689999938,0.0,25.15245689999938,25.20914080000148,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,MSTL,monthly_30d,kW,OK,18.530386300000828,0.011712700001226,18.54209900000205,21.293449699998742,,,,Recorded stage timings
+Bus_06,CalendarRidge,daily,kW,OK,1.563488399999187,0.0,1.563488399999187,1.6202827000015532,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,LightGBM,daily_weekly_monthly,kW,OK,5.244930299999396,0.0,5.244930299999396,5.302899599999364,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,XGBoost,daily_weekly_monthly,kW,OK,8.113446899998962,0.0,8.113446899998962,8.169632500001171,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,LightGBM,yearly_365d,kW,OK,4.462084599999798,0.0,4.462084599999798,4.520589899999322,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,FourierOLS,daily,kW,OK,1.540419799999654,0.0,1.540419799999654,1.5957114000011643,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,FourierSARIMAX,monthly_30d,kW,OK_WITH_WARNINGS,10.239990599999146,0.0,10.239990599999146,10.295032000001813,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,Prophet,monthly_30d,kW,OK_WITH_WARNINGS,14.09540940000079,0.0,14.09540940000079,14.14818860000014,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,Prophet,yearly_365d,kW,OK_WITH_WARNINGS,19.02922650000255,0.0,19.02922650000255,19.08095669999966,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,AutoTBATS,daily,kW,OK_WITH_WARNINGS,9.481073200000536,0.0216476000023249,9.502720800002862,12.348407399997086,,,,Recorded stage timings
+Bus_06,XGBoost,yearly_365d,kW,OK,5.582917300002009,0.0,5.582917300002009,5.639216700001271,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,AutoNHITS,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,53.683872800000245,0.0,53.683872800000245,53.76141429999916,40.951,1.81,,Fit field bundles prediction; see neural stage times
+Bus_06,MSTL,weekly,kW,OK,4.840726700000232,0.011537499998667,4.852264199998899,7.506094700001995,,,,Recorded stage timings
+Bus_06,FourierOLS,yearly_365d,kW,OK,1.5526209000017843,0.0,1.5526209000017843,1.6093000000000757,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,LightGBM,monthly_30d,kW,OK,2.806295400001545,0.0,2.806295400001545,2.864835000000312,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,XGBoost,monthly_30d,kW,OK,3.698275399998238,0.0,3.698275399998238,3.75496639999983,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,CalendarRidge,yearly_365d,kW,OK,1.5744123000004038,0.0,1.5744123000004038,1.6287773000003654,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,AutoARIMA,daily,kW,OK_WITH_WARNINGS,56.39204099999915,0.2309459999996761,56.62298699999883,59.31404500000281,,,,Recorded stage timings
+Bus_06,AutoARIMA,weekly,kW,OK_WITH_WARNINGS,769.640278400002,3.2876397,772.927918100002,775.5829475999999,,,,Recorded stage timings
+Bus_06,CalendarRidge,monthly_30d,kW,OK,1.5040031999997154,0.0,1.5040031999997154,1.5578098000005411,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,SeasonalNaive,monthly_30d,kW,OK,0.0,2.930000118794851e-05,2.930000118794851e-05,0.0482496000004175,,,,Recorded stage timings
+Bus_06,FourierOLS,monthly_30d,kW,OK,1.4935617999981332,0.0,1.4935617999981332,1.5469687000004342,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,XGBoost,daily_weekly,kW,OK,8.193766000000323,0.0,8.193766000000323,8.256767999999283,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,XGBoost,weekly,kW,OK,4.838778899997124,0.0,4.838778899997124,4.897202799998922,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,MSTL,daily,kW,OK,1.3535278999988805,0.0105265999991388,1.3640544999980193,4.055874300000141,,,,Recorded stage timings
+Bus_06,SeasonalNaive,weekly,kW,OK,0.0,3.279999873484485e-05,3.279999873484485e-05,0.050194300001749,,,,Recorded stage timings
+Bus_06,XGBoost,daily,kW,OK,5.63620119999905,0.0,5.63620119999905,5.692067699998006,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,LightGBM,weekly,kW,OK,4.6602834000004805,0.0,4.6602834000004805,4.717587500002992,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,AutoTBATS,daily_weekly,kW,OK_WITH_WARNINGS,19.98212800000329,0.0222310999997716,20.004359100003057,22.739452300000263,,,,Recorded stage timings
+Bus_06,LightGBM,daily_weekly,kW,OK,5.989315300001181,0.0,5.989315300001181,6.046796099999483,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,LightGBM,daily,kW,OK,4.543911699998716,0.0,4.543911699998716,4.599676999998337,,,,"Fit field bundles tuning, fitting and prediction"
+Bus_06,AutoTBATS,weekly,kW,OK_WITH_WARNINGS,5.807518999998138,0.0215162999993481,5.829035299997486,8.5062625999999,,,,Recorded stage timings
+Bus_06,AutoTheta,monthly_30d,kW,OK,167.11313289999816,0.000625000000582,167.11375789999877,169.8060852000017,,,,Recorded stage timings
+Bus_06,HoltWinters,weekly,kW,OK,26.2633158000026,0.0003868999992846,26.26370270000189,29.03304859999844,,,,Recorded stage timings
+Bus_06,AutoTheta,daily,kW,OK,166.0756438999997,0.0007421999980579,166.07638609999776,168.7868223000005,,,,Recorded stage timings
+Bus_06,AutoTheta,weekly,kW,OK,168.75787739999942,0.0006652999982179,168.75854269999763,171.44502809999904,,,,Recorded stage timings
+Bus_06,SeasonalNaive,daily,kW,OK,0.0,5.370000144466758e-05,5.370000144466758e-05,0.0511583999978029,,,,Recorded stage timings
+Bus_06,AutoTBATS,daily_weekly_monthly,kW,OK_WITH_WARNINGS,34.37554380000074,0.0243564999982481,34.39990029999899,37.0648970000002,,,,Recorded stage timings
+Bus_06,MSTL,daily_weekly,kW,OK,9.91000189999977,0.0119508999996469,9.921952799999415,12.596078700000362,,,,Recorded stage timings
+Bus_06,MSTL,daily_weekly_monthly,kW,OK,44.401544000000285,0.0107844000012846,44.41232840000157,47.101593300001696,,,,Recorded stage timings
+Bus_06,Naive,daily,kW,OK,0.0,1.679999695625156e-05,1.679999695625156e-05,0.0482198999998217,,,,Recorded stage timings
+Bus_06,AutoCES,weekly,kW,OK,1.9540252000006149,0.0002997999981744,1.9543249999987893,4.692834699999366,,,,Recorded stage timings
+Bus_06,AutoETS,weekly,kW,OK,543.4327821000006,0.0097940999985439,543.4425761999992,546.1345465999984,,,,Recorded stage timings
+Bus_06,AutoNBEATSx,daily_weekly_monthly_yearly,kW,OK_WITH_WARNINGS,57.08235160000004,0.0,57.08235160000004,57.1401592000002,44.184,1.904,,Fit field bundles prediction; see neural stage times

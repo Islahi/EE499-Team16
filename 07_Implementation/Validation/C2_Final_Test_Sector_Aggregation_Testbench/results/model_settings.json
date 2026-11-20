@@ -1,0 +1,161 @@
+{
+  "residential": {
+    "configuration": "CalendarRidge__daily_weekly_monthly_yearly",
+    "selected_setting": {
+      "fourier_richness": 0.5,
+      "alpha": 0.1,
+      "validation_mae_scaled": 0.11193982306703829,
+      "validation_days": 120,
+      "selection_target": "representative_bus_training_only"
+    },
+    "training_only_tuning_seconds": 6.347196599999734,
+    "candidate_grid_results": [
+      {
+        "fourier_richness": 0.5,
+        "alpha": 0.1,
+        "validation_mae_scaled": 0.11193982306703829,
+        "candidate_seconds": 0.32125039999937144
+      },
+      {
+        "fourier_richness": 0.5,
+        "alpha": 10.0,
+        "validation_mae_scaled": 0.11205960889793218,
+        "candidate_seconds": 0.010688600000321458
+      },
+      {
+        "fourier_richness": 0.5,
+        "alpha": 1000.0,
+        "validation_mae_scaled": 0.12527576472000604,
+        "candidate_seconds": 0.01147820000005595
+      },
+      {
+        "fourier_richness": 1.0,
+        "alpha": 0.1,
+        "validation_mae_scaled": 0.11234923754540446,
+        "candidate_seconds": 0.011634200000116834
+      },
+      {
+        "fourier_richness": 1.0,
+        "alpha": 10.0,
+        "validation_mae_scaled": 0.11261000418501893,
+        "candidate_seconds": 0.011324000000058732
+      },
+      {
+        "fourier_richness": 1.0,
+        "alpha": 1000.0,
+        "validation_mae_scaled": 0.12547747848428764,
+        "candidate_seconds": 0.011120300000584393
+      },
+      {
+        "fourier_richness": 1.5,
+        "alpha": 0.1,
+        "validation_mae_scaled": 0.11281633292701901,
+        "candidate_seconds": 0.014032499999302672
+      },
+      {
+        "fourier_richness": 1.5,
+        "alpha": 10.0,
+        "validation_mae_scaled": 0.11294343139764962,
+        "candidate_seconds": 0.013340299999981653
+      },
+      {
+        "fourier_richness": 1.5,
+        "alpha": 1000.0,
+        "validation_mae_scaled": 0.12266154654408788,
+        "candidate_seconds": 0.013627899999846704
+      }
+    ],
+    "candidate_source": "supplied extra_models.py",
+    "frozen_for_all_targets": true
+  },
+  "commercial": {
+    "configuration": "XGBoost__daily_weekly_monthly_yearly",
+    "selected_setting": {
+      "selected_hyperparameters": {
+        "n_estimators": 300,
+        "learning_rate": 0.05,
+        "max_depth": 3
+      },
+      "validation_mae_scaled": 0.13052320387460034,
+      "validation_days": 120,
+      "selection_target": "representative_bus_training_only"
+    },
+    "training_only_tuning_seconds": 7.926905000000261,
+    "candidate_grid_results": [
+      {
+        "selected_hyperparameters": {
+          "n_estimators": 300,
+          "learning_rate": 0.05,
+          "max_depth": 3
+        },
+        "validation_mae_scaled": 0.13052320387460034,
+        "candidate_seconds": 2.1309508000003916
+      },
+      {
+        "selected_hyperparameters": {
+          "n_estimators": 500,
+          "learning_rate": 0.03,
+          "max_depth": 5
+        },
+        "validation_mae_scaled": 0.14532490281773158,
+        "candidate_seconds": 1.9272166999999172
+      },
+      {
+        "selected_hyperparameters": {
+          "n_estimators": 700,
+          "learning_rate": 0.03,
+          "max_depth": 6
+        },
+        "validation_mae_scaled": 0.14855287888204963,
+        "candidate_seconds": 3.4799339999999575
+      }
+    ],
+    "candidate_source": "supplied extra_models.py",
+    "frozen_for_all_targets": true
+  },
+  "manufacturing": {
+    "configuration": "LightGBM__daily_weekly_monthly_yearly",
+    "selected_setting": {
+      "selected_hyperparameters": {
+        "n_estimators": 500,
+        "learning_rate": 0.03,
+        "num_leaves": 31
+      },
+      "validation_mae_scaled": 0.1773585412965824,
+      "validation_days": 120,
+      "selection_target": "representative_bus_training_only"
+    },
+    "training_only_tuning_seconds": 4.6542489000003116,
+    "candidate_grid_results": [
+      {
+        "selected_hyperparameters": {
+          "n_estimators": 300,
+          "learning_rate": 0.05,
+          "num_leaves": 15
+        },
+        "validation_mae_scaled": 0.18259205495190897,
+        "candidate_seconds": 0.5305572000006578
+      },
+      {
+        "selected_hyperparameters": {
+          "n_estimators": 500,
+          "learning_rate": 0.03,
+          "num_leaves": 31
+        },
+        "validation_mae_scaled": 0.1773585412965824,
+        "candidate_seconds": 1.2656637999998566
+      },
+      {
+        "selected_hyperparameters": {
+          "n_estimators": 700,
+          "learning_rate": 0.03,
+          "num_leaves": 63
+        },
+        "validation_mae_scaled": 0.1792819907106445,
+        "candidate_seconds": 2.7530852999998388
+      }
+    ],
+    "candidate_source": "supplied extra_models.py",
+    "frozen_for_all_targets": true
+  }
+}

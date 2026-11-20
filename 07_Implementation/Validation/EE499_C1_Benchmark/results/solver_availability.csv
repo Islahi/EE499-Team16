@@ -1,0 +1,9 @@
+﻿solver,status,detail
+fbs_python,available,bundled C1 solver
+fbs_numpy,available,bundled C1 solver
+fbs_numba,available,dependency found
+scipy_nr,available,dependency found
+pandapower_bfsw,available,dependency found
+pandapower_nr,available,dependency found
+opendss,available,dependency found
+matpower_matlab,available,MATLAB engine import available; MATPOWER path still required

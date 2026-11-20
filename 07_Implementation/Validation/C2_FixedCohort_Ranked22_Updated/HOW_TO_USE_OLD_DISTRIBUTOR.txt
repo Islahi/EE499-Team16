@@ -1,0 +1,57 @@
+C2 FIXED-COHORT -> ORIGINAL GOIENER LOAD DISTRIBUTOR
+===================================================
+
+Purpose
+-------
+Produces the EXACT original six-column GoiEner Cleaner category-file layout
+for your existing GoiEner_Load_Distributor_Simple GUI, without changing the
+fixed-cohort data or any forecasting model configuration.
+
+Choose ONE method:
+
+A) Fixed-cohort processing has NOT finished:
+   Run 02_BUILD_FIXED_COHORT_WINDOWS.bat.
+   This processes the three original .tzst archives and then exports the
+   distributor-compatible files automatically.
+
+B) Fixed-cohort processing has ALREADY finished:
+   Run 02B_EXPORT_ONLY_FOR_DISTRIBUTOR_WINDOWS.bat.
+   This converts your existing small cohort_output CSVs; there is NO reason
+   to process the multi-gigabyte archives again.
+
+Compatible output folder
+------------------------
+cohort_output\Distributor_Compatible\
+
+The folder contains:
+  residential.csv
+  commercial.csv
+  manufacturing.csv
+  goiener_three_profiles.csv
+  goiener_distributor_ready.csv
+  quality_report.json
+  README_DISTRIBUTOR.txt
+
+How to use your old distributor
+-------------------------------
+1. Open GoiEner_Load_Distributor_Simple/goiener_distribution_gui.py.
+2. In the Profiles tab, select the Distributor_Compatible FOLDER above.
+3. Select Average (recommended: same setting as your old process), then
+   load/validate the profiles.
+4. Choose your 15-bus network and KEEP your prior category mapping and
+   normalization settings.
+5. Export the new distributed load CSV. Use this new result in the 06
+   preparation step of the C2 model benchmark.
+
+The CSV header exactly follows the old cleaner:
+  timestamp,load_kwh,load_kw,average_customer_kw,active_customers,no_customer_data_hour
+
+If you select goiener_distributor_ready.csv directly, its values are
+AVERAGE by default. The folder selection also permits Sum.
+
+Only a contiguous interval with valid data from all three categories goes
+into goiener_distributor_ready.csv. The report documents omitted hours.
+No new interpolation, extrapolation, or smoothing occurs in this converter.
+The original fixed-cohort CSVs stay in cohort_output and are not overwritten.
+
+Repository: https://github.com/Islahi/EE499-Team16.git

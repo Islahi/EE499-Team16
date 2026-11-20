@@ -1,0 +1,23 @@
+C2 ANNUAL FORECAST BENCHMARK — START HERE
+Project: https://github.com/Islahi/EE499-Team16.git
+
+1. Extract the ZIP completely (do not launch from inside ZIP).
+2. Open the C2_Annual_Test folder.
+3. Double-click 01_INSTALL_AND_CHECK_WINDOWS.bat.
+4. Double-click 02_SMOKE_TEST_WINDOWS.bat (tests all nine model APIs, then a complete 8,784-hour naive forecast).
+5. Double-click 03_RUN_ALL_WINDOWS.bat (all nine models and seasonalities across all seven datasets).
+6. Inspect C2_model_benchmark_results/load_model_scores.csv and pv_model_scores.csv.
+7. Use 04_REBUILD_REPORTS_WINDOWS.bat to regenerate rankings/graphs after a partial run.
+
+COMMAND LINE EXAMPLES (Windows PowerShell, in this directory):
+python run_c2_model_benchmark.py --prepare-only
+python run_c2_model_benchmark.py --list-jobs
+python run_c2_model_benchmark.py --models AutoARIMA MSTL AutoMFLES --seasonalities daily weekly daily_weekly
+python run_c2_model_benchmark.py --categories pv --models AutoTBATS --seasonalities daily weekly
+python run_c2_model_benchmark.py --baseline-only
+python run_c2_model_benchmark.py
+
+NOTE: Training: 2017-06-01 to 2019-02-28; forecast: 2019-03-01 to 2020-02-29 (8784 hours).
+Monthly=720h and yearly=8760h are approximate cycles; some yearly model variants are skipped because training includes fewer than two full years.
+PV power = modelled electrical output converted from NASA POWER irradiance, not measured PV power.
+The main EE499 Team 16 GitHub repo is not changed by running these scripts.

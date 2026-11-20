@@ -1,0 +1,4 @@
+-r requirements_base.txt
+lightgbm>=4.0
+xgboost>=2.0
+prophet>=1.1

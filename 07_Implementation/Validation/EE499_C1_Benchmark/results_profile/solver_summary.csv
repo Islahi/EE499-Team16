@@ -1,0 +1,3 @@
+﻿network,solver,bus_count,converged,iterations,loss_p_kw,loss_q_kvar,slack_p_kw,slack_q_kvar,min_voltage_pu,weakest_bus,max_nodal_mismatch_kw_kvar,feeder_balance_p_kw,feeder_balance_q_kvar,historical_c1_loss_p_kw,historical_c1_converged,historical_review_flag,status
+T04_15-Bus_System_1,fbs_python,15,True,7,61.78540860771167,57.288945271045144,1288.1854077897003,1308.2889445104367,0.9445202227359675,13,1.0799644201142655e-07,8.180113582056947e-07,7.606083727296209e-07,61.78540860771167,True,PASS,success
+T04_15-Bus_System_1,scipy_nr,15,True,3,61.78540860118573,57.288945264655176,1288.1854077514743,1308.2889444734292,0.944520222742968,13,1.3247242236502643e-07,8.497115686623147e-07,7.912260571174556e-07,61.78540860771167,True,PASS,success

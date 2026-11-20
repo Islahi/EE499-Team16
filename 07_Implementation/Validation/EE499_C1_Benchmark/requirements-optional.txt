@@ -1,0 +1,6 @@
+numba>=0.60
+pandapower>=2.14
+OpenDSSDirect.py>=0.9
+# MATLAB Engine must match local MATLAB installation and Python interpreter.
+# Install via the official MathWorks package instructions after MATLAB is configured.
+# artifact_tool optional; CSVs and dashboard/PDF work without it.

@@ -1,0 +1,3 @@
+Customer-sector assignments are selected study assumptions and are not inferred from static feeder topology.
+Assignment rule: saved.
+No PV generation data is included; any exported pv_profile.csv is a ZERO placeholder.

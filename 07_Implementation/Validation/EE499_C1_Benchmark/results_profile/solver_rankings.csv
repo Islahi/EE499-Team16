@@ -1,0 +1,3 @@
+﻿network,solver,accuracy_qualified,nodal_mismatch_kw_kvar,max_vdiff_pu,median_warm_s,p95_warm_s,throughput_solves_per_s,loss_p_kw,coverage,speedup_vs_original,speed_rank
+T04_15-Bus_System_1,fbs_python,True,1.0799644201142655e-07,,0.0007587500003864989,0.0008738749997064587,933.3146670378233,61.78540860771167,nominal only qualified,1.0,1
+T04_15-Bus_System_1,scipy_nr,True,1.3247242236502643e-07,7.0005112817739246e-12,0.0011691500003507826,0.0014459199993325455,649.6125331806993,61.78540860118573,nominal only qualified,0.6489757517502882,2

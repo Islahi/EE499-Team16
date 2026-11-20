@@ -1,0 +1,3 @@
+﻿solver,status,detail
+fbs_python,available,bundled C1 solver
+scipy_nr,available,dependency found

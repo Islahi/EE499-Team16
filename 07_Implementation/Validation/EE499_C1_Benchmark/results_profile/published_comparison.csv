@@ -1,0 +1,2 @@
+﻿network,reference_table,published_p_loss_kw,computed_p_loss_kw,published_vmin_pu,computed_vmin_pu,max_paper_voltage_error_pu,impedance_mismatch_count,published_pages,published_data_warning
+T04_15-Bus_System_1,4,61.496,61.78540860771167,0.945,0.9445202227359675,4.4800951339407646e-05,0,11,
