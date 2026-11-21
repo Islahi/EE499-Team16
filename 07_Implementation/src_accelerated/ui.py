@@ -191,6 +191,8 @@ class JobRunner(QObject):
 
 
 class LoadDataDialog(QDialog):
+    solar_csv_modes = ("nasa_power", "open_meteo", "prepared", "power")
+
     def __init__(self, parent=None):
         super().__init__(parent)
         load_form(self, "load_data_dialog.ui")
@@ -233,6 +235,8 @@ class LoadDataDialog(QDialog):
         widget(self, "btn_load_network").clicked.connect(self.load_network_preview)
         widget(self, "edit_network_path").textChanged.connect(self.update_network_button)
         widget(self, "combo_pv_source").currentIndexChanged.connect(self.update_modes)
+        widget(self, "chk_no_pv").toggled.connect(self.update_modes)
+        widget(self, "chk_pv_fallback").toggled.connect(self.update_modes)
         widget(self, "combo_load_source").currentIndexChanged.connect(self.update_modes)
         widget(self, "btn_add_pv_row").clicked.connect(self.add_pv_row)
         widget(self, "btn_remove_pv_row").clicked.connect(self.remove_pv_row)
@@ -331,7 +335,7 @@ class LoadDataDialog(QDialog):
         coverage = f"{int(hours):,} hourly observations" if isinstance(hours,(int,float)) else "Hourly dataset found"
         widget(self,"lbl_load_status").setText(f"{folder.name} · {coverage}")
         placeholder = "placeholder" in str(meta.get("pv_status","")).lower()
-        pv_text = ("The dataset contains a zero-PV placeholder. Add a historical solar source if PV is installed."
+        pv_text = ("The dataset contains a zero-PV placeholder. Enable Use fallback solar source if PV is installed."
                    if placeholder else "Dataset PV history will be checked during preparation.")
         widget(self,"lbl_pv_status").setText(pv_text+conflicts)
         widget(self,"lbl_pv_status").setToolTip(str(meta.get("pv_status",""))+conflicts)
@@ -341,10 +345,23 @@ class LoadDataDialog(QDialog):
     def update_network_button(self):
         widget(self, "btn_load_network").setEnabled(bool(widget(self, "edit_network_path").text()) and not self.runner.busy)
 
+    def solar_source_mode(self):
+        if widget(self, "chk_no_pv").isChecked():
+            return "none"
+        if widget(self, "chk_pv_fallback").isChecked():
+            return widget(self, "combo_pv_source").currentData()
+        return "dataset"
+
     def update_modes(self):
-        mode = widget(self,"combo_pv_source").currentData()
-        manual = mode in ("nasa_power", "open_meteo", "prepared", "power")
+        mode = self.solar_source_mode()
+        manual = mode in self.solar_csv_modes
         installed = mode != "none"
+        fallback = installed and mode != "dataset"
+        widget(self, "chk_pv_fallback").setVisible(installed)
+        widget(self, "panel_pv_source_fields").setVisible(fallback)
+        widget(self, "panel_pv_source_fields").setEnabled(fallback)
+        for name in ("edit_reference_capacity", "lbl_edit_reference_capacity"):
+            widget(self, name).setVisible(fallback)
         for name in ("panel_pv_source_file","label_5","edit_solar_clock","lbl_edit_solar_clock"):
             widget(self,name).setVisible(manual)
         for name in ("edit_site_latitude","edit_site_longitude","lbl_edit_site_latitude","lbl_edit_site_longitude"):
@@ -353,12 +370,14 @@ class LoadDataDialog(QDialog):
             widget(self,name).setVisible(installed)
             widget(self,name).setEnabled(installed)
         widget(self,"edit_solar_clock").setEnabled(manual)
-        widget(self,"panel_irradiance_fields").setVisible(installed and mode != "power")
+        widget(self,"panel_irradiance_fields").setVisible(fallback and mode != "power")
         widget(self,"edit_reference_capacity").setPlaceholderText(
             "Enter the modeled profile nameplate" if mode == "power" else "Defaults to total installed PV kW")
         widget(self,"panel_load_import").setEnabled(True)
         if not installed:
             message = "No PV study: no solar source or site metadata is required."
+        elif not fallback:
+            message = "Using PV history from the study folder. Enable Use fallback solar source if you need a CSV or provider."
         elif manual:
             message = ("If the dataset has no valid PV history, supply historical modeled electrical kW, reference kW, site and file clock."
                        if mode == "power" else "If the dataset has no valid PV history, supply a historical irradiance CSV and its source clock. Review the site coordinates.")
@@ -399,7 +418,7 @@ class LoadDataDialog(QDialog):
     def read_request(self):
         path, frequency, format_name = self.network_arguments()
         ratings = {}
-        mode = widget(self, "combo_pv_source").currentData()
+        mode = self.solar_source_mode()
         for row, cells in enumerate(self.pv_rows() if mode != "none" else ()):
             try:
                 bus, rating = int(cells[0]), float(cells[1])
@@ -412,7 +431,8 @@ class LoadDataDialog(QDialog):
             ratings[bus] = rating
 
         pv_path = widget(self, "edit_pv_source_path").text().strip()
-        manual = mode in ("nasa_power", "open_meteo", "prepared", "power")
+        manual = mode in self.solar_csv_modes
+        reference_capacity = widget(self, "edit_reference_capacity").text().strip() if mode not in ("none", "dataset") else ""
         load_path = widget(self, "edit_load_path").text().strip()
         if not load_path:
             raise ValueError("Choose a GoiEner case or multi-case output folder")
@@ -427,8 +447,8 @@ class LoadDataDialog(QDialog):
             latitude=float(widget(self,"edit_site_latitude").text()) if mode != "none" and widget(self,"edit_site_latitude").text().strip() else None,
             longitude=float(widget(self,"edit_site_longitude").text()) if mode != "none" and widget(self,"edit_site_longitude").text().strip() else None,
             clock=widget(self,"edit_source_clock").text().strip() or None,
-            solar_source_clock=widget(self,"edit_solar_clock").text().strip() or None,
-            reference_capacity_kw=float(widget(self,"edit_reference_capacity").text()) if widget(self,"edit_reference_capacity").text().strip() else None,
+            solar_source_clock=(widget(self,"edit_solar_clock").text().strip() or None) if manual else None,
+            reference_capacity_kw=float(reference_capacity) if reference_capacity else None,
             load_path=Path(load_path) if load_path else None, load_seed=widget(self, "spin_load_seed").value())
 
     def prepare_data(self):

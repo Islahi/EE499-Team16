@@ -169,11 +169,17 @@ def test_qt_solar_modes_and_case_ratings(tmp_path, monkeypatch):
     app = QApplication.instance() or QApplication([])
     dialog = LoadDataDialog()
     combo = widget(dialog, "combo_pv_source")
-    modes = ("auto_nasa_power", "auto_open_meteo", "nasa_power", "open_meteo", "prepared", "power", "none")
+    fallback = widget(dialog, "chk_pv_fallback")
+    assert not fallback.isChecked()
+    assert widget(dialog, "panel_pv_source_fields").isHidden()
+    assert widget(dialog, "panel_irradiance_fields").isHidden()
+    fallback.setChecked(True)
+    assert not widget(dialog, "panel_pv_source_fields").isHidden()
+    modes = ("auto_nasa_power", "auto_open_meteo", "nasa_power", "open_meteo", "prepared", "power")
     assert tuple(combo.itemData(i) for i in range(combo.count())) == modes
     for mode in modes:
         combo.setCurrentIndex(combo.findData(mode))
-        assert widget(dialog, "panel_pv_source_file").isHidden() == (mode.startswith("auto") or mode == "none")
+        assert widget(dialog, "panel_pv_source_file").isHidden() == mode.startswith("auto")
     combo.setCurrentIndex(combo.findData("power"))
     assert widget(dialog, "panel_irradiance_fields").isHidden()
     for name, rating in (("a-zero", 0), ("b-positive", 50)):
@@ -199,6 +205,23 @@ def test_qt_solar_modes_and_case_ratings(tmp_path, monkeypatch):
     assert "differ" in widget(dialog, "lbl_pv_status").text()
     dialog.populate_folder_metadata()
     assert dialog.pv_rows() == (("2", "32"),)
+
+    widget(dialog, "edit_network_path").setText(str(tmp_path / "network.xlsx"))
+    combo.setCurrentIndex(combo.findData("prepared"))
+    csv = tmp_path / "solar.csv"
+    widget(dialog, "edit_pv_source_path").setText(str(csv))
+    assert dialog.read_request().pv_path == csv
+    fallback.setChecked(False)
+    request = dialog.read_request()
+    assert request.pv_source == "dataset" and request.pv_path is None
+    assert request.solar_source_clock is None and request.reference_capacity_kw is None
+    assert widget(dialog, "panel_pv_source_fields").isHidden()
+    fallback.setChecked(True)
+    assert dialog.read_request().pv_path == csv
+    widget(dialog, "chk_no_pv").setChecked(True)
+    request = dialog.read_request()
+    assert request.pv_source == "none" and request.pv_path is None
+    assert widget(dialog, "panel_pv_source_fields").isHidden()
     assert app is not None
 
 
@@ -234,6 +257,9 @@ def test_manual_solar_inputs_and_dataset_precedence(tmp_path, monkeypatch):
         study = prepare_study(replace(request, pv_source=mode, pv_path=file))
         assert study.context["PV source"] == mode
         assert max(study.profiles.pv_p_kw[2]) == pytest.approx(10.)
+    dataset_only = replace(request, pv_source="dataset", pv_path=tmp_path / "prepared.csv")
+    with pytest.raises(ValueError, match="Enable Use fallback solar source"):
+        prepare_study(dataset_only)
     calls = []
 
     def fetch(provider, timestamps, site, cache):
@@ -254,6 +280,7 @@ def test_manual_solar_inputs_and_dataset_precedence(tmp_path, monkeypatch):
     preferred = prepare_study(replace(request, pv_source="nasa_power", pv_path=tmp_path / "missing.csv"))
     assert preferred.context["PV source"] == "Validated dataset history"
     assert max(preferred.profiles.pv_p_kw[2]) == pytest.approx(10.)
+    assert prepare_study(dataset_only).context["PV source"] == "Validated dataset history"
 
 
 @pytest.mark.parametrize("ids,ratings", [([2,2],[1,2]), ([2.5],[1]), ([9],[1]), ([2],[-1]), ([2],[np.nan])])

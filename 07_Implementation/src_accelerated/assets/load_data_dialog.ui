@@ -311,11 +311,22 @@
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_5">
            <item>
+            <widget class="QCheckBox" name="chk_no_pv">
+             <property name="text"><string>No PV study</string></property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="chk_pv_fallback">
+             <property name="text"><string>Use fallback solar source</string></property>
+             <property name="toolTip"><string>Use a CSV or provider only if the study folder has no usable PV history.</string></property>
+            </widget>
+           </item>
+           <item>
             <widget class="QWidget" name="panel_pv_source_fields" native="true">
              <layout class="QFormLayout" name="formLayout_2">
               <item row="0" column="0">
                <widget class="QLabel" name="label_4">
-                <property name="text"><string>Historical solar source</string></property></widget>
+                <property name="text"><string>Fallback source</string></property></widget>
               </item>
               <item row="0" column="1">
                <widget class="QComboBox" name="combo_pv_source">
@@ -325,7 +336,7 @@
                  <item><property name="text"><string>Open-Meteo - irradiance CSV</string></property><property name="userData"><string>open_meteo</string></property></item>
                  <item><property name="text"><string>Prepared irradiance CSV</string></property><property name="userData"><string>prepared</string></property></item>
                  <item><property name="text"><string>Historical modeled PV power CSV</string></property><property name="userData"><string>power</string></property></item>
-                 <item><property name="text"><string>No PV study</string></property><property name="userData"><string>none</string></property></item></widget>
+               </widget>
               </item>
               <item row="1" column="0">
                <widget class="QLabel" name="label_5">

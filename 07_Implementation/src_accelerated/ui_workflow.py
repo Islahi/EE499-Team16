@@ -338,6 +338,8 @@ def _prepare_distributed(request, network, stage):
     times = pd.DatetimeIndex(raw.timestamps)
     pvref = None
     if sum(ratings.values()) > 0:
+        if request.pv_source == "dataset" and not dataset.pv_valid:
+            raise ValueError("The study folder has no usable PV history. Enable Use fallback solar source or choose No PV study.")
         site_meta = meta.get("site") or (meta.get("pv_reference") or {}).get("site") or {}
         source_meta = {}
         if not dataset.pv_valid and request.pv_path is not None and request.pv_source == "nasa_power":

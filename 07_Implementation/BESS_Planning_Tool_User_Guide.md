@@ -19,14 +19,14 @@ Once the dependencies are installed, double-click `src_accelerated/app.pyw` or r
 1. Open **Load data**. Select the radial network `.xlsx` workbook and click **Load network** to inspect the buses and the workbook PV ratings. Verify the network format and frequency.
 2. In the load tab, browse for the **GoiEner case folder**. It contains `load_profile.csv`, `bus_assignments_used.csv`, and `manifest.json`. You can also choose their parent folder and pick a case from the list. Extract a ZIP to a folder first. Use the workbook used by the distributor, since the app checks the bus IDs and any workbook hash in the manifest.
 3. Enter the actual timestamp clock if the folder does not declare it. Use `UTC` or the actual IANA zone, such as `Asia/Riyadh`. The histories must contain continuous hourly timestamps. Prepare a continuous UTC timeline before importing data with repeated or missing daylight saving hours.
-4. In **Solar / PV**, choose **No PV study** for a load-only trial. For a PV study, verify the table of installed bus ratings in kW and select a fallback solar source if needed.
+4. In **Solar / PV**, check **No PV study** for a load-only trial. For a PV study, verify the installed bus ratings in kW. Check **Use fallback solar source** if the study folder lacks usable PV history and you want to supply a CSV or provider.
 5. Click **Prepare study**. The diagram opens with the first 24 hours of available history selected. Use **Base-case FBS** for one static workbook snapshot, or **Run simulation** for the selected hourly profiles.
 
 A ready load example is `Validation/C2_Final_Test_Sector_Aggregation_Testbench/input` with `Validation/C2_Annual_Test/T04_15-Bus_System_1.xlsx`. The example has a zero-PV placeholder. Use the clock documented for your copy of the demand data.
 
 ## Choose a solar source
 
-The app uses verified modeled PV history in the selected case when it is available. A solar file or provider is needed only when PV is installed and the folder lacks usable history.
+The app uses verified modeled PV history in the selected case when it is available. **Use fallback solar source** starts unchecked, with its source and file controls hidden. Check it to choose a CSV or provider. The selected fallback is used only if PV is installed and the folder lacks usable history.
 
 | Source | What to enter |
 | --- | --- |
