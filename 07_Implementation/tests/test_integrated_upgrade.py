@@ -86,9 +86,13 @@ def test_importer_uses_full_source_timestamps(tmp_path):
 
 def test_ampacity_enforced_when_network_has_rating():
     network, profile = simple_network(ampacity=.01), source_data(hours=2)
-    result = simulate_timeseries(network,profile,SimulationConfig(reserve_fraction=0))
-    assert result.completed and result.converged and not result.feasible
-    assert any('Line ampacity exceeded' in m for s in result.steps for m in s.messages)
+    result = simulate_timeseries(network, profile, SimulationConfig(reserve_fraction=0))
+    assert result.completed and result.converged and result.feasible
+    assert all(step.shedding_kw > 0 for step in result.steps)
+    assert all(max(step.power_flow.branch_current_a.values()) <= .010001 for step in result.steps)
+    blocked = simulate_timeseries(network, profile, SimulationConfig(reserve_fraction=0, allow_load_shedding=False))
+    assert blocked.completed and blocked.converged and not blocked.feasible
+    assert any('Line ampacity exceeded' in m for step in blocked.steps for m in step.messages)
 
 
 def test_terminal_soc_optional_strict_limit():

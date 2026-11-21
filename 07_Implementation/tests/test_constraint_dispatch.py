@@ -10,7 +10,7 @@ import pytest
 from src_accelerated.bess import BESSConfig
 from src_accelerated.data_loader import ProfileData, profile_at
 from src_accelerated.fbs import OperatingPoint, run_fbs
-from src_accelerated.metrics import EconomicConfig
+from src_accelerated.metrics import EconomicConfig, evaluate_results
 from src_accelerated.network_loader import load_network
 from src_accelerated.network_model import Bus, Line, Load, NetworkModel, PVUnit
 from src_accelerated.optimizer import BESSParameters, OptimizationBounds, OptimizerConfig, SimulationEvaluator, optimize
@@ -197,9 +197,15 @@ def test_archived_annual_replay(archive, tmp_path):
                   spin_gwo_population=3, spin_gwo_iterations=1, spin_gwo_seed=42, spin_cpu_workers=2)
     settings = RunSettings(SimulationConfig(reserve_fraction=0, grid_import_limit_kw=2400, grid_export_limit_kw=0),
                            EconomicConfig(grid_import_tariff_per_kwh=.1, grid_export_tariff_per_kwh=0.), None, values)
+    legacy = simulate_timeseries(network, data, replace(settings.simulation, legacy_proportional_validation=True),
+                                 capture_dispatch=False)
+    assert evaluate_results(legacy, settings.economics).annual_total_cost == pytest.approx(29266147.66812243, rel=1e-8)
     report = run_and_export(study, settings, True, tmp_path / "annual",
                             network_snapshot=root / "network.xlsx")
-    assert report.result.metadata["no_bess_annual_cost"] == pytest.approx(29266147.66812243, rel=1e-8)
+    baseline, baseline_metrics = report.alternatives["no_bess"]
+    assert report.result.metadata["no_bess_annual_cost"] == pytest.approx(baseline_metrics.annual_total_cost)
+    assert all(step.dispatch.final.converged and not step.dispatch.final.violations
+               for step in baseline.steps if step.feasible)
     assert report.result.metadata["best_bess_feasible"]
     assert "best_bess_replay_mismatch" not in report.result.metadata
     assert report.dashboard_path.is_file()

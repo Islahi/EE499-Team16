@@ -413,6 +413,7 @@ def _prepare_distributed(request, network, stage):
             (request.pv_rating_selection or "Explicit override") if request.pv_override else
             "Workbook" if workbook_ratings else "Dataset folder"),
         "Demand":"GoiEner distributed sector assignments", "Dataset folder":str(dataset.folder),
+        "Demand normalization":meta.get("normalization"),
         "History interval":f"{times[0]} through {times[-1]}; {len(times)} hours", "Clock":clock,
         "Classification disclaimer":meta.get("sector_assignment_status","Explicit user scenario; not observed customer labels"),
         "Dataset provenance":json.dumps(meta),"PV history validation":dataset.pv_reason}
@@ -444,6 +445,10 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
     from .study_session import runtime_provenance
     context["Runtime provenance"] = runtime_provenance()
     context["Numba readiness timing"] = settings.values.get("numba_readiness")
+    simulation = replace(settings.simulation,
+                         shedding_penalty_per_kwh=settings.economics.shedding_penalty_per_kwh,
+                         curtailment_penalty_per_kwh=settings.economics.curtailment_penalty_per_kwh)
+    settings = replace(settings, simulation=simulation)
     dispatch = settings.dispatch
     if isinstance(dispatch, ConstraintAwareDispatch):
         economics = settings.economics
@@ -482,6 +487,8 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
             timing = result.dispatch_timing
             stage(f"Dispatch scheduling {timing['planning_seconds']:.3f}s; trial FBS {timing['dispatch_fbs_seconds']:.3f}s "
                   f"across {timing['dispatch_fbs_trials']} calls")
+            stage(f"Network correction {timing['correction_seconds']:.3f}s across {timing['correction_hours']} hours; "
+                  f"{timing['correction_fbs_trials']} FBS calls, {timing['correction_unresolved_hours']} unresolved hours")
         return finish_report(result, metrics, context, started, started_clock)
     validate_annual_inputs(study.profiles.timestamps, settings.economics, study.profiles.dt_hours)
     values = settings.values
@@ -577,11 +584,15 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
     result.metadata["simulation_window"] = dict(study.simulation_window)
     result.metadata["decision_message"] = result.message
     timing = {key: sum(item.execution_metadata.get(key, 0) for item in result.evaluations)
-              for key in ("planning_seconds", "dispatch_fbs_seconds", "dispatch_fbs_trials")}
+              for key in ("planning_seconds", "dispatch_fbs_seconds", "dispatch_fbs_trials", "correction_seconds",
+                          "correction_fbs_trials", "correction_hours", "correction_unresolved_hours")}
     context["Candidate dispatch timing (summed across workers)"] = timing
     if timing["dispatch_fbs_trials"]:
         stage(f"Candidate scheduling {timing['planning_seconds']:.3f}s; trial FBS "
               f"{timing['dispatch_fbs_seconds']:.3f}s across {timing['dispatch_fbs_trials']} calls (worker totals)")
+    if timing["correction_hours"]:
+        stage(f"Candidate network correction {timing['correction_seconds']:.3f}s; "
+              f"{timing['correction_fbs_trials']} FBS calls, {timing['correction_unresolved_hours']} unresolved hours (worker totals)")
     report = finish_report(result, None, context, started, started_clock)
     report.alternatives["no_bess"] = (baseline_result, baseline)
     if best_result is not None:

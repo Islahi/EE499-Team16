@@ -41,13 +41,20 @@ def payload(path):
 def test_report_lifecycle_and_portable_exports(tmp_path, monkeypatch):
     study = study_for([40.] * 14 + [130.] * 2 + [60.] * 23, '<script>alert("study")</script>')
     base = run_base_case_and_export(study, run_settings(), tmp_path / "base")
-    simulation = run_and_export(study, run_settings(), False, tmp_path / "simulation")
+    simulation = run_and_export(study, run_settings(manual_bess=None), False, tmp_path / "simulation")
     assert payload(base.dashboard_path)["scenarios"]["."]["hours"][0]["timestamp"] == "Static base case"
     unpacked = payload(simulation.dashboard_path)
     assert unpacked["manifest"]["timestamp_count"] == 39
     assert unpacked["manifest"]["clock"] == "UTC"
     assert unpacked["scenarios"]["."]["events"][0]["no_bess_shedding_kw"] is None
     assert unpacked["scenarios"]["."]["events"][0]["run_id"] == unpacked["manifest"]["run_id"]
+    assert unpacked["manifest"]["network_control"] == "bus_specific_joint"
+    assert unpacked["manifest"]["input_hashes"]["inputs/load_profile.csv"]
+    stressed = unpacked["scenarios"]["."]
+    assert stressed["events"][14]["correction"]["status"] == "verified"
+    assert stressed["buses"]["2"]["requested_load_kw"][14] == 130.
+    assert stressed["buses"]["2"]["remaining_load_fraction"][14] < 1.
+    assert abs(stressed["hours"][14]["power_balance_residual_kw"]) < .002
     assert unpacked["metadata"]["context"]["Network"] == study.context["Network"]
     assert '<script>alert("study")</script>' not in simulation.dashboard_path.read_text(encoding="utf-8")
     root = simulation.dashboard_path.parent

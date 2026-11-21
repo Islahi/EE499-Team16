@@ -50,6 +50,7 @@ class DispatchEvent:
     terminal_discharge_headroom_kwh: float | None = None
     projected_stress_actions: list[dict] = field(default_factory=list)
     reason_codes: list[str] = field(default_factory=list)
+    correction: dict | None = None
 
 
 def check_flow(flow, network, config):
@@ -76,12 +77,16 @@ def check_flow(flow, network, config):
     binding = list(violations)
     for name, value, limit in (("undervoltage", voltages[low], config.voltage_min_pu),
                                ("overvoltage", voltages[high], config.voltage_max_pu),
-                               ("import", imports, config.grid_import_limit_kw),
-                               ("export", exports, config.grid_export_limit_kw)):
+                               ("import", flow.slack_p_kw, config.grid_import_limit_kw),
+                               ("export", -flow.slack_p_kw, config.grid_export_limit_kw)):
         if limit is not None and abs(value - limit) <= 5e-6:
             key = f"{name}:{low if name == 'undervoltage' else high}" if name.endswith("voltage") else name
             if key not in binding:
                 binding.append(key)
+    if config.enforce_line_ampacity:
+        binding.extend(f"ampacity:{line.line_id}" for line in network.lines
+                       if line.ampacity_a is not None and f"ampacity:{line.line_id}" not in violations
+                       and abs(flow.branch_current_a[line.line_id] - line.ampacity_a) <= 1e-6)
     return FlowCheck(True, voltages[low], low, voltages[high], high, imports, exports, violations, binding)
 
 

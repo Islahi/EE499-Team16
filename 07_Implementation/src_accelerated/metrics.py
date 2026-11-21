@@ -345,4 +345,6 @@ def with_terminal_policy(simulation, economics):
     equal = economics.terminal_policy == "equal_soc"
     return replace(simulation,
                    terminal_soc_tolerance=economics.terminal_soc_tolerance if equal else None,
-                   terminal_cycle_hours=24 if equal and economics.annual_day_weights else None)
+                   terminal_cycle_hours=24 if equal and economics.annual_day_weights else None,
+                   shedding_penalty_per_kwh=economics.shedding_penalty_per_kwh,
+                   curtailment_penalty_per_kwh=economics.curtailment_penalty_per_kwh)

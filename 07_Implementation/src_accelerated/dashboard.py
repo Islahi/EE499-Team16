@@ -73,6 +73,8 @@ def write_run_metadata(folder, network, kind, context, simulation, *, optimizer=
     metadata = {
         "run_id": context.get("Run ID") or str(uuid4()), "folder": folder.name, "kind": kind, "context": context,
         "solver": {"name": "FBS Numba CPU", "config": asdict(simulation.fbs_config)},
+        "network_control": ("static_fbs" if snapshot is not None else "legacy_proportional_validation"
+                            if simulation.legacy_proportional_validation else "bus_specific_joint"),
         "simulation": context.get("Simulation settings", asdict(simulation)), "optimizer": optimizer, "static": snapshot,
         "scenarios": scenarios or {".": kind},
         "topology": topology,
@@ -142,7 +144,9 @@ def _scenario(folder, label, static):
     indices = {row["timestamp"]: index for index, row in enumerate(hourly)}
     buses = _entity_columns(folder / "buses.csv", "bus_id", indices, {
         "voltage_pu", "voltage_angle_deg", "load_input_kw", "load_input_kvar", "pv_input_kw",
-        "pv_input_kvar", "bess_input_kw", "curtailment_kw", "shedding_kw", "diagnostic_only"})
+        "pv_input_kvar", "bess_input_kw", "curtailment_kw", "shedding_kw", "diagnostic_only",
+        "requested_load_kw", "requested_load_kvar", "shedding_kvar", "remaining_load_fraction",
+        "available_pv_kw", "pre_control_voltage_pu"})
     branches = _entity_columns(folder / "branches.csv", "line_id", indices, {
         "current_a", "sending_p_kw", "sending_q_kvar", "loss_p_kw", "diagnostic_only"})
     if static is not None or (folder / "bus_voltages.csv").is_file():
@@ -208,6 +212,9 @@ def regenerate_dashboard(run_folder):
     hours = next((scenario["hours"] for scenario in trace_data.values() if scenario["hours"]), [])
     context = metadata.get("context", {})
     prices = context.get("Economic inputs")
+    input_hashes = {f"inputs/{name}": _hash(folder / "inputs" / name)
+                    for name in ("network.xlsx", "load_profile.csv", "pv_profile.csv", "input_snapshot.json")
+                    if (folder / "inputs" / name).is_file()}
     if metadata.get("kind") == "base case":
         hours = []
     manifest = {
@@ -223,9 +230,10 @@ def regenerate_dashboard(run_folder):
         "currency": prices.get("currency") if prices else None, "economics": prices,
         "objective": "annualized_bess_ownership+net_grid+curtailment+shedding+terminal_adjustment",
         "simulation": metadata.get("simulation"), "solver": metadata.get("solver"),
+        "network_control": metadata.get("network_control"),
         "source": context.get("Active input source"), "forecast": context.get("Forecast model"),
         "dispatch": context.get("Dispatch policy"), "provenance": context.get("Runtime provenance"),
-        "input_hashes": {name: value for name, value in files.items() if name.startswith("inputs/")},
+        "input_hashes": input_hashes,
         "files": files,
         "summary": (list(_rows(folder / "metrics.csv")) or
                     next((scenario["metrics"] for scenario in trace_data.values() if scenario["metrics"]), [])),

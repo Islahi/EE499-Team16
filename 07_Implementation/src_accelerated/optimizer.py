@@ -169,7 +169,7 @@ class SimulationEvaluator:
         failed_steps = [step for step in result.steps if not step.feasible]
         reasons = sorted({message for step in failed_steps for message in step.messages
                           if message.startswith(("Voltage limits", "Line ampacity", "Terminal SOC",
-                                                 "Network voltage", "BESS cannot"))})
+                                                 "Network voltage", "BESS cannot", "Corrective control unresolved"))})
         return CandidateEvaluation(
             candidate=candidate, objective=annual_economic_objective(metrics),
             feasible=metrics.feasible, metrics=metrics,

@@ -117,10 +117,15 @@ function compare(a, b) {
   const timestamps = test(a.timestamp_count && a.timestamp_sha256 === b.timestamp_sha256, "timestamp coverage");
   const clock = test(a.clock && equal(a.clock, b.clock), "timezone / clock definition");
   const units = test(a.dt_hours && a.dt_hours === b.dt_hours && equal(a.units, b.units), "units or time step");
-  const engineering = test(a.simulation && equal(a.simulation, b.simulation) && equal(a.solver, b.solver),
+  const limits = settings => {
+    const {legacy_proportional_validation, shedding_penalty_per_kwh, curtailment_penalty_per_kwh, ...rest} = settings || {};
+    return rest;
+  };
+  const engineering = test(a.simulation && b.simulation && equal(limits(a.simulation), limits(b.simulation)) && equal(a.solver, b.solver),
     "solver or operating limits");
-  const inputMatch = test(a.source && a.source === b.source && equal(a.forecast, b.forecast) &&
-    equal(a.input_hashes, b.input_hashes), "input profiles or provenance");
+  const profileFiles = ["inputs/network.xlsx", "inputs/load_profile.csv", "inputs/pv_profile.csv"];
+  const inputMatch = test(a.source && a.source === b.source && equal(a.forecast, b.forecast) && profileFiles.every(
+    file => a.input_hashes?.[file] && a.input_hashes[file] === b.input_hashes?.[file]), "input profiles or provenance");
   const economics = test(a.economics && equal(a.economics, b.economics) && a.objective === b.objective &&
     a.currency === b.currency, "tariffs, currency or annual objective");
   return {align: topology && timestamps && clock && units && engineering,
@@ -295,6 +300,9 @@ function overview(root) {
   kv(summary, [
     ["Run ID", run.manifest.run_id], ["Source", run.manifest.source], ["Time basis", run.manifest.clock],
     ["Selected interval", run.manifest.interval], ["Dispatch", run.metadata.context?.Dispatch],
+    ["Network control", run.manifest.network_control ? nameOf(run.manifest.network_control) : null],
+    ["Demand normalization", run.metadata.context?.["Demand normalization"]],
+    ["Requested load energy (kWh)", textMetric("requested_load_energy_kwh")],
     ["Curtailed energy (kWh)", textMetric("curtailment_energy_kwh")],
     ["Unserved energy (kWh)", textMetric("load_shedding_energy_kwh")],
     ["Power flow", staticCase() ? row.fbs_message : null]
@@ -385,7 +393,11 @@ function network(root) {
   const object = select(objects, state.equipment[0] + ":" + state.equipment[1]);
   const peers = comparableScenarios().filter(peer => peer.scenario !== active());
   const other = select([["", "None"], ...peers.map(peer => [peer.id, peer.label])], state.networkPeer);
-  bar.append(label("Equipment", object), label("Compare voltage by bus", other),
+  const overlay = el("input");
+  overlay.type = "checkbox";
+  overlay.checked = Boolean(state.sheddingOverlay);
+  overlay.addEventListener("change", () => { state.sheddingOverlay = overlay.checked; draw(); });
+  bar.append(label("Equipment", object), label("Compare voltage by bus", other), label("Show load shedding", overlay),
     button("Zoom in", () => { state.zoom *= 1.25; draw(); }),
     button("Zoom out", () => { state.zoom /= 1.25; draw(); }),
     button("Fit feeder", () => { state.zoom = 1; state.offsetX = state.offsetY = 0; draw(); }));
@@ -442,6 +454,14 @@ function network(root) {
       ctx.beginPath();
       ctx.arc(x, y, type === "Bus" && id === key ? 8 : 5, 0, Math.PI * 2);
       ctx.fill();
+      if (state.sheddingOverlay && data.shedding_kw > 0 && !data.diagnostic_only) {
+        const requested = data.requested_load_kw ?? (data.load_input_kw + data.shedding_kw);
+        ctx.strokeStyle = "#79568c";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, 9 + 8 * Math.min(1, data.shedding_kw / requested), 0, Math.PI * 2);
+        ctx.stroke();
+      }
       ctx.fillStyle = "#102c3a";
       const installed = state.scenario === "best_bess" ? run.metadata.optimizer?.best_bess_candidate :
         state.scenario === "." ? run.metadata.context?.["Manual BESS"] : null;
@@ -463,9 +483,13 @@ function network(root) {
     const otherRun = peers.find(item => item.id === other.value);
     const compared = otherRun ? entityAt(otherRun.scenario, type, id, hourAt()) : {};
     const entries = type === "Bus" ?
-      [["Voltage (pu)", data.voltage_pu, compared.voltage_pu], ["Load (kW)", data.load_input_kw, compared.load_input_kw],
-        ["PV (kW)", data.pv_input_kw, compared.pv_input_kw], ["Battery injection (kW)", data.bess_input_kw, compared.bess_input_kw],
-        ["Shedding (kW)", data.shedding_kw, compared.shedding_kw], ["Curtailment (kW)", data.curtailment_kw, compared.curtailment_kw]] :
+      [["Voltage (pu)", data.voltage_pu, compared.voltage_pu], ["Pre-control voltage (pu)", data.pre_control_voltage_pu, compared.pre_control_voltage_pu],
+        ["Requested load (kW)", data.requested_load_kw, compared.requested_load_kw], ["Delivered load (kW)", data.load_input_kw, compared.load_input_kw],
+        ["Requested load (kvar)", data.requested_load_kvar, compared.requested_load_kvar], ["Delivered load (kvar)", data.load_input_kvar, compared.load_input_kvar],
+        ["Available PV (kW)", data.available_pv_kw, compared.available_pv_kw], ["Delivered PV (kW)", data.pv_input_kw, compared.pv_input_kw],
+        ["Battery injection (kW)", data.bess_input_kw, compared.bess_input_kw],
+        ["Shedding (kW)", data.shedding_kw, compared.shedding_kw], ["Shedding (kvar)", data.shedding_kvar, compared.shedding_kvar],
+        ["Curtailment (kW)", data.curtailment_kw, compared.curtailment_kw]] :
       [["Current (A)", data.current_a, compared.current_a], ["Sending power (kW)", data.sending_p_kw ?? data.p_kw, compared.sending_p_kw ?? compared.p_kw],
         ["Reactive power (kvar)", data.sending_q_kvar ?? data.q_kvar, compared.sending_q_kvar ?? compared.q_kvar],
         ["Loss (kW)", data.loss_p_kw ?? data.loss_kw, compared.loss_p_kw ?? compared.loss_kw]];
@@ -874,13 +898,22 @@ function economicAlternatives(root) {
   const match = !run.metadata.optimizer?.best_bess_replay_mismatch;
   const savings = match && base.feasible && best.feasible && number(base.annual_total_cost) && number(best.annual_total_cost) ?
     base.annual_total_cost - best.annual_total_cost : null;
-  const avoided = match && number(base.annual_shedding_cost) && number(best.annual_shedding_cost) ?
+  const avoided = match && base.feasible && best.feasible && number(base.annual_shedding_cost) && number(best.annual_shedding_cost) ?
     base.annual_shedding_cost - best.annual_shedding_cost : null;
+  const reduction = key => match && base.feasible && best.feasible && base[key] > 0 && number(best[key]) ?
+    (base[key] - best[key]) / base[key] * 100 : null;
   const operatingBenefit = number(savings) && number(best.annual_capital_recovery) ?
     savings + best.annual_capital_recovery : null;
   const payback = savings > 0 && operatingBenefit > 0 && number(best.bess_cost) ? best.bess_cost / operatingBenefit : null;
   kv(root, [["Net annual savings from best tested BESS (USD/year)", savings],
     ["Avoided shedding cost (USD/year)", avoided], ["Simple payback (years)", payback ?? "N/A"]]);
+  const targets = [["Unserved energy", "load_shedding_energy_kwh", 5], ["Annual cost", "annual_total_cost", 5],
+    ["Curtailed energy", "curtailment_energy_kwh", null]];
+  table(root, ["Best feasible BESS vs No BESS", "Reduction (%)", "Annual target (%)", "Target met"],
+    targets.map(([name, key, target]) => {
+      const change = reduction(key);
+      return [name, change, target, change === null || target === null ? null : change >= target];
+    }));
 }
 
 function economics(root, printable = false) {
@@ -1088,6 +1121,10 @@ function diagnostics(root) {
       ["Curtailment after controls (kW)", event.curtailment_kw], ["Matched No BESS shedding (kW)", event.no_bess_shedding_kw],
       ["Matched No BESS curtailment (kW)", event.no_bess_curtailment_kw],
       ["Avoided shedding (kW)", event.avoided_shedding_kw], ["Avoided curtailment (kW)", event.avoided_curtailment_kw],
+      ["Corrector status", event.correction?.status], ["Linear solver status", event.correction?.linear_status],
+      ["Corrector iterations", event.correction?.iterations], ["Corrector FBS calls", event.correction?.fbs_trials],
+      ["Corrective cost (USD)", event.correction?.objective_usd],
+      ["Power balance residual (kW)", row.power_balance_residual_kw], ["Reactive balance residual (kvar)", row.reactive_balance_residual_kvar],
       ["Reason codes", event.reason_codes?.join(", ")], ["Look-ahead hours", event.horizon_hours],
       ["Engineering messages", event.messages?.join(" · ")]]);
     note(hour, "Constraint excess uses pu for voltage, amperes for branch current and kW for grid limits.");
@@ -1098,6 +1135,51 @@ function diagnostics(root) {
     note(hour, "Pre-correction, BESS-only and matched counterfactual records unavailable.");
   }
   if (row.converged === false) note(hour, "Final electrical values belong to a nonconverged diagnostic iterate.");
+  if (row.converged && row.feasible === false) note(hour, "This operating point is infeasible. See the residual limits and engineering messages above.");
+  const controlled = Object.keys(scenario.buses).map(id => [id, entityAt(scenario, "Bus", id, hourAt())])
+    .filter(([, bus]) => bus.shedding_kw > 0 || bus.curtailment_kw > 0)
+    .sort(([, a], [, b]) => b.shedding_kw - a.shedding_kw);
+  if (controlled.length) table(hour, ["Bus", "Shed (kW)", "Shed (kvar)", "Curtailed (kW)", "Pre-control voltage (pu)", "Final voltage (pu)"],
+    controlled.map(([id, bus]) => [id, bus.shedding_kw, bus.shedding_kvar, bus.curtailment_kw, bus.pre_control_voltage_pu, bus.voltage_pu]));
+  if (number(textMetric("load_shedding_energy_kwh"))) {
+    const requested = textMetric("requested_load_energy_kwh");
+    const shed = textMetric("load_shedding_energy_kwh");
+    const totals = section(root, "Feeder shedding over the saved interval");
+    const peak = scenario.hours.reduce((current, item) => {
+      const demand = item.load_input_kw + item.shedding_kw;
+      return number(item.shedding_kw) && demand > 0 ? Math.max(current, item.shedding_kw / demand) : current;
+    }, 0);
+    kv(totals, [["Unserved energy (kWh)", shed], ["Energy unserved (%)", requested > 0 ? shed / requested * 100 : null],
+      ["Peak hourly shedding (%)", peak * 100], ["Curtailed energy (kWh)", textMetric("curtailment_energy_kwh")],
+      ["Feeder losses (kWh)", textMetric("loss_energy_kwh")]]);
+    const dt = manifest().dt_hours;
+    if (number(dt)) {
+      const ranking = Object.entries(scenario.buses).map(([id, bus]) => [id,
+        (bus.shedding_kw || []).reduce((sum, power) => sum + (power || 0), 0) * dt]);
+      ranking.sort((a, b) => b[1] - a[1]);
+      if (ranking.some(([, energy]) => energy > 0)) table(totals, ["Bus", "Unserved energy (kWh)"], ranking);
+    }
+  }
+  const run = current();
+  const paired = state.runs.filter(other => {
+    const comparison = compare(run.manifest, other.manifest);
+    return other !== run && comparison.align && comparison.inputMatch &&
+      other.manifest.network_control && run.manifest.network_control &&
+      other.manifest.network_control !== run.manifest.network_control && other.scenarios[state.scenario] &&
+      stable(run.metadata.optimizer?.best_bess_candidate) === stable(other.metadata.optimizer?.best_bess_candidate) &&
+      stable(run.metadata.context?.["Manual BESS"]) === stable(other.metadata.context?.["Manual BESS"]);
+  });
+  if (paired.length) {
+    const comparison = section(root, "Matched corrective control policies");
+    const entries = [[run.manifest.network_control, scenario], ...paired.map(other =>
+      [other.manifest.network_control, other.scenarios[state.scenario]])];
+    table(comparison, ["Policy", "Feasible", "Unserved energy (kWh)", "Curtailed (kWh)", "Annual cost (USD/year)"],
+      entries.map(([policy, variant]) => {
+        const m = metricsOf(variant.metrics);
+        return [nameOf(policy), m.feasible, m.load_shedding_energy_kwh, m.curtailment_energy_kwh,
+          m.feasible ? m.annual_total_cost : null];
+      }));
+  }
   if (!scenario.events.length) return;
   const log = section(root, "Dispatch event filter");
   const controls = el("div", undefined, "chart-controls");

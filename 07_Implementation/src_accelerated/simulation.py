@@ -1,7 +1,7 @@
 """Hourly orchestration of profile inputs, BESS operation and FBS power flow."""
 from collections.abc import Callable
 from copy import copy
-from dataclasses import dataclass, field, replace
+from dataclasses import asdict, dataclass, field, replace
 from math import isfinite
 
 from .fbs import FBSConfig, OperatingPoint, PowerFlowResult, prepare_fbs, validate_config
@@ -10,7 +10,8 @@ from .network_model import NetworkModel
 from .data_loader import ProfileSlice, ProfileData, profile_at
 from .progress import ProgressEvent
 from .dispatch import terminal_request
-from .constraint_dispatch import ConstraintAwareDispatch, DispatchEvent, RollingDispatch, check_flow
+from .constraint_dispatch import ConstraintAwareDispatch, DispatchEvent, RollingDispatch, admissible, check_flow
+from .network_control import Correction, NetworkCorrector
 
 
 @dataclass(frozen=True)
@@ -57,6 +58,9 @@ class SimulationConfig:
     terminal_cycle_hours: int | None = None
     control_max_iterations: int = 30
     control_tolerance_kw: float = 1e-6
+    shedding_penalty_per_kwh: float = 12.0
+    curtailment_penalty_per_kwh: float = 0.07
+    legacy_proportional_validation: bool = False
 
     def __post_init__(self):
         if self.terminal_cycle_hours is not None and (type(self.terminal_cycle_hours) is not int or self.terminal_cycle_hours < 1):
@@ -91,6 +95,13 @@ class SimulationConfig:
                 or isinstance(self.control_max_iterations, bool) or self.control_max_iterations < 1):
             raise ValueError("control_max_iterations must be a positive integer")
         _check_number(self.control_tolerance_kw, "control_tolerance_kw", positive=True)
+        for name in ("shedding_penalty_per_kwh", "curtailment_penalty_per_kwh"):
+            value = getattr(self, name)
+            _check_number(value, name)
+            if value < 0:
+                raise ValueError(f"{name} cannot be negative")
+        if not isinstance(self.legacy_proportional_validation, bool):
+            raise ValueError("legacy_proportional_validation must be boolean")
 
 
 @dataclass
@@ -112,6 +123,8 @@ class SimulationStepResult:
     curtailment_by_bus_kw: dict[int, float] | None = None
     shedding_by_bus_kw: dict[int, float] | None = None
     dispatch: DispatchEvent | None = None
+    requested_point: OperatingPoint | None = None
+    pre_control_voltage_pu: dict[int, float] | None = None
 
 
 @dataclass
@@ -267,7 +280,7 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
                   *, simulation_config: SimulationConfig | None = None,
                   peak_load_kw: float | None = None, progress=None,
                   planner=None, index=None, event=None, capture_dispatch=False,
-                  solve_fbs=None) -> SimulationStepResult:
+                  solve_fbs=None, corrector=None) -> SimulationStepResult:
     """Run one hour. bess_state is accepted only when the power flow converges.
 
     bess_step retains the attempted energy update for diagnosis on failure.
@@ -282,6 +295,7 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
         operating_point = _operating_point(network, profile_slice)
     else:
         operating_point, raw_flow, raw_check = planner.uncontrolled(index)
+    requested_point = operating_point
     bus_ids = operating_point.p_load_kw
     _check_number(bess_request_kw, "bess_request_kw")
     if (bess_config is None) != (bess_state is None):
@@ -341,47 +355,51 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
         event.after_bess = after
         event.after_bess_kw = accepted_kw if power_flow.converged else None
     else:
-        unchecked_point = operating_point
+        raw_flow = solve_fbs(requested_point, progress=progress)
+        raw_check = check_flow(raw_flow, network, settings)
+        power_flow = raw_flow
         if bess_result is not None:
-            operating_point = replace(operating_point, p_bess_kw={
-                **operating_point.p_bess_kw, bess_config.bus_id: bess_result.actual_power_kw})
-        power_flow = solve_fbs(operating_point, progress=progress)
+            available_kw = bess_result.actual_power_kw
+            if available_kw:
+                for fraction in (1., .5, .25, .125, .0625, 0.):
+                    power = available_kw * fraction
+                    trial = replace(requested_point, p_bess_kw={
+                        **requested_point.p_bess_kw, bess_config.bus_id: power})
+                    trial_flow = solve_fbs(trial) if power else raw_flow
+                    if not power or admissible(raw_check, check_flow(trial_flow, network, settings)):
+                        operating_point, power_flow = trial, trial_flow
+                        break
+                if power != available_kw:
+                    bess_result, power_shortfall, energy_shortfall = _run_bess(
+                        bess_config, bess_state, power, reserve_kw, settings.reserve_duration_hours)
+                    bess_result.limited = True
+                    bess_result.limit_reason = "Electrical trial limited the battery action"
         if capture_dispatch:
-            raw = power_flow if bess_result is None or not bess_result.actual_power_kw else solve_fbs(unchecked_point)
             event = DispatchEvent("no-bess" if bess_result is None else "explicit-dispatch",
                                   "", bess_config.bus_id if bess_config else None, 0, [],
-                                  check_flow(raw, network, settings), request_kw=bess_request_kw)
+                                  raw_check, request_kw=bess_request_kw)
     if planner is not None:
         operating_point = replace(operating_point, p_bess_kw={
             **operating_point.p_bess_kw, bess_config.bus_id: bess_result.actual_power_kw})
-    original_load = operating_point.p_load_kw.copy()
-    original_pv = operating_point.p_pv_kw.copy()
+    original_load = requested_point.p_load_kw
+    original_pv = requested_point.p_pv_kw
     voltage_violations = {}
     messages = []
     curtailment = shedding = None
-    if power_flow.converged:
-        excess_generation, excess_demand = _network_violations(power_flow, settings)
-        if bess_result is not None and planner is None:
-            actual_kw = bess_result.actual_power_kw
-            if (excess_generation and actual_kw > 0) or (excess_demand and actual_kw < 0):
-                idle_bess, idle_power_shortfall, idle_energy_shortfall = _run_bess(
-                    config=bess_config, state=bess_state, request_kw=0.0,
-                    reserve_kw=reserve_kw, reserve_hours=settings.reserve_duration_hours,
-                )
-                idle_point = replace(operating_point, p_bess_kw=operating_point.p_bess_kw.copy())
-                idle_point.p_bess_kw[bess_config.bus_id] = idle_bess.actual_power_kw
-                idle_flow = solve_fbs(idle_point, progress=progress)
-                if idle_flow.converged:
-                    operating_point, power_flow = idle_point, idle_flow
-                    bess_result = idle_bess
-                    power_shortfall, energy_shortfall = idle_power_shortfall, idle_energy_shortfall
-                    bess_result.limited = True
-                    bess_result.limit_reason = "Battery request paused for network limits"
-                    messages.append(bess_result.limit_reason)
-
-        if event is not None and event.after_bess is None:
-            event.after_bess = check_flow(power_flow, network, settings)
-            event.after_bess_kw = bess_result.actual_power_kw if bess_result is not None else None
+    after_bess_check = (event.after_bess if event is not None and event.after_bess is not None
+                        else raw_check if power_flow is raw_flow else check_flow(power_flow, network, settings))
+    if capture_dispatch and event is not None:
+        event.after_bess = after_bess_check
+        event.after_bess_kw = bess_result.actual_power_kw if bess_result is not None and power_flow.converged else None
+    correction = Correction(status="legacy_proportional_validation")
+    if not settings.legacy_proportional_validation:
+        if after_bess_check.violations or not power_flow.converged:
+            if corrector is None:
+                corrector = NetworkCorrector(network, settings, solve_fbs)
+            operating_point, power_flow, correction = corrector.correct(operating_point, power_flow, after_bess_check)
+        else:
+            correction = Correction()
+    elif power_flow.converged:
         excess_generation, _ = _network_violations(power_flow, settings)
         if excess_generation and settings.allow_pv_curtailment:
             operating_point, power_flow = _reduce_until_allowed(
@@ -392,7 +410,9 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
             operating_point, power_flow = _reduce_until_allowed(
                 solve_fbs, operating_point, power_flow, settings, curtail_pv=False, progress=progress
             )
-
+    if correction.status not in ("legacy_proportional_validation", "not_needed", "verified"):
+        messages.append(f"Corrective control unresolved ({correction.status})")
+    if power_flow.converged:
         curtailment = {}
         shedding = {}
         for bus_id in bus_ids:
@@ -432,6 +452,7 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
             messages.append("Network voltage/import/export limits remain violated after controls")
     if capture_dispatch and event is not None:
         event.final = check_flow(power_flow, network, settings)
+        event.correction = asdict(correction)
         event.accepted_kw = (bess_result.actual_power_kw if bess_result is not None and power_flow.converged
                              else None)
         if not power_flow.converged and "nonconvergence" not in event.reason_codes:
@@ -464,6 +485,8 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
         shedding_kw=sum(shedding.values()) if shedding is not None else None,
         curtailment_by_bus_kw=curtailment, shedding_by_bus_kw=shedding,
         dispatch=event if capture_dispatch else None,
+        requested_point=requested_point if capture_dispatch else None,
+        pre_control_voltage_pu=raw_flow.voltage_mag_pu if capture_dispatch and raw_flow.converged else None,
     )
 
 
@@ -521,6 +544,7 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
         )
     reserve_kw = simulation_config.reserve_fraction * peak_load_kw
     solve_fbs = prepare_fbs(network, simulation_config.fbs_config)
+    corrector = NetworkCorrector(network, simulation_config, solve_fbs)
     planner = None
     if isinstance(dispatch_policy, ConstraintAwareDispatch):
         planner = RollingDispatch(network, simulation_config, bess_config, dispatch_policy,
@@ -559,6 +583,7 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
             simulation_config=simulation_config, peak_load_kw=peak_load_kw,
             progress=None if hourly_progress_only else progress,
             planner=planner, index=index, event=event, capture_dispatch=capture_dispatch, solve_fbs=solve_fbs,
+            corrector=corrector,
         )
         steps.append(step)
         state = copy(step.bess_state)
@@ -592,7 +617,9 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
     return TimeSeriesSimulationResult(
         steps=steps, dt_hours=1.0, completed=completed, converged=converged,
         feasible=feasible, final_bess_state=copy(state), message=message,
-        dispatch_timing=({"planning_seconds": planner.plan_seconds,
-                          "dispatch_fbs_seconds": planner.flow_seconds,
-                          "dispatch_fbs_trials": planner.flow_trials} if planner else {}),
+        dispatch_timing={"planning_seconds": planner.plan_seconds if planner else 0.,
+                         "dispatch_fbs_seconds": planner.flow_seconds if planner else 0.,
+                         "dispatch_fbs_trials": planner.flow_trials if planner else 0,
+                         "correction_seconds": corrector.seconds, "correction_fbs_trials": corrector.trials,
+                         "correction_hours": corrector.evaluations, "correction_unresolved_hours": corrector.unresolved},
     )
