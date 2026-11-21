@@ -75,6 +75,9 @@ def compact_summary(report):
             lines.append("Network losses         " + _number(metrics.loss_energy_kwh, "kWh"))
         if metrics.load_shedding_energy_kwh is not None:
             lines.append("Load shedding          " + _number(metrics.load_shedding_energy_kwh, "kWh"))
+        outage_hours = getattr(metrics, "hours_with_full_disconnection", None)
+        if outage_hours is not None:
+            lines.append("Hours with a fully disconnected load bus: " + _number(outage_hours, "h"))
         if metrics.curtailment_energy_kwh is not None:
             lines.append("PV curtailment         " + _number(metrics.curtailment_energy_kwh, "kWh"))
     elif hasattr(result, "best_objective"):

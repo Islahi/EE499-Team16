@@ -22,7 +22,7 @@ MANIFEST_FILE = "dashboard_manifest.json"
 HTML_FILE = "dashboard.html"
 SCHEMA = 2
 CHUNK_HOURS = 168
-TABLES = ("hourly.csv", "buses.csv", "branches.csv", "metrics.csv", "evaluations.csv",
+TABLES = ("hourly.csv", "buses.csv", "branches.csv", "metrics.csv", "evaluations.csv", "service_by_bus.csv",
           "convergence.csv", "economic_comparison.csv", "comparison.csv",
           "bus_voltages.csv", "line_flows.csv")
 UNITS = {"power": "kW", "reactive_power": "kvar", "energy": "kWh", "voltage": "pu",
@@ -148,7 +148,7 @@ def _scenario(folder, label, static):
         "voltage_pu", "voltage_angle_deg", "load_input_kw", "load_input_kvar", "pv_input_kw",
         "pv_input_kvar", "bess_input_kw", "curtailment_kw", "shedding_kw", "diagnostic_only",
         "requested_load_kw", "requested_load_kvar", "shedding_kvar", "remaining_load_fraction",
-        "available_pv_kw", "pre_control_voltage_pu"})
+        "available_pv_kw", "pre_control_voltage_pu", "shed_load_percent", "fully_disconnected"})
     branches = _entity_columns(folder / "branches.csv", "line_id", indices, {
         "current_a", "sending_p_kw", "sending_q_kvar", "loss_p_kw", "diagnostic_only"})
     if static is not None or (folder / "bus_voltages.csv").is_file():
@@ -164,7 +164,8 @@ def _scenario(folder, label, static):
         with (folder / "dispatch_events.jsonl").open(encoding="utf-8") as stream:
             events = [json.loads(line) for line in stream if line.strip()]
     return {"label": label, "hours": hourly, "buses": buses, "branches": branches,
-            "metrics": list(_rows(folder / "metrics.csv")), "events": events}
+            "metrics": list(_rows(folder / "metrics.csv")), "events": events,
+            "service_by_bus": list(_rows(folder / "service_by_bus.csv"))}
 
 
 def _source_files(folder, scenarios):
@@ -261,7 +262,12 @@ def _scenario_blocks(scenario, metadata, add):
                 intensities = [max(1, round(100 * power / (power + load))) if power is not None and power > 0
                                and load is not None and power + load > 0 else 0
                                for power, load in zip(shed[start:stop], served[start:stop])]
-                data[bus] = [flags, intensities]
+                fractions = columns.get("remaining_load_fraction", [])[start:stop]
+                disconnected = columns.get("fully_disconnected", [])[start:stop]
+                data[bus] = [flags, intensities, [round(value, 1) if value is not None and value > 0 else 0
+                                                  for value in shed[start:stop]],
+                             [round(value * 100) if value is not None else None for value in fractions],
+                             "".join("Y" if flag is True else "N" if flag is False else "?" for flag in disconnected)]
             overloads = {line: "".join("X" if amps is not None and amps > limit + 1e-6 else "-" for amps in
                          scenario["branches"].get(line, {}).get("current_a", [])[start:stop]) for line, limit in rated.items()}
             network_chunks.append(add({"buses": data, "overloads": overloads}))
@@ -277,6 +283,7 @@ def _scenario_blocks(scenario, metadata, add):
         "label": scenario["label"], "metrics": scenario["metrics"], "hour_count": hour_count,
         "first": hours[0] if hours else None, "has_bess": has_bess, "diagnostic": diagnostic,
         "shedding_ranking": shedding_ranking,
+        "service_by_bus": scenario["service_by_bus"],
         "hours_block": add(hours) if hours else None,
         "bus_blocks": {key: add(value) for key, value in buses.items()},
         "branch_blocks": {key: add(value) for key, value in scenario["branches"].items()},

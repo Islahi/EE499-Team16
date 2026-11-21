@@ -246,7 +246,7 @@ function payloadFromHtml(source) {
       const headers = /<script id="report-block-(\d+)" type="application\/octet-stream"[^>]*>/g;
       let header;
       while ((header = headers.exec(source))) {
-        const end = source.indexOf("</script>", headers.lastIndex);
+        const end = source.indexOf("<\/script>", headers.lastIndex);
         if (end < 0) break;
         blocks.set(Number(header[1]), [headers.lastIndex, end]);
         headers.lastIndex = end + 9;
@@ -529,10 +529,12 @@ function overview(root) {
     const {base, battery, selected, matched, savings} = savedAlternatives(run);
     const fraction = number(selected.load_shedding_energy_kwh) && selected.requested_load_energy_kwh > 0 ?
       100 * selected.load_shedding_energy_kwh / selected.requested_load_energy_kwh : null;
-    cards(summary, [["Selected alternative", selectedOutcome(run)], ["Selected annual cost", currency(selected.annual_total_cost)],
+    cards(summary, [["Selected alternative", selectedOutcome(run)],
       ["Modeled annual savings", currency(savings)], ["Unserved energy", energy(selected.load_shedding_energy_kwh)],
       ["PV curtailment", energy(selected.curtailment_energy_kwh)],
+      ["Hours with a disconnected bus", selected.hours_with_full_disconnection ?? "Unavailable"],
       ["Feasibility", selected.feasible === true ? "Passed recorded limits" : selected.feasible === false ? "Infeasible" : null]]);
+    if (selected.hours_with_full_disconnection > 0) summary.append(el("p", "One or more load buses were fully disconnected during the selected run.", "warning"));
     if (optimizer.decision_message) note(summary, optimizer.decision_message);
     else if (matched && savings > 0) note(summary, "The selected battery has a lower recorded annual objective than No BESS.");
     else if (matched && optimizer.no_bess_selected) note(summary, "No BESS had the lowest recorded annual objective.");
@@ -544,7 +546,9 @@ function overview(root) {
     cards(summary, [["Feasibility", infeasible ? "Infeasible" : metrics.feasible === true ? "Passed recorded limits" : null],
       ["Minimum voltage after controls", number(metrics.voltage_min_pu) ? fmt(metrics.voltage_min_pu) + " pu" : null],
       ["Unserved energy", energy(metrics.load_shedding_energy_kwh)],
-      ["PV curtailment", energy(metrics.curtailment_energy_kwh)], ["Feeder losses", energy(metrics.loss_energy_kwh)]]);
+      ["PV curtailment", energy(metrics.curtailment_energy_kwh)],
+      ["Hours with a disconnected bus", metrics.hours_with_full_disconnection ?? "Unavailable"]]);
+    if (metrics.hours_with_full_disconnection > 0) summary.append(el("p", "One or more load buses were fully disconnected.", "warning"));
     if (infeasible) summary.append(el("p", "Saved results contain unresolved constraints or failed hours.", "warning"));
     if (metrics.load_shedding_energy_kwh > 0 && metrics.requested_load_energy_kwh > 0)
       summary.append(el("p", fmt(100 * metrics.load_shedding_energy_kwh / metrics.requested_load_energy_kwh, 2) +
@@ -552,6 +556,11 @@ function overview(root) {
   }
   if (!staticCase() && diagnosis.infeasible > 0 && optimizer)
     summary.append(el("p", scenario.label + " has " + fmt(diagnosis.infeasible) + " infeasible or nonconverged hours.", "warning"));
+  if (!staticCase()) {
+    const policy = run.metadata.simulation?.shedding_policy;
+    note(summary, "Load service policy: " + (policy === "progressive" ? "Balanced shedding" :
+      policy === "minimum_energy" ? "Minimum energy" : "Unavailable"));
+  }
   if (number(low) && number(high)) note(summary, "Configured voltage range " + fmt(low) + "–" + fmt(high) + " pu. " +
     (run.manifest.clock ? "Study clock " + run.manifest.clock + "." : ""));
   const jumps = el("div", undefined, "jump-actions");
@@ -638,7 +647,7 @@ function network(root) {
   const picker = select(objects, state.equipment.join(":"));
   const peers = comparableScenarios().filter(peer => peer.scenario !== scenario);
   const other = select([["", "None"], ...peers.map(peer => [peer.id, peer.label])], state.networkPeer);
-  const overlay = select([["voltage", "Voltage"], ["shedding", "Load shedding"], ["resources", "PV and BESS"],
+  const overlay = select([["voltage", "Voltage (pu)"], ["served", "Served load (%)"], ["shedding", "Shedding (kW)"], ["resources", "PV and BESS"],
     ["violations", "Electrical violations"]], state.overlay);
   overlay.addEventListener("change", () => { state.overlay = overlay.value; draw(); });
   bar.append(label("Equipment", picker), label("Overlay", overlay),
@@ -706,6 +715,9 @@ function network(root) {
       const values = entityValues(scenario.buses[id], state.hour);
       const series = hourSnapshot?.buses[id];
       const voltage = values.voltage_pu;
+      const shedKw = series?.[2]?.[offset] ?? values.shedding_kw;
+      const servedPercent = series?.[3]?.[offset] ?? (number(values.remaining_load_fraction) ? 100 * values.remaining_load_fraction : null);
+      const disconnected = series?.[4]?.[offset] === "Y" || values.fully_disconnected === true;
       const shed = series?.[1]?.length ? series[1][offset] / 100 : (values.shedding_kw > 0 ?
         values.shedding_kw / (values.load_input_kw + values.shedding_kw) : null);
       const valid = validHour && !values.diagnostic_only;
@@ -713,17 +725,28 @@ function network(root) {
         voltage < low ? "L" : voltage > high ? "H" : "N");
       const pv = run.metadata.pv_buses?.includes(bus.bus_id), bess = installed?.bus_id === bus.bus_id;
       ctx.fillStyle = overlay.value === "resources" ? (bess ? "#79568c" : pv ? "#087c80" : "#879aa2") :
-        overlay.value === "shedding" ? (shed > 0 && valid ? "#79568c" : "#879aa2") :
+        overlay.value === "served" ? (number(servedPercent) && valid ? (servedPercent < 80 ? "#b56a05" : "#087c80") : "#879aa2") :
+        overlay.value === "shedding" ? (shedKw > 0 && valid ? "#79568c" : "#879aa2") :
         band === "L" ? "#b56a05" : band === "H" ? "#b84c37" :
         band === "N" && overlay.value !== "violations" ? "#087c80" : "#879aa2";
       ctx.beginPath();
       const radius = kind === "Bus" && id === selected ? 8 : 5;
       ctx.arc(x, y, overlay.value === "shedding" && valid && shed > 0 ? radius + 6 * Math.min(1, shed) : radius, 0, Math.PI * 2);
       ctx.fill();
+      if (disconnected && valid) {
+        ctx.strokeStyle = "#b84c37";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, radius + 3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
       ctx.fillStyle = "#102c3a";
       ctx.font = "11px system-ui, sans-serif";
       const icons = [bus.is_slack ? "Grid" : "", pv ? "PV" : "", bess ? "BESS" : ""].filter(Boolean);
-      ctx.fillText("B" + id + (["L", "H"].includes(band) ? " " + band : ""), x + 8, y - 6);
+      const loadLabel = overlay.value === "served" && number(servedPercent) ? " " + fmt(servedPercent, 0) + "%" :
+        overlay.value === "shedding" && shedKw > 0 ? " " + fmt(shedKw, 1) + " kW" : "";
+      ctx.fillText("B" + id + (disconnected && valid ? " Out" : "") +
+        (["L", "H"].includes(band) ? " " + band : "") + loadLabel, x + 8, y - 6);
       if (icons.length) ctx.fillText(icons.join(" · "), x + 8, y + 12);
     }
   }
@@ -746,6 +769,7 @@ function network(root) {
       const peer = entityValues(compared, alternative?.scenario.timeIndex.get(time));
       const entries = kind === "Bus" ? [
         ["Voltage (pu)", "voltage_pu"], ["Requested load (kW)", "requested_load_kw"], ["Served load (kW)", "load_input_kw"],
+        ["Load shed (%)", "shed_load_percent"], ["Fully disconnected", "fully_disconnected"],
         ["Requested load (kvar)", "requested_load_kvar"], ["Served load (kvar)", "load_input_kvar"],
         ["Delivered PV (kW)", "pv_input_kw"], ["Battery injection (kW)", "bess_input_kw"], ["Shedding (kW)", "shedding_kw"],
         ["Pre-control voltage (pu)", "pre_control_voltage_pu"], ["Available PV (kW)", "available_pv_kw"],
@@ -1420,6 +1444,18 @@ function optimization(root) {
     ["Infeasible BESS candidates", infeasible], ["Modeled annual savings", currency(savings)]]);
   if (meta?.decision_message) note(summary, meta.decision_message);
   if (meta?.best_bess_replay_mismatch) summary.append(el("p", meta.best_bess_replay_mismatch, "warning"));
+  if (meta?.annual_verification_hours) {
+    note(summary, fmt(meta.annual_verification_hours, 0) + " chronological hours verified per finalist.");
+    const reliable = meta.verified_minimum_shedding_candidate;
+    if (reliable) note(summary, "Lowest shedding among verified batteries: " + batteryName(reliable.candidate) +
+      ", " + energy(reliable.annual_shedding_kwh) + " unserved.");
+    advanced(summary, "Screening estimates and verification times", body => {
+      kv(body, [["Screened battery candidates", meta.screening_candidate_count],
+        ["Verified finalist hours", meta.annual_verification_hours]]);
+      details(body, "Representative weeks, bus probes and timings", {periods: meta.screening_periods,
+        locations: meta.screened_locations, wall_seconds: meta.stage_wall_seconds});
+    });
+  }
   if (run.convergence.length) {
     const convergence = section(root, "Convergence");
     plot(convergence, [{label: "Best annual cost", points: run.convergence.map(row => ({
@@ -1564,6 +1600,24 @@ async function diagnostics(root) {
     ["Battery limiter hours", digest.battery_limiter_hours ??
       (hourly.some(row => typeof row.bess_limited === "boolean") ? hourly.filter(row => row.bess_limited === true).length : null)]]);
   if (infeasible) summary.append(el("p", "Saved results contain unresolved constraints, nonconvergence, or a failed feasibility check.", "warning"));
+
+  advanced(root, "Load service and solver timings", body => {
+    const quality = metricsOf(scenario.metrics);
+    kv(body, [["Fully disconnected bus-hours", quality.fully_disconnected_bus_hours ?? "Unavailable"],
+      ["Hours with any disconnected load bus", quality.hours_with_full_disconnection ?? "Unavailable"],
+      ["Hours without verified service values", quality.service_unverified_hours ?? "Unavailable"],
+      ["Bus-hours above 50% shed", quality.buses_shed_over_50_percent_hours ?? "Unavailable"],
+      ["Bus-hours above 80% shed", quality.buses_shed_over_80_percent_hours ?? "Unavailable"],
+      ["Weighted controller score", quality.controller_policy_score ?? "Unavailable"]]);
+    const ranking = [...(scenario.service_by_bus || [])].sort((a, b) =>
+      b.fully_disconnected_hours - a.fully_disconnected_hours || b.shed_energy_kwh - a.shed_energy_kwh);
+    if (ranking.length) table(body, ["Bus", "Disconnected hours", "Longest outage (h)", "Energy served (%)", "Shed energy (kWh)"],
+      ranking.map(bus => [bus.bus_id, bus.fully_disconnected_hours, bus.longest_disconnection_hours,
+        bus.served_energy_percent, bus.shed_energy_kwh]));
+    else note(body, "Per-bus service history unavailable.");
+    details(body, "Saved timing breakdown", run.metadata.context?.["Dispatch timing"] ||
+      run.metadata.optimizer?.stage_wall_seconds || {});
+  });
 
   const tableSection = section(root, "Event log");
   const controls = el("div", undefined, "chart-controls");

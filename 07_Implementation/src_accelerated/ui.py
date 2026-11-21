@@ -34,6 +34,7 @@ from .progress import StageReporter, format_duration
 from .ui_presentation import compact_summary
 from .ui_bindings import restore_designer_combo_data
 from .study_session import StudySession, study_fingerprint, migrate_inputs
+from .study_setup import open_study_setup, save_study_setup
 from .distributed_dataset import discover_cases, summary_pv_ratings
 from .pv_model import read_nasa_csv
 from .ui_workflow import (
@@ -534,12 +535,17 @@ class SettingsDialog(QDialog):
         widget(self, "btn_clear_allowed_buses").clicked.connect(self.clear_allowed_buses)
         widget(self, "list_allowed_buses").itemSelectionChanged.connect(self.update_allowed_bus_count)
         widget(self, "combo_optimizer_algorithm").currentIndexChanged.connect(self.update_algorithm_controls)
+        widget(self, "combo_search_preset").currentIndexChanged.connect(self.update_algorithm_controls)
+        widget(self, "chk_advanced_search").toggled.connect(self.update_algorithm_controls)
+        widget(self, "chk_advanced_shedding").toggled.connect(self.update_shedding_controls)
+        widget(self, "combo_shedding_policy").currentIndexChanged.connect(self.update_shedding_controls)
+        self.update_shedding_controls()
         for name in ("group_manual_bess","group_reserve","group_import_limit","group_export_limit","group_economic_inputs","group_terminal_soc"):
             widget(self,name).toggled.connect(self.update_optional_controls)
         # A CPU-dependent value is runtime data, not a visual layout change.
         workers = widget(self, "spin_cpu_workers")
         workers.setMaximum(max(1, os.cpu_count() or 1))
-        workers.setValue(max(1, (os.cpu_count() or 1) - 1))
+        workers.setValue(max(1, min(4, (os.cpu_count() or 1) - 1)))
 
     def update_algorithm_controls(self, *args):
         """Collapse inactive rows while keeping both methods in the same form."""
@@ -551,6 +557,20 @@ class SettingsDialog(QDialog):
             form.setRowVisible(widget(self,name),ga)
         compute = widget(self,"group_compute_backend").layout()
         compute.setRowVisible(widget(self,"spin_cpu_workers"),not ga)
+        advanced = widget(self, "chk_advanced_search").isChecked()
+        for name in ("group_ga_settings", "group_compute_backend", "group_allowed_buses", "group_optimization_bounds"):
+            widget(self, name).setVisible(advanced)
+        preset = widget(self, "combo_search_preset")
+        if ga:
+            preset.setCurrentIndex(preset.findData("thorough"))
+        preset.setEnabled(not ga)
+        widget(self, "group_search_screening").setVisible(advanced and not ga and preset.currentData() != "thorough")
+
+    def update_shedding_controls(self, *args):
+        advanced = widget(self, "chk_advanced_shedding").isChecked()
+        policy = widget(self, "combo_shedding_policy")
+        policy.setEnabled(advanced)
+        widget(self, "group_shedding_tiers").setVisible(advanced and policy.currentData() == "progressive")
 
     def update_optional_controls(self, *args):
         for name in ("group_manual_bess","group_reserve","group_import_limit","group_export_limit","group_economic_inputs","group_terminal_soc"):
@@ -625,6 +645,13 @@ class SettingsDialog(QDialog):
         values["chk_tariffs_confirmed"] = widget(self,"chk_tariffs_confirmed").isChecked()
         values["optimizer_algorithm"] = widget(self, "combo_optimizer_algorithm").currentData()
         values["terminal_policy"] = widget(self, "combo_terminal_policy").currentData()
+        values["search_mode"] = widget(self, "combo_search_preset").currentData()
+        values["shedding_policy"] = widget(self, "combo_shedding_policy").currentData()
+        for key, control, sentinel in (("screen_sites", "spin_screen_sites", 0),
+                                       ("screen_exploratory", "spin_screen_exploratory", -1),
+                                       ("screen_finalists", "spin_screen_finalists", 0)):
+            if values[control] != sentinel:
+                values[key] = values[control]
         return values
 
     def restore_values(self):
@@ -649,6 +676,10 @@ class SettingsDialog(QDialog):
         widget(self,"chk_tariffs_confirmed").setChecked(self.committed.get("chk_tariffs_confirmed",False))
         terminal = widget(self, "combo_terminal_policy")
         terminal.setCurrentIndex(max(0, terminal.findData(self.committed.get("terminal_policy", "equal_soc"))))
+        for name, key, default in (("combo_search_preset", "search_mode", "standard"),
+                                   ("combo_shedding_policy", "shedding_policy", "progressive")):
+            combo = widget(self, name)
+            combo.setCurrentIndex(max(0, combo.findData(self.committed.get(key, default))))
         self.update_optional_controls()
         self.update_dispatch()
         self.update_compute_status()
@@ -690,6 +721,9 @@ class SettingsDialog(QDialog):
             terminal_soc_tolerance=(values["spin_terminal_soc_percent"] / 100
                                     if values["group_terminal_soc"] else None),
             allow_pv_curtailment=values["chk_allow_curtailment"], allow_load_shedding=values["chk_allow_shedding"],
+            shedding_policy=values["shedding_policy"],
+            shedding_tier_edges=tuple(values[f"spin_shed_edge_{i}"] / 100 for i in (1, 2)),
+            shedding_tier_weights=tuple(values[f"spin_shed_weight_{i}"] for i in (1, 2, 3)),
             fbs_config=FBSConfig())
         terminal_policy = values["terminal_policy"] if values["group_economic_inputs"] else "equal_soc"
         economics = EconomicConfig(
@@ -704,6 +738,7 @@ class SettingsDialog(QDialog):
             grid_export_tariff_per_kwh=values["spin_grid_export_tariff"] if values["chk_tariffs_confirmed"] else None,
             fixed_installation_cost=values["spin_fixed_cost"],
             terminal_policy=terminal_policy,
+            terminal_soc_tolerance=values["spin_terminal_soc_percent"] / 100,
             terminal_energy_price_per_kwh=(values["spin_terminal_energy_price"] if terminal_policy == "priced_energy" else None))
         dispatch = ConstraintAwareDispatch() if values["dispatch_mode"] == 1 else None
         battery = None
@@ -961,6 +996,9 @@ class MainWindow(QMainWindow):
         # Toolbar, icons and view layout are defined in main_window.ui.
         self.add_network_controls()
         self.add_dashboard_actions()
+        study_menu = self.menuBar().addMenu("Study")
+        self.save_setup_action = study_menu.addAction("Save study setup…", self.save_setup)
+        self.open_setup_action = study_menu.addAction("Open study setup…", self.open_setup)
         widget(self, "run_log").setMaximumBlockCount(5000)
         self.connect_events()
         self.connect_source_events()
@@ -1336,26 +1374,68 @@ class MainWindow(QMainWindow):
 
     def load_data(self):
         if self.load_dialog.exec() == QDialog.DialogCode.Accepted:
-            next_study = self.load_dialog.study
-            new_session = (self.session is None
-                           or study_fingerprint(next_study) != self.session.manifest["fingerprint"])
-            if new_session:
-                self.session = StudySession.create(
-                    next_study, Path(__file__).resolve().parent / "Results",
-                )
+            self.attach_study(self.load_dialog.study)
 
-            self.study = next_study
-            self.settings_dialog.set_network(self.study.network)
-            self.sync_time_controls()
-            self.invalidate_results("New data loaded; previous results cleared.")
-            self.scene.branch_sides.clear()
-            self.arrange_network_view()
-            self.append_log(
-                f"Study loaded: {len(self.study.network.buses)} buses; "
-                f"{len(self.study.profiles.timestamps)} hourly steps\n"
-                f"Load: {self.study.request.load_source}; PV: {self.study.request.pv_source}\n"
-                f"Session: {self.session.root.name}")
-            self.set_busy(False)
+    def attach_study(self, study, controls=None):
+        if self.session is None or study_fingerprint(study) != self.session.manifest["fingerprint"]:
+            self.session = StudySession.create(study, Path(__file__).resolve().parent / "Results")
+        self.study = study
+        self.settings_dialog.set_network(study.network)
+        if controls is not None:
+            self.settings_dialog.committed.update(controls)
+            self.settings_dialog.restore_values()
+        self.sync_time_controls()
+        self.invalidate_results("Study loaded. Open a saved report to review earlier results.")
+        self.scene.branch_sides.clear()
+        self.arrange_network_view()
+        self.append_log(f"Study loaded: {len(study.network.buses)} buses; {len(study.profiles.timestamps)} hourly steps\n"
+                        f"Load: {self.study.request.load_source}; PV: {self.study.request.pv_source}\nSession: {self.session.root.name}")
+        self.set_busy(False)
+
+    def save_setup(self):
+        if self.study is None or self.runner.busy:
+            return
+        name, _ = QFileDialog.getSaveFileName(self, "Save study setup", "BESS_Study.json", "Study setup (*.json)")
+        if name:
+            self.pending_action = "save_setup"
+            self.runner.start(partial(save_study_setup, Path(name), self.study, deepcopy(self.settings_dialog.committed)))
+
+    def open_setup(self):
+        if self.runner.busy:
+            return
+        name, _ = QFileDialog.getOpenFileName(self, "Open study setup", "", "Study setup (*.json)")
+        if name:
+            self.pending_action = "open_setup"
+            self.runner.start(partial(open_study_setup, Path(name)))
+
+    def pre_run_review(self):
+        if self.study is None:
+            return "Import network, load and PV data to configure a study."
+        study = self.study
+        controls = self.settings_dialog.committed
+        network = study.network
+        pv = {unit.bus_id for unit in network.pv_units if unit.p_rated_kw > 0.}
+        kw = sum(unit.p_rated_kw for unit in network.pv_units)
+        grid = []
+        for kind in ("import", "export"):
+            limit = f"{controls[f'spin_{kind}_limit_kw']:g} kW" if controls[f"group_{kind}_limit"] else "uncapped"
+            grid.append(f"{kind} {limit}")
+        policy = "Balanced shedding" if controls.get("shedding_policy", "progressive") == "progressive" else "Minimum-energy shedding"
+        preset = {"quick": "Quick", "standard": "Standard", "thorough": "Thorough"}.get(controls.get("search_mode"), "Standard")
+        reserve = f"{controls['spin_reserve_percent']:g}% reserve" if controls["group_reserve"] else "reserve disabled"
+        economics = (f"VoLL {controls['spin_shedding_penalty']:g} USD/kWh, "
+                     f"BESS {controls['spin_cost_per_kwh']:g} USD/kWh + {controls['spin_cost_per_kw']:g} USD/kW")
+        if not controls["group_economic_inputs"]:
+            economics = "Battery economics disabled"
+        review = (f"{len(network.buses)} buses · {len(network.radial_order().forward_line_ids)} active branches · "
+                  f"{sum(load.p_base_kw for load in network.loads):,.0f} kW nominal demand · {kw:,.0f} kW PV at {len(pv)} sites · "
+                  f"{study.profiles.timestamps[0].year} / {len(study.profiles.timestamps):,} h "
+                  f"{study.context.get('Clock') or getattr(study.request, 'clock', None) or 'source clock'}\n"
+                  f"{controls['spin_voltage_min_pu']:g}–{controls['spin_voltage_max_pu']:g} pu · {', '.join(grid)} · "
+                  f"{reserve} · {policy} · {preset} {controls.get('optimizer_algorithm', 'GWO')} · {economics}")
+        if len(network.buses) == 33 and pv == {6, 18, 25, 30} and abs(kw - 4800.) < 1.:
+            review += "\nIEEE 33-bus reference uses 6,000 kW at five sites. Bus 12 is absent from the installed PV rows."
+        return review
 
     def open_forecasting(self):
         if self.study is None or self.session is None or self.runner.busy:
@@ -1477,6 +1557,12 @@ class MainWindow(QMainWindow):
     def set_busy(self, busy):
         widget(self,"group_simulation_source").setEnabled(not busy)
         widget(self,"btn_input_window").setEnabled(not busy)
+        self.save_setup_action.setEnabled(self.study is not None and not busy)
+        self.open_setup_action.setEnabled(not busy)
+        title = widget(self, "lbl_workspace_subtitle")
+        title.setTextFormat(Qt.TextFormat.PlainText)
+        title.setText(self.pre_run_review())
+        title.setWordWrap(True)
         ready = self.settings_dialog.engine_ready
         set_status(widget(self,"lbl_engine_status"),"FBS Numba · Ready" if ready else
             "Solver unavailable" if self.settings_dialog.jit_runner.failure else "Preparing solver…",
@@ -1588,6 +1674,14 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(message)
 
     def job_succeeded(self, result):
+        if self.pending_action == "open_setup":
+            self.pending_action = ""
+            self.attach_study(*result)
+            return
+        if self.pending_action == "save_setup":
+            self.pending_action = ""
+            self.show_stage(f"Study setup saved to {result}")
+            return
         if self.pending_action == "run":
             self.finish_run_clock()
             self.report = result
