@@ -4,30 +4,44 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data: blob:; base-uri 'none'; form-action 'none'">
-<title>BESS Planning Tool · Run dashboard</title>
+<title>BESS Planning Tool | Results</title>
 <style><!-- REPORT_STYLE --></style>
 </head>
 <body>
 <header>
   <div><div class="app-name">BESS Planning Tool</div><h1 id="title">Run dashboard</h1><p id="subtitle" class="muted"></p></div>
-  <div class="actions">
-    <label class="button">Import runs<input id="import" type="file" accept=".html,.json,.zip" multiple></label>
-    <button id="print" type="button">Print / Save PDF</button>
+  <div class="actions" id="report-actions" hidden>
+    <label id="run-label" hidden>Run<select id="run"></select></label>
+    <details class="action-menu" id="compare-menu">
+      <summary>Compare</summary>
+      <div class="menu-content"><label id="scenario-label">Alternative<select id="scenario"></select></label>
+      <label class="button">Import saved runs<input id="import" type="file" accept=".html,.json,.zip" multiple></label>
+      <p id="comparison-help" class="muted"></p></div>
+    </details>
+    <details class="action-menu">
+      <summary>Export</summary>
+      <div class="menu-content"><button id="print" type="button">Print / Save PDF</button>
+      <p class="muted">Charts can be saved from their view. The desktop Dashboard menu includes portable ZIP export.</p></div>
+    </details>
   </div>
 </header>
-<div id="notice" role="status" aria-live="polite">Reading saved results…</div>
+<div id="notice" role="status" aria-live="polite">Reading saved results.</div>
 <div id="workspace" hidden>
-  <div class="controls">
-    <label>Run<select id="run"></select></label>
-    <label>Alternative<select id="scenario"></select></label>
-    <label class="clock">Study hour<input id="hour" type="range" min="0" max="0" value="0"></label>
-    <output id="timestamp" for="hour"></output>
-  </div>
   <nav id="tabs" aria-label="Results sections"></nav>
-  <main id="panel" tabindex="-1"></main>
+  <main>
+    <nav id="analysis-tabs" aria-label="Analysis sections" hidden></nav>
+    <div class="controls" id="hour-controls" hidden>
+      <button id="previous-hour" type="button" aria-label="Previous hour">‹</button>
+      <label class="clock">Study hour<input id="hour" type="range" min="0" max="0" value="0"></label>
+      <button id="next-hour" type="button" aria-label="Next hour">›</button>
+      <output id="timestamp" for="hour"></output>
+    </div>
+    <div id="panel" role="tabpanel" tabindex="-1"></div>
+  </main>
 </div>
 <section id="print-summary" aria-label="Printable run summary"></section>
-<script id="report-data" type="application/octet-stream" data-bytes="<!-- REPORT_SIZE -->"><!-- REPORT_DATA --></script>
+<script id="report-data" type="application/octet-stream" data-bytes="<!-- REPORT_SIZE -->" data-total-bytes="<!-- TOTAL_SIZE -->"><!-- REPORT_DATA --></script>
 <script><!-- REPORT_SCRIPT --></script>
+<!-- REPORT_BLOCKS -->
 </body>
 </html>
