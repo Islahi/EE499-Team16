@@ -1,26 +1,31 @@
 "use strict";
 
 const $ = id => document.getElementById(id);
-const tabs = ["Overview", "Network", "Simulation", "BESS", "Economics", "Optimization", "Diagnostics"];
+const tabs = ["Overview", "Network", "Charts", "Analysis"];
+const analysisTabs = ["BESS", "Economics", "Optimization", "Diagnostics"];
 const colors = ["#087c80", "#b84c37", "#275fa5", "#79568c", "#806509", "#257647"];
-const state = {runs: [], run: 0, scenario: "", tab: "Overview", hour: 0,
+const state = {runs: [], run: 0, scenario: "", tab: "Overview", analysis: "", hour: 0,
   equipment: ["Bus", ""], zoom: 1, offsetX: 0, offsetY: 0, redraw: null};
 const empty = {label: "Summary only", hours: [], buses: {}, branches: {}, metrics: [], events: []};
 const number = value => typeof value === "number" && Number.isFinite(value);
-const fmt = (value, digits = 5) => number(value) ? new Intl.NumberFormat("en", {
-  maximumFractionDigits: digits, maximumSignificantDigits: 9
-}).format(value) : value === null || value === undefined || value === "" ? "Unavailable" :
+const formatters = new Map();
+const fmt = (value, digits = 5) => number(value) ? formatNumber(value, digits) : value === null || value === undefined || value === "" ? "Unavailable" :
   typeof value === "boolean" ? (value ? "Yes" : "No") :
   typeof value === "object" ? JSON.stringify(value) : String(value);
 const nameOf = key => key.replaceAll("_", " ").replace(/^./, letter => letter.toUpperCase());
 const manifest = () => state.runs[state.run].manifest;
 const current = () => state.runs[state.run];
 const active = () => current().scenarios[state.scenario] || empty;
-const staticCase = () => active().hours[0]?.timestamp === "Static base case";
-const hourAt = () => active().hours[state.hour]?.timestamp || null;
-const eventAt = () => active().eventIndex?.get(hourAt()) || null;
+const hourCount = scenario => scenario?.hour_count ?? scenario?.hours?.length ?? 0;
+const staticCase = (scenario = active()) => (scenario.first || scenario.hours[0])?.timestamp === "Static base case";
+const hourAt = () => active().hours[state.hour]?.timestamp || (!state.hour ? active().first?.timestamp : null);
 const metricsOf = rows => Object.fromEntries(rows.map(row => [row.metric, row.value]));
 const textMetric = (key, fallback) => metricsOf(active().metrics)[key] ?? fallback ?? null;
+
+function formatNumber(value, digits) {
+  if (!formatters.has(digits)) formatters.set(digits, new Intl.NumberFormat("en", {maximumFractionDigits: digits}));
+  return formatters.get(digits).format(value);
+}
 
 function el(tag, value, className) {
   const node = document.createElement(tag);
@@ -85,10 +90,23 @@ function kv(root, entries) {
 }
 
 function details(root, title, value) {
-  const container = el("details");
-  container.append(el("summary", title), el("pre", typeof value === "string" ? value : JSON.stringify(value, null, 2)));
-  root.append(container);
-  return container;
+  return advanced(root, title, body => body.append(el("pre", typeof value === "string" ? value : JSON.stringify(value, null, 2))));
+}
+
+function advanced(root, title, fill) {
+  const box = el("details", undefined, "advanced");
+  const summary = el("summary", title);
+  const content = el("div", undefined, "advanced-content");
+  box.append(summary, content);
+  root.append(box);
+  const reveal = async () => {
+    if (!box.open) return;
+    box.removeEventListener("toggle", reveal);
+    try { await fill(content); }
+    catch (error) { note(content, "Unable to read saved details. " + error.message); }
+  };
+  box.addEventListener("toggle", reveal);
+  return box;
 }
 
 function cards(root, entries) {
@@ -143,35 +161,100 @@ function checkNotice() {
         ". Use the run selector to inspect this report separately.") : "Matched data and comparison basis.");
   });
   if (current().metadata.legacy) messages.unshift("Archived run. Fields without saved records are unavailable.");
-  const rawBytes = Number($("report-data").dataset.bytes);
-  if (rawBytes >= 85 * 1024 * 1024) {
-    messages.push("This annual report contains large hourly tables. A portable ZIP with the original files is available from the desktop dashboard menu.");
-  }
   $("notice").textContent = messages.join(" ");
+  $("comparison-help").textContent = state.runs.length > 1 ? "Compatibility details appear above the report." :
+    "Import a saved HTML report, portable ZIP, or manifest to compare runs.";
+  $("run-label").hidden = state.runs.length < 2;
+  $("scenario-label").hidden = Object.keys(current().scenarios).length < 2;
 }
 
-function indexRun(run) {
-  if (run.manifest?.schema_version !== 1 || typeof run.manifest.run_id !== "string" ||
+function indexRun(run, readBlock) {
+  if (![1, 2].includes(run.manifest?.schema_version) || typeof run.manifest.run_id !== "string" ||
       !run.scenarios || !run.metadata) throw Error("Unsupported report or manifest schema.");
+  run.readBlock = readBlock;
   for (const scenario of Object.values(run.scenarios)) {
+    scenario.hours ??= [];
+    scenario.buses ??= {};
+    scenario.branches ??= {};
+    scenario.events ??= [];
     scenario.timeIndex = new Map(scenario.hours.map((row, index) => [row.timestamp, index]));
     scenario.eventIndex = new Map(scenario.events.map(event => [event.timestamp, event]));
+    scenario.run = run;
   }
   return run;
 }
 
-async function unpack(data) {
+async function inflate(data) {
   if (typeof DecompressionStream !== "function") throw Error("This report needs a browser with gzip decompression support.");
-  const text = atob(data.trim());
-  const bytes = Uint8Array.from(text, character => character.charCodeAt(0));
+  const encoded = data.trim();
+  let bytes;
+  if (typeof Uint8Array.fromBase64 === "function") bytes = Uint8Array.fromBase64(encoded);
+  else {
+    const raw = atob(encoded);
+    bytes = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  }
   const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
-  return indexRun(await new Response(stream).json());
+  return new Response(stream).json();
+}
+
+const cachedBlocks = new Map();
+
+function block(run, id) {
+  if (id === null || id === undefined) return Promise.resolve(null);
+  const key = run.manifest.run_id + ":" + id;
+  const task = cachedBlocks.get(key) || Promise.resolve().then(() => run.readBlock(id)).then(inflate).catch(error => {
+    cachedBlocks.delete(key);
+    throw error;
+  });
+  cachedBlocks.delete(key);
+  cachedBlocks.set(key, task);
+  if (cachedBlocks.size > 20) cachedBlocks.delete(cachedBlocks.keys().next().value);
+  return task;
+}
+
+async function loadHours(scenario) {
+  if (!scenario.hours.length && hourCount(scenario)) {
+    scenario.hours = await block(scenario.run, scenario.hours_block);
+    scenario.timeIndex = new Map(scenario.hours.map((row, index) => [row.timestamp, index]));
+  }
+}
+
+function eventSummaries(scenario) {
+  return scenario.event_index_block === null || scenario.event_index_block === undefined ?
+    Promise.resolve(scenario.events) : block(scenario.run, scenario.event_index_block);
+}
+
+async function hourEvent(scenario, index) {
+  const timestamp = scenario.hours[index]?.timestamp;
+  if (!scenario.event_blocks) return scenario.eventIndex.get(timestamp);
+  const events = await block(scenario.run, scenario.event_blocks[Math.floor(index / scenario.chunk_hours)]);
+  return events?.find(event => event.timestamp === timestamp);
+}
+
+async function unpack(data, readBlock) {
+  return indexRun(await inflate(data), readBlock);
 }
 
 function payloadFromHtml(source) {
   const match = source.match(/<script id="report-data" type="application\/octet-stream"[^>]*>\s*([A-Za-z0-9+/=]+)\s*<\/script>/);
   if (!match) throw Error("The HTML does not contain an EE499 run.");
-  return unpack(match[1]);
+  let blocks;
+  return unpack(match[1], id => {
+    if (!blocks) {
+      blocks = new Map();
+      const headers = /<script id="report-block-(\d+)" type="application\/octet-stream"[^>]*>/g;
+      let header;
+      while ((header = headers.exec(source))) {
+        const end = source.indexOf("</script>", headers.lastIndex);
+        if (end < 0) break;
+        blocks.set(Number(header[1]), [headers.lastIndex, end]);
+        headers.lastIndex = end + 9;
+      }
+    }
+    if (!blocks.has(id)) throw Error("The saved report is missing data block " + id);
+    return source.slice(...blocks.get(id));
+  });
 }
 
 async function htmlFromZip(file) {
@@ -209,7 +292,7 @@ async function readImport(file) {
   if (file.name.toLowerCase().endsWith(".zip")) return payloadFromHtml(await htmlFromZip(file));
   if (file.name.toLowerCase().endsWith(".html")) return payloadFromHtml(await file.text());
   const data = JSON.parse(await file.text());
-  if (data.schema_version !== 1 || !data.run_id || !Array.isArray(data.summary)) {
+  if (![1, 2].includes(data.schema_version) || !data.run_id || !Array.isArray(data.summary)) {
     throw Error("Unsupported EE499 manifest.");
   }
   return indexRun({manifest: data, metadata: {legacy: true, context: {}},
@@ -239,17 +322,21 @@ function pickScenario(key) {
   state.scenario = key;
   $("scenario").value = key;
   state.hour = active().timeIndex?.get(previous) ?? 0;
-  updateHour();
+  state.pendingTimestamp = active().hours.length ? null : previous;
+  state.visibleSeries = null;
   checkNotice();
   render();
 }
 
 function updateHour() {
   const input = $("hour");
-  input.max = Math.max(0, active().hours.length - 1);
-  input.disabled = active().hours.length < 2;
+  const count = hourCount(active());
+  input.max = Math.max(0, count - 1);
+  input.disabled = count < 2;
   input.value = state.hour;
   $("timestamp").textContent = hourAt() || "Hourly data unavailable";
+  $("previous-hour").disabled = state.hour === 0;
+  $("next-hour").disabled = state.hour >= count - 1;
 }
 
 function setHour(timestamp) {
@@ -257,24 +344,101 @@ function setHour(timestamp) {
   if (index === undefined) return;
   state.hour = index;
   updateHour();
-  if (state.tab === "Simulation") state.redraw?.();
-  else render();
+  if (state.hourChanged) state.hourChanged();
+  else state.redraw?.();
 }
 
-function render() {
+function availableAnalysis(run, scenario) {
+  return analysisTabs.filter(name => ({
+    BESS: scenario.has_bess ?? scenario.hours.some(row => number(row.bess_accepted_soc)),
+    Economics: run.economic_comparison?.length || number(metricsOf(scenario.metrics).annual_total_cost),
+    Optimization: run.candidate_count || run.evaluations?.length || run.metadata.optimizer,
+    Diagnostics: hourCount(scenario) && !staticCase(scenario)
+  })[name]);
+}
+
+function navigate(tab, analysis) {
+  state.tab = tab;
+  if (analysis) state.analysis = analysis;
+  render();
+}
+
+function tabKey(event) {
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  const choices = [...event.currentTarget.querySelectorAll("button:not(:disabled)")];
+  const index = choices.indexOf(event.target);
+  if (index === -1) return;
+  event.preventDefault();
+  const next = event.key === "Home" ? choices[0] : event.key === "End" ? choices.at(-1) :
+    choices[(index + choices.length + (event.key === "ArrowLeft" ? -1 : 1)) % choices.length];
+  next.click();
+  if (event.currentTarget.id === "analysis-tabs") $(next.id)?.focus();
+  else next.focus();
+}
+
+function tabControl(name, id, activate, selected) {
+  const control = button(name, activate);
+  control.id = id;
+  control.setAttribute("role", "tab");
+  control.setAttribute("aria-controls", "panel");
+  control.setAttribute("aria-selected", selected);
+  control.tabIndex = selected ? 0 : -1;
+  return control;
+}
+
+let viewRequest = 0;
+
+async function render() {
+  const request = ++viewRequest;
   const run = current();
+  const scenario = active();
+  const interval = run.manifest.interval || {};
+  const begin = interval.start?.slice(0, 10), end = (interval.end_exclusive || interval.last)?.slice(0, 10);
   $("title").textContent = (run.manifest.kind === "base case" ? "Static base case" :
     run.manifest.kind === "optimization" ? "Storage optimization" :
     run.manifest.kind === "simulation" ? "Hourly simulation" : "Archived results");
-  $("subtitle").textContent = [run.metadata.context?.Network, run.manifest.folder, run.manifest.solver?.name]
+  $("subtitle").textContent = [run.metadata.context?.Network, run.manifest.source,
+    begin && end && begin !== end ? begin + " to " + end : begin, run.manifest.solver?.name]
     .filter(Boolean).join(" · ");
-  $("tabs").querySelectorAll("button").forEach(control =>
-    control.setAttribute("aria-selected", control.textContent === state.tab));
+  const analyses = availableAnalysis(run, scenario);
+  if (!analyses.includes(state.analysis)) state.analysis = analyses.includes("Optimization") ? "Optimization" : analyses[0];
+  const availability = {Overview: true, Network: !!run.metadata.layout && hourCount(scenario) > 0,
+    Charts: hourCount(scenario) > 0 && !staticCase(scenario), Analysis: analyses.length > 0};
+  if (!availability[state.tab]) state.tab = "Overview";
+  $("tabs").querySelectorAll("button").forEach(control => {
+    const selected = control.textContent === state.tab;
+    control.disabled = !availability[control.textContent];
+    control.setAttribute("aria-selected", selected);
+    control.tabIndex = selected ? 0 : -1;
+  });
+  const analysisBar = $("analysis-tabs");
+  analysisBar.hidden = state.tab !== "Analysis";
+  analysisBar.replaceChildren(...(analysisBar.hidden ? [] : analyses.map(name =>
+    tabControl(name, "analysis-" + name.toLowerCase(), () => navigate("Analysis", name), state.analysis === name))));
   const root = $("panel");
-  root.replaceChildren();
+  const body = el("div", undefined, "view-content");
+  root.replaceChildren(body);
+  root.setAttribute("aria-labelledby", (state.tab === "Analysis" ? "analysis-" + state.analysis : "tab-" + state.tab).toLowerCase());
   state.redraw = null;
-  ({Overview: overview, Network: network, Simulation: simulation, BESS: bess,
-    Economics: economics, Optimization: optimization, Diagnostics: diagnostics})[state.tab](root);
+  state.hourChanged = null;
+  const view = state.tab === "Analysis" ? state.analysis : state.tab;
+  const timeView = ["Network", "Charts", "BESS", "Diagnostics"].includes(view);
+  $("hour-controls").hidden = !timeView || staticCase(scenario) || hourCount(scenario) < 2;
+  try {
+    if (timeView && !scenario.hours.length) {
+      note(body, "Loading saved hourly results…");
+      await loadHours(scenario);
+      if (request !== viewRequest) return;
+      if (state.pendingTimestamp) state.hour = scenario.timeIndex.get(state.pendingTimestamp) ?? 0;
+      state.pendingTimestamp = null;
+      body.replaceChildren();
+    }
+    updateHour();
+    await ({Overview: overview, Network: network, Charts: simulation, BESS: bess,
+      Economics: economics, Optimization: optimization, Diagnostics: diagnostics})[view](body);
+  } catch (error) {
+    if (request === viewRequest) note(body, "Unable to read saved results. " + error.message);
+  }
 }
 
 function batteryName(candidate) {
@@ -282,46 +446,126 @@ function batteryName(candidate) {
     candidate.energy_capacity_kwh + " kWh" : "Unavailable";
 }
 
+function energy(kwh) {
+  return number(kwh) ? fmt(kwh / 1000, 2) + " MWh" : null;
+}
+
+function currency(value) {
+  return number(value) ? fmt(value, 0) + " USD/year" : null;
+}
+
+function selectedOutcome(run) {
+  const optimizer = run.metadata.optimizer;
+  if (!optimizer) return active().label;
+  if (optimizer.no_bess_selected) return "No BESS";
+  return optimizer.best_bess_feasible ? batteryName(optimizer.best_bess_candidate) : "No feasible design";
+}
+
+function savedAlternatives(run) {
+  const base = metricsOf(run.scenarios.no_bess?.metrics || []);
+  const battery = metricsOf(run.scenarios.best_bess?.metrics || []);
+  const selected = run.metadata.optimizer?.no_bess_selected ? base : battery;
+  const matched = !run.metadata.optimizer?.best_bess_replay_mismatch && base.feasible === true && battery.feasible === true;
+  const savings = (matched || selected === base && base.feasible === true) &&
+    number(base.annual_total_cost) && number(selected.annual_total_cost) ? base.annual_total_cost - selected.annual_total_cost : null;
+  return {base, battery, selected, matched, savings};
+}
+
+function percentChange(before, after) {
+  return number(before) && before > 0 && number(after) ? (before - after) * 100 / before : null;
+}
+
+function comparisonGraphic(root, base, battery) {
+  const rows = [["Annual cost", "annual_total_cost", currency], ["Unserved energy", "load_shedding_energy_kwh", energy],
+    ["PV curtailment", "curtailment_energy_kwh", energy]].filter(([, key]) => number(base[key]) && number(battery[key]));
+  if (!rows.length) return;
+  const box = section(root, "No BESS vs best feasible battery");
+  const legend = el("div", undefined, "comparison-legend");
+  legend.append(el("span", "No BESS", "base-key"), el("span", "Best feasible battery", "battery-key"));
+  box.append(legend);
+  for (const [caption, metric, display] of rows) {
+    const before = base[metric], after = battery[metric];
+    const change = percentChange(before, after);
+    const row = el("div", undefined, "comparison-row");
+    const title = el("div", undefined, "comparison-label");
+    title.append(el("strong", caption));
+    if (change !== null) title.append(el("span", fmt(Math.abs(change), 2) + "% " +
+      (change > 0 ? "lower" : change < 0 ? "higher" : "change"), "muted"));
+    const bars = el("div", undefined, "comparison-bars");
+    const max = Math.max(Math.abs(before), Math.abs(after), 1);
+    for (const [kind, value] of [["base", before], ["battery", after]]) {
+      const line = el("div", undefined, "bar-line");
+      const fill = el("span", undefined, "bar-fill " + kind);
+      fill.style.width = 100 * Math.abs(value) / max + "%";
+      fill.setAttribute("aria-hidden", "true");
+      line.append(fill, el("span", display(value), "bar-value"));
+      bars.append(line);
+    }
+    row.append(title, bars);
+    box.append(row);
+  }
+}
+
 function overview(root) {
   const run = current();
+  const scenario = active();
   const optimizer = run.metadata.optimizer;
-  const summary = section(root, "Run summary");
-  const row = active().hours[state.hour] || {};
-  const vMin = textMetric("voltage_min_pu", staticCase() ? row.voltage_min_pu : null);
-  const vMax = textMetric("voltage_max_pu", staticCase() ? row.voltage_max_pu : null);
-  cards(summary, [
-    ["Selected option", optimizer ? (optimizer.no_bess_selected ? "No BESS" :
-      optimizer.best_bess_feasible ? batteryName(optimizer.best_bess_candidate) : "No feasible design") :
-      run.metadata.context?.["Manual BESS"] ? batteryName(run.metadata.context["Manual BESS"]) : active().label],
-    ["Run voltage range (pu)", vMin === null || vMax === null ? null : fmt(vMin) + " to " + fmt(vMax)],
-    ["Annual cost (USD/year)", textMetric("annual_total_cost")],
-    ["Feasible", textMetric("feasible", row.feasible)]
-  ]);
-  kv(summary, [
-    ["Run ID", run.manifest.run_id], ["Source", run.manifest.source], ["Time basis", run.manifest.clock],
-    ["Selected interval", run.manifest.interval], ["Dispatch", run.metadata.context?.Dispatch],
-    ["Network control", run.manifest.network_control ? nameOf(run.manifest.network_control) : null],
-    ["Demand normalization", run.metadata.context?.["Demand normalization"]],
-    ["Requested load energy (kWh)", textMetric("requested_load_energy_kwh")],
-    ["Curtailed energy (kWh)", textMetric("curtailment_energy_kwh")],
-    ["Unserved energy (kWh)", textMetric("load_shedding_energy_kwh")],
-    ["Power flow", staticCase() ? row.fbs_message : null]
-  ]);
-  if (optimizer) {
-    const best = section(root, "Evaluated alternatives");
-    note(best, batteryName(optimizer.best_bess_candidate));
-    economicAlternatives(best);
-    if (optimizer.best_bess_replay_mismatch) note(best, optimizer.best_bess_replay_mismatch);
+  const snapshot = scenario.first || scenario.hours[0] || {};
+  const summary = section(root, staticCase() ? "Feeder benchmark" : "Results at a glance");
+  const diagnosis = scenario.diagnostic || {};
+  const metrics = metricsOf(scenario.metrics);
+  const low = run.metadata.simulation?.voltage_min_pu;
+  const high = run.metadata.simulation?.voltage_max_pu;
+  if (staticCase()) {
+    const vMin = diagnosis.worst_voltage_pu ?? snapshot.voltage_min_pu;
+    const bus = diagnosis.worst_bus ?? snapshot.minimum_voltage_bus;
+    cards(summary, [["Power flow", snapshot.converged === true ? "Converged" :
+      snapshot.converged === false ? "Did not converge" : null],
+    ["Minimum voltage", number(vMin) ? fmt(vMin, 5) + " pu" + (bus ? " at bus " + bus : "") : null],
+    ["Active power loss", number(snapshot.loss_p_kw) ? fmt(snapshot.loss_p_kw, 2) + " kW" : null]]);
+    if (number(vMin) && number(low) && vMin < low) summary.append(el("p",
+      "Minimum voltage is below the configured " + fmt(low) + " pu limit.", "warning"));
+  } else if (optimizer) {
+    const {base, battery, selected, matched, savings} = savedAlternatives(run);
+    const fraction = number(selected.load_shedding_energy_kwh) && selected.requested_load_energy_kwh > 0 ?
+      100 * selected.load_shedding_energy_kwh / selected.requested_load_energy_kwh : null;
+    cards(summary, [["Selected alternative", selectedOutcome(run)], ["Selected annual cost", currency(selected.annual_total_cost)],
+      ["Modeled annual savings", currency(savings)], ["Unserved energy", energy(selected.load_shedding_energy_kwh)],
+      ["PV curtailment", energy(selected.curtailment_energy_kwh)],
+      ["Feasibility", selected.feasible === true ? "Passed recorded limits" : selected.feasible === false ? "Infeasible" : null]]);
+    if (optimizer.decision_message) note(summary, optimizer.decision_message);
+    else if (matched && savings > 0) note(summary, "The selected battery has a lower recorded annual objective than No BESS.");
+    else if (matched && optimizer.no_bess_selected) note(summary, "No BESS had the lowest recorded annual objective.");
+    if (optimizer.best_bess_replay_mismatch) summary.append(el("p", optimizer.best_bess_replay_mismatch, "warning"));
+    if (fraction > 0) summary.append(el("p", fmt(fraction, 2) + "% of requested energy was unserved in the selected alternative.", "warning"));
+    if (matched) comparisonGraphic(root, base, battery);
+  } else {
+    const infeasible = metrics.feasible === false || diagnosis.infeasible > 0;
+    cards(summary, [["Feasibility", infeasible ? "Infeasible" : metrics.feasible === true ? "Passed recorded limits" : null],
+      ["Minimum voltage after controls", number(metrics.voltage_min_pu) ? fmt(metrics.voltage_min_pu) + " pu" : null],
+      ["Unserved energy", energy(metrics.load_shedding_energy_kwh)],
+      ["PV curtailment", energy(metrics.curtailment_energy_kwh)], ["Feeder losses", energy(metrics.loss_energy_kwh)]]);
+    if (infeasible) summary.append(el("p", "Saved results contain unresolved constraints or failed hours.", "warning"));
+    if (metrics.load_shedding_energy_kwh > 0 && metrics.requested_load_energy_kwh > 0)
+      summary.append(el("p", fmt(100 * metrics.load_shedding_energy_kwh / metrics.requested_load_energy_kwh, 2) +
+        "% of requested energy was unserved.", "warning"));
   }
-  if (state.runs.length > 1) {
-    const imports = section(root, "Imported runs");
-    table(imports, ["Run", "Hourly alignment", "Profiles", "Economic basis", "Differences"],
-      state.runs.filter(item => item !== run).map(item => {
-        const peers = compare(run.manifest, item.manifest);
-        return [item.manifest.folder, peers.align, peers.inputMatch, peers.economics, peers.reasons.join(", ") || "Matched"];
-      }));
-  }
-  details(summary, "Saved settings and provenance", run.manifest);
+  if (!staticCase() && diagnosis.infeasible > 0 && optimizer)
+    summary.append(el("p", scenario.label + " has " + fmt(diagnosis.infeasible) + " infeasible or nonconverged hours.", "warning"));
+  if (number(low) && number(high)) note(summary, "Configured voltage range " + fmt(low) + "–" + fmt(high) + " pu. " +
+    (run.manifest.clock ? "Study clock " + run.manifest.clock + "." : ""));
+  const jumps = el("div", undefined, "jump-actions");
+  if (run.metadata.layout && hourCount(scenario)) jumps.append(button("Explore network", () => navigate("Network")));
+  if (availableAnalysis(run, scenario).includes("Economics")) jumps.append(button("Explore costs", () => navigate("Analysis", "Economics")));
+  if (jumps.childElementCount) root.append(jumps);
+  advanced(root, "Run details and all metrics", body => {
+    for (const item of Object.values(run.scenarios)) {
+      if (item.metrics.length) table(section(body, item.label), ["Saved metric", "Exact value", "Unit"],
+        item.metrics.map(row => [nameOf(row.metric), row.value == null ? null : String(row.value), row.unit]));
+    }
+    details(body, "Settings, hashes and provenance", run.manifest);
+    details(body, "Source and study configuration", run.metadata.context);
+  });
 }
 
 function canvasFrame(root, caption, className) {
@@ -366,157 +610,186 @@ function png(root, canvas, name) {
 function comparableScenarios() {
   return state.runs.flatMap((run, runIndex) => {
     if (run !== current() && !compare(manifest(), run.manifest).align) return [];
-    return Object.entries(run.scenarios).filter(([, scenario]) => scenario.hours.length).map(([key, scenario]) => ({
+    return Object.entries(run.scenarios).filter(([, scenario]) => hourCount(scenario)).map(([key, scenario]) => ({
       id: runIndex + ":" + key, label: (run === current() ? "" : run.manifest.folder + " · ") + scenario.label, scenario
     }));
   });
 }
 
-function entityAt(scenario, type, id, timestamp) {
-  const index = scenario.timeIndex?.get(timestamp);
-  const entity = (type === "Bus" ? scenario.buses : scenario.branches)[id];
+function entityColumns(scenario, type, id) {
+  const columns = (type === "Bus" ? scenario.buses : scenario.branches)[id];
+  const blocks = type === "Bus" ? scenario.bus_blocks : scenario.branch_blocks;
+  return columns ? Promise.resolve(columns) : block(scenario.run, blocks?.[id]);
+}
+
+function entityValues(entity, index) {
   if (!entity || index === undefined) return {};
   return Object.fromEntries(Object.entries(entity).map(([field, values]) => [field, values[index]]));
 }
 
 function network(root) {
   const run = current();
-  const geometry = run.metadata.layout;
-  const top = run.metadata.topology;
-  if (!geometry || !top || !active().hours.length) {
-    note(root, "Saved schematic layout or hourly network values unavailable.");
-    return;
-  }
+  const scenario = active();
+  const {layout: geometry, topology} = run.metadata;
+  if (!geometry || !topology || !scenario.hours.length) return note(root, "Saved network values unavailable.");
   const bar = el("div", undefined, "chart-controls");
-  const objects = [["", "Select a bus or line"], ...top.buses.map(bus => ["Bus:" + bus.bus_id, "Bus " + bus.bus_id]),
-    ...top.lines.map(line => ["Line:" + line.line_id, "Line " + line.line_id])];
-  const object = select(objects, state.equipment[0] + ":" + state.equipment[1]);
-  const peers = comparableScenarios().filter(peer => peer.scenario !== active());
+  const objects = [["", "Select a bus or line"], ...topology.buses.map(bus => ["Bus:" + bus.bus_id, "Bus " + bus.bus_id]),
+    ...topology.lines.map(line => ["Line:" + line.line_id, "Line " + line.line_id])];
+  const picker = select(objects, state.equipment.join(":"));
+  const peers = comparableScenarios().filter(peer => peer.scenario !== scenario);
   const other = select([["", "None"], ...peers.map(peer => [peer.id, peer.label])], state.networkPeer);
-  const overlay = el("input");
-  overlay.type = "checkbox";
-  overlay.checked = Boolean(state.sheddingOverlay);
-  overlay.addEventListener("change", () => { state.sheddingOverlay = overlay.checked; draw(); });
-  bar.append(label("Equipment", object), label("Compare voltage by bus", other), label("Show load shedding", overlay),
-    button("Zoom in", () => { state.zoom *= 1.25; draw(); }),
-    button("Zoom out", () => { state.zoom /= 1.25; draw(); }),
+  const overlay = select([["voltage", "Voltage"], ["shedding", "Load shedding"], ["resources", "PV and BESS"],
+    ["violations", "Electrical violations"]], state.overlay);
+  overlay.addEventListener("change", () => { state.overlay = overlay.value; draw(); });
+  bar.append(label("Equipment", picker), label("Overlay", overlay),
+    button("Zoom in", () => { state.zoom = Math.min(15, state.zoom * 1.25); draw(); }),
+    button("Zoom out", () => { state.zoom = Math.max(.15, state.zoom / 1.25); draw(); }),
     button("Fit feeder", () => { state.zoom = 1; state.offsetX = state.offsetY = 0; draw(); }));
   root.append(bar);
-  const {canvas, hint} = canvasFrame(root, "Use the wheel to zoom, drag to pan, and select a bus or line for details.", "network");
-  const detail = el("div");
-  root.append(detail);
-  png(root, canvas, "feeder");
-  const low = run.metadata.simulation?.voltage_min_pu;
-  const high = run.metadata.simulation?.voltage_max_pu;
-  note(root, "Voltage bands (pu) · Below " + fmt(low) + " amber · Within limits teal · Above " +
-    fmt(high) + " red · Unavailable or nonconverged gray.");
-  let targets = [], segments = [];
-  let drag = null;
+  if (peers.length) advanced(root, "Compare network values", body => body.append(label("Comparison alternative", other)));
+
+  const layout = el("div", undefined, "network-layout");
+  const drawing = el("div", undefined, "network-drawing");
+  const detail = el("aside", undefined, "network-inspector");
+  layout.append(drawing, detail);
+  root.append(layout);
+  const status = el("p", undefined, "network-status");
+  drawing.append(status);
+  const {canvas, hint} = canvasFrame(drawing, "Select a bus or line for exact saved values.", "network");
+  png(drawing, canvas, "feeder");
+  const low = run.metadata.simulation?.voltage_min_pu, high = run.metadata.simulation?.voltage_max_pu;
+  note(drawing, "Voltage (pu) · Below " + fmt(low) + " amber · Within limits teal · Above " +
+    fmt(high) + " red. L and H mark voltage violations. Dashed red lines mark saved ampacity violations.");
   const positions = Object.values(geometry.positions);
-  const xs = positions.map(position => position[0]), ys = positions.map(position => position[1]);
-  const left = Math.min(...xs), right = Math.max(...xs), topY = Math.min(...ys), bottom = Math.max(...ys);
+  const xs = positions.map(([x]) => x), ys = positions.map(([, y]) => y);
+  const left = Math.min(...xs), right = Math.max(...xs), top = Math.min(...ys), bottom = Math.max(...ys);
+  const installed = state.scenario === "best_bess" ? run.metadata.optimizer?.best_bess_candidate :
+    state.scenario === "." ? run.metadata.context?.["Manual BESS"] : null;
+  let targets = [], segments = [], drag, snapshot, snapshotIndex = -1, inspected = 0;
 
   function draw() {
     const {context: ctx, width, height} = sizeCanvas(canvas);
     const scale = Math.max(.015, Math.min((width - 60) / Math.max(1, right - left),
-      (height - 70) / Math.max(160, bottom - topY))) * state.zoom;
+      (height - 70) / Math.max(160, bottom - top))) * state.zoom;
     const xy = ([x, y]) => [width / 2 + (x - (right + left) / 2) * scale + state.offsetX,
-      height / 2 + (y - (bottom + topY) / 2) * scale + state.offsetY];
+      height / 2 + (y - (bottom + top) / 2) * scale + state.offsetY];
     targets = [];
     segments = [];
-    const [type, id] = state.equipment;
-    for (const line of top.lines) {
+    const [kind, selected] = state.equipment;
+    const offset = state.hour % scenario.chunk_hours;
+    const validHour = scenario.hours[state.hour]?.converged !== false;
+    const hourSnapshot = snapshotIndex === state.hour ? snapshot : null;
+    for (const line of topology.lines) {
       const route = geometry.routes[line.line_id];
       if (!route?.length) continue;
       const points = route.map(xy);
-      ctx.strokeStyle = type === "Line" && id === line.line_id ? "#087c80" : "#78929d";
-      ctx.lineWidth = type === "Line" && id === line.line_id ? 3 : 1.3;
+      const oldAmps = scenario.branches[line.line_id]?.current_a?.[state.hour];
+      const overload = overlay.value === "violations" && validHour && (hourSnapshot?.overloads[line.line_id]?.[offset] === "X" ||
+        (!hourSnapshot && run.metadata.simulation?.enforce_line_ampacity !== false && number(line.ampacity_a) &&
+         number(oldAmps) && oldAmps > line.ampacity_a + 1e-6));
+      ctx.strokeStyle = overload ? "#b84c37" : kind === "Line" && selected === line.line_id ? "#087c80" : "#78929d";
+      ctx.lineWidth = overload || kind === "Line" && selected === line.line_id ? 3 : 1.3;
+      ctx.setLineDash(overload ? [5, 3] : []);
       ctx.beginPath();
       points.forEach(([x, y], index) => {
-        if (index) {
-          ctx.lineTo(x, y);
-          segments.push([line.line_id, points[index - 1], points[index]]);
-        } else ctx.moveTo(x, y);
+        if (index) { ctx.lineTo(x, y); segments.push([line.line_id, points[index - 1], points[index]]); }
+        else ctx.moveTo(x, y);
       });
       ctx.stroke();
     }
-    for (const bus of top.buses) {
-      const key = String(bus.bus_id);
-      const position = geometry.positions[key];
-      if (!position) continue;
-      const [x, y] = xy(position);
-      targets.push([key, x, y]);
-      const data = entityAt(active(), "Bus", key, hourAt());
-      const voltage = data.voltage_pu;
-      const converged = active().hours[state.hour]?.converged;
-      ctx.fillStyle = !number(voltage) || data.diagnostic_only || converged === false || !number(low) || !number(high) ?
-        "#879aa2" : voltage < low ? "#b56a05" : voltage > high ? "#b84c37" : "#087c80";
+    ctx.setLineDash([]);
+    for (const bus of topology.buses) {
+      const id = String(bus.bus_id);
+      if (!geometry.positions[id]) continue;
+      const [x, y] = xy(geometry.positions[id]);
+      targets.push([id, x, y]);
+      const values = entityValues(scenario.buses[id], state.hour);
+      const series = hourSnapshot?.buses[id];
+      const voltage = values.voltage_pu;
+      const shed = series?.[1]?.length ? series[1][offset] / 100 : (values.shedding_kw > 0 ?
+        values.shedding_kw / (values.load_input_kw + values.shedding_kw) : null);
+      const valid = validHour && !values.diagnostic_only;
+      const band = !valid ? "?" : series?.[0]?.[offset] ?? (!number(voltage) || !number(low) || !number(high) ? "?" :
+        voltage < low ? "L" : voltage > high ? "H" : "N");
+      const pv = run.metadata.pv_buses?.includes(bus.bus_id), bess = installed?.bus_id === bus.bus_id;
+      ctx.fillStyle = overlay.value === "resources" ? (bess ? "#79568c" : pv ? "#087c80" : "#879aa2") :
+        overlay.value === "shedding" ? (shed > 0 && valid ? "#79568c" : "#879aa2") :
+        band === "L" ? "#b56a05" : band === "H" ? "#b84c37" :
+        band === "N" && overlay.value !== "violations" ? "#087c80" : "#879aa2";
       ctx.beginPath();
-      ctx.arc(x, y, type === "Bus" && id === key ? 8 : 5, 0, Math.PI * 2);
+      const radius = kind === "Bus" && id === selected ? 8 : 5;
+      ctx.arc(x, y, overlay.value === "shedding" && valid && shed > 0 ? radius + 6 * Math.min(1, shed) : radius, 0, Math.PI * 2);
       ctx.fill();
-      if (state.sheddingOverlay && data.shedding_kw > 0 && !data.diagnostic_only) {
-        const requested = data.requested_load_kw ?? (data.load_input_kw + data.shedding_kw);
-        ctx.strokeStyle = "#79568c";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(x, y, 9 + 8 * Math.min(1, data.shedding_kw / requested), 0, Math.PI * 2);
-        ctx.stroke();
-      }
       ctx.fillStyle = "#102c3a";
-      const installed = state.scenario === "best_bess" ? run.metadata.optimizer?.best_bess_candidate :
-        state.scenario === "." ? run.metadata.context?.["Manual BESS"] : null;
       ctx.font = "11px system-ui, sans-serif";
-      const icons = [bus.is_slack ? "Grid" : null, run.metadata.pv_buses?.includes(bus.bus_id) ? "☀ PV" : null,
-        installed?.bus_id === bus.bus_id ? "▣ BESS" : null].filter(Boolean);
-      ctx.fillText("B" + key, x + 8, y - 6);
+      const icons = [bus.is_slack ? "Grid" : "", pv ? "PV" : "", bess ? "BESS" : ""].filter(Boolean);
+      ctx.fillText("B" + id + (["L", "H"].includes(band) ? " " + band : ""), x + 8, y - 6);
       if (icons.length) ctx.fillText(icons.join(" · "), x + 8, y + 12);
     }
   }
 
-  function showEquipment() {
+  async function inspect() {
+    const request = ++inspected;
     detail.replaceChildren();
-    const [type, id] = state.equipment;
-    if (!id) return;
-    const data = entityAt(active(), type, id, hourAt());
-    const object = type === "Bus" ? top.buses.find(bus => String(bus.bus_id) === id) :
-      top.lines.find(line => line.line_id === id);
-    const otherRun = peers.find(item => item.id === other.value);
-    const compared = otherRun ? entityAt(otherRun.scenario, type, id, hourAt()) : {};
-    const entries = type === "Bus" ?
-      [["Voltage (pu)", data.voltage_pu, compared.voltage_pu], ["Pre-control voltage (pu)", data.pre_control_voltage_pu, compared.pre_control_voltage_pu],
-        ["Requested load (kW)", data.requested_load_kw, compared.requested_load_kw], ["Delivered load (kW)", data.load_input_kw, compared.load_input_kw],
-        ["Requested load (kvar)", data.requested_load_kvar, compared.requested_load_kvar], ["Delivered load (kvar)", data.load_input_kvar, compared.load_input_kvar],
-        ["Available PV (kW)", data.available_pv_kw, compared.available_pv_kw], ["Delivered PV (kW)", data.pv_input_kw, compared.pv_input_kw],
-        ["Battery injection (kW)", data.bess_input_kw, compared.bess_input_kw],
-        ["Shedding (kW)", data.shedding_kw, compared.shedding_kw], ["Shedding (kvar)", data.shedding_kvar, compared.shedding_kvar],
-        ["Curtailment (kW)", data.curtailment_kw, compared.curtailment_kw]] :
-      [["Current (A)", data.current_a, compared.current_a], ["Sending power (kW)", data.sending_p_kw ?? data.p_kw, compared.sending_p_kw ?? compared.p_kw],
-        ["Reactive power (kvar)", data.sending_q_kvar ?? data.q_kvar, compared.sending_q_kvar ?? compared.q_kvar],
-        ["Loss (kW)", data.loss_p_kw ?? data.loss_kw, compared.loss_p_kw ?? compared.loss_kw]];
-    const pane = section(detail, type + " " + id + (object?.name ? " · " + object.name : ""));
-    if (otherRun) table(pane, ["Measure", active().label, otherRun.label, "Δ active − comparison"],
-      entries.map(([key, actual, peer]) => [key, actual, peer, number(actual) && number(peer) ? actual - peer : null]));
-    else kv(pane, entries.map(([key, actual]) => [key, actual]));
-    if (type === "Line") note(pane, "Bus " + object?.from_bus + " to " + object?.to_bus + " · Ampacity " + fmt(object?.ampacity_a) + " A");
-    if (data.diagnostic_only || active().hours[state.hour]?.converged === false) note(pane, "Nonconverged. Last electrical iterate is diagnostic only.");
+    const [kind, id] = state.equipment;
+    if (!id) return note(detail, "Select a bus or line on the feeder to see its saved electrical values.");
+    const index = state.hour;
+    const time = hourAt();
+    const equipment = kind === "Bus" ? topology.buses.find(bus => String(bus.bus_id) === id) :
+      topology.lines.find(line => line.line_id === id);
+    const alternative = peers.find(peer => peer.id === other.value);
+    try {
+      const [columns, compared] = await Promise.all([entityColumns(scenario, kind, id),
+        alternative ? loadHours(alternative.scenario).then(() => entityColumns(alternative.scenario, kind, id)) : null]);
+      if (request !== inspected || !detail.isConnected) return;
+      const data = entityValues(columns, index);
+      const peer = entityValues(compared, alternative?.scenario.timeIndex.get(time));
+      const entries = kind === "Bus" ? [
+        ["Voltage (pu)", "voltage_pu"], ["Requested load (kW)", "requested_load_kw"], ["Served load (kW)", "load_input_kw"],
+        ["Requested load (kvar)", "requested_load_kvar"], ["Served load (kvar)", "load_input_kvar"],
+        ["Delivered PV (kW)", "pv_input_kw"], ["Battery injection (kW)", "bess_input_kw"], ["Shedding (kW)", "shedding_kw"],
+        ["Pre-control voltage (pu)", "pre_control_voltage_pu"], ["Available PV (kW)", "available_pv_kw"],
+        ["Shedding (kvar)", "shedding_kvar"], ["Curtailment (kW)", "curtailment_kw"]] : [
+        ["Current (A)", "current_a"], ["Active flow (kW)", "sending_p_kw", "p_kw"],
+        ["Reactive flow (kvar)", "sending_q_kvar", "q_kvar"], ["Loss (kW)", "loss_p_kw", "loss_kw"]];
+      const rows = entries.map(([caption, key, fallback]) => [caption, data[key] ?? data[fallback], peer[key] ?? peer[fallback]]);
+      const pane = section(detail, kind + " " + id + (equipment?.name ? " · " + equipment.name : ""));
+      const show = (target, items) => alternative ? table(target, ["Measure", scenario.label, alternative.label, "Difference"],
+        items.map(([caption, actual, comparison]) => [caption, actual, comparison, number(actual) && number(comparison) ? actual - comparison : null])) :
+        kv(target, items.map(([caption, actual]) => [caption, actual]));
+      const limit = kind === "Bus" ? 8 : 3;
+      show(pane, rows.slice(0, limit));
+      if (kind === "Line") note(pane, "Bus " + equipment?.from_bus + " to " + equipment?.to_bus + " · Ampacity " +
+        fmt(equipment?.ampacity_a) + " A");
+      advanced(pane, "More electrical details", body => {
+        show(body, rows.slice(limit));
+        details(body, "Saved values and attributes", {equipment, data, comparison: alternative ? peer : undefined});
+      });
+      if (data.diagnostic_only || scenario.hours[index]?.converged === false) note(pane, "Nonconverged. Values are diagnostic only.");
+    } catch (error) { if (request === inspected) note(detail, error.message); }
   }
 
-  function selection(type, id) {
-    state.equipment = [type, id];
-    object.value = type + ":" + id;
+  function selectEquipment(kind, id) {
+    state.equipment = [kind, id];
+    picker.value = id ? state.equipment.join(":") : "";
     draw();
-    showEquipment();
+    inspect();
   }
-  object.addEventListener("change", () => {
-    if (!object.value) return selection("Bus", "");
-    const separator = object.value.indexOf(":");
-    selection(object.value.slice(0, separator), object.value.slice(separator + 1));
+  picker.addEventListener("change", () => {
+    const separator = picker.value.indexOf(":");
+    if (separator === -1) selectEquipment("Bus", "");
+    else selectEquipment(picker.value.slice(0, separator), picker.value.slice(separator + 1));
   });
-  other.addEventListener("change", () => { state.networkPeer = other.value; showEquipment(); });
-  canvas.addEventListener("wheel", event => { event.preventDefault(); state.zoom = Math.max(.15, Math.min(15,
-    state.zoom * (event.deltaY < 0 ? 1.12 : .9))); draw(); }, {passive: false});
-  canvas.addEventListener("pointerdown", event => { drag = [event.offsetX, event.offsetY, state.offsetX, state.offsetY];
-    canvas.setPointerCapture(event.pointerId); });
+  other.addEventListener("change", () => { state.networkPeer = other.value; inspect(); });
+  canvas.addEventListener("wheel", event => {
+    event.preventDefault();
+    state.zoom = Math.max(.15, Math.min(15, state.zoom * (event.deltaY < 0 ? 1.12 : .9)));
+    draw();
+  }, {passive: false});
+  canvas.addEventListener("pointerdown", event => {
+    drag = [event.offsetX, event.offsetY, state.offsetX, state.offsetY];
+    canvas.setPointerCapture(event.pointerId);
+  });
   canvas.addEventListener("pointermove", event => {
     if (!drag) return;
     state.offsetX = drag[2] + event.offsetX - drag[0];
@@ -530,18 +803,35 @@ function network(root) {
     if (!clicked) return;
     const px = event.offsetX, py = event.offsetY;
     const target = targets.find(([, x, y]) => Math.hypot(x - px, y - py) < 13);
-    if (target) return selection("Bus", target[0]);
+    if (target) return selectEquipment("Bus", target[0]);
     const line = segments.find(([, [x, y], [x2, y2]]) => {
-      const fraction = Math.max(0, Math.min(1, ((px - x) * (x2 - x) + (py - y) * (y2 - y)) /
+      const f = Math.max(0, Math.min(1, ((px - x) * (x2 - x) + (py - y) * (y2 - y)) /
         ((x2 - x) ** 2 + (y2 - y) ** 2 || 1)));
-      return Math.hypot(px - x - fraction * (x2 - x), py - y - fraction * (y2 - y)) < 7;
+      return Math.hypot(px - x - f * (x2 - x), py - y - f * (y2 - y)) < 7;
     });
-    if (line) selection("Line", line[0]);
+    if (line) selectEquipment("Line", line[0]);
   });
-  hint.textContent = (hourAt() || "") + " · Wheel to zoom, drag to pan, select equipment for exact values.";
+
+  async function showHour() {
+    const index = state.hour;
+    const row = scenario.hours[index];
+    const message = row?.converged === false ? "Power flow did not converge" : row?.feasible === false ?
+      "Unresolved constraints at this hour" : row?.shedding_kw > 0 ? fmt(row.shedding_kw) + " kW of load shed" : "";
+    status.textContent = message;
+    status.classList.toggle("warning", Boolean(message));
+    try {
+      const data = await block(run, scenario.network_blocks?.[Math.floor(index / scenario.chunk_hours)]);
+      if (!root.isConnected || index !== state.hour) return;
+      snapshot = data;
+      snapshotIndex = index;
+      hint.textContent = (hourAt() || "") + " · Wheel to zoom, drag to pan, select equipment for exact values.";
+      draw();
+      inspect();
+    } catch (error) { status.textContent = error.message; }
+  }
+  state.hourChanged = showHour;
   state.redraw = draw;
-  draw();
-  showEquipment();
+  showHour();
 }
 
 const variables = [
@@ -595,7 +885,7 @@ function bucketed(records, cadence, method) {
   }));
 }
 
-function plot(root, series, title) {
+function plot(root, series, title, withCsv = false) {
   const {canvas, hint} = canvasFrame(root, title);
   if (series.length > 1) {
     const legend = el("div", undefined, "chart-legend");
@@ -606,7 +896,21 @@ function plot(root, series, title) {
     }
     root.append(legend);
   }
-  png(root, canvas, title.toLowerCase().replace(/[^a-z0-9]+/g, "-"));
+  const filename = title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  advanced(root, "Export chart", body => {
+    png(body, canvas, filename);
+    if (withCsv) body.append(button("Save chart data CSV", () => {
+      const quote = value => '"' + String(value ?? "").replaceAll('"', '""') + '"';
+      const rows = [["Timestamp", "Period", "Series", title], ...series.flatMap(set =>
+        set.points.map(point => [point.timestamp, point.label, set.label, point.value]))];
+      const url = URL.createObjectURL(new Blob([rows.map(row => row.map(quote).join(",")).join("\r\n")], {type: "text/csv"}));
+      const link = el("a");
+      link.href = url;
+      link.download = filename + ".csv";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }));
+  });
   const feature = new Map();
   for (const set of series) for (const point of set.points) feature.set(point.label, point.timestamp);
   const ticks = [...feature.keys()];
@@ -734,115 +1038,215 @@ function physicalValue(row, field) {
   if (row.diagnostic_only || row.converged === false) return null;
   if (["grid_import_kw", "grid_export_kw"].includes(field)) return number(row.slack_p_kw) ?
     Math.max(0, row.slack_p_kw * (field === "grid_import_kw" ? 1 : -1)) : null;
+  if (field === "requested_demand_kw") return number(row.load_input_kw) && number(row.shedding_kw) ?
+    row.load_input_kw + row.shedding_kw : null;
   return row[field];
 }
 
 function simulation(root) {
-  if (!active().hours.length || staticCase()) {
-    note(root, "Hourly simulation data unavailable for this view. Use Network for a saved static snapshot.");
-    return;
-  }
-  const widget = el("div", undefined, "chart-controls");
-  const choose = select(variables.map(([title], index) => [index, title]), state.variable ?? 0);
+  const scenario = active();
+  if (!scenario.hours.length || staticCase(scenario)) return note(root, "Hourly charts unavailable for this run.");
+  const metrics = [
+    ["Demand & PV (kW)", null, "average"], ["Shedding & curtailment (kW)", null, "average"],
+    ["Voltage range (pu)", null, "min"], ["BESS SOC (%)", "bess_accepted_soc", "last"],
+    ["BESS power (kW)", "bess_trial_power_kw", "average"], ["Grid & losses (kW)", null, "average"],
+    ...variables
+  ];
+  const groups = {
+    0: [["Requested demand", "requested_demand_kw", "average"], ["Delivered PV", "pv_input_kw", "average"]],
+    1: [["Load shedding", "shedding_kw", "average"], ["PV curtailment", "curtailment_kw", "average"]],
+    2: [["Lowest voltage", "voltage_min_pu", "min"], ["Highest voltage", "voltage_max_pu", "max"]],
+    5: [["Grid import", "grid_import_kw", "average"], ["Grid export", "grid_export_kw", "average"],
+        ["Active loss", "loss_p_kw", "average"]]
+  };
+  const peers = comparableScenarios();
+  const quick = el("div", undefined, "chart-controls");
+  const choose = select(metrics.map(([title], i) => [i, title]), state.variable ?? 0);
   const cadence = select(["Hourly", "Daily", "Weekly", "Monthly"].map(value => [value, value]), state.cadence);
-  const firstDay = active().hours[0].timestamp.slice(0, 10);
-  const lastDay = active().hours.at(-1).timestamp.slice(0, 10);
+  const windows = select([["all", "Full saved period"], ["7", "Week around selected hour"],
+    ["30", "Month around selected hour"], ["custom", "Custom dates"]], state.chartWindow);
+  const entityBox = el("span", undefined, "chart-entities");
+  const firstDay = scenario.hours[0].timestamp.slice(0, 10), lastDay = scenario.hours.at(-1).timestamp.slice(0, 10);
   const start = el("input"), end = el("input");
   start.type = end.type = "date";
+  start.min = end.min = firstDay;
+  start.max = end.max = lastDay;
   start.value = state.chartStart || firstDay;
   end.value = state.chartEnd || lastDay;
-  const peers = comparableScenarios();
-  const entityBox = el("div", undefined, "chart-controls");
+  const activeId = peers.find(peer => peer.scenario === scenario)?.id;
+  const overlay = select([["", "Current alternative only"], ...peers.filter(peer => peer.id !== activeId)
+    .map(peer => [peer.id, peer.label])], state.chartPeer);
+  quick.append(label("Metric", choose), entityBox, label("Resolution", cadence), label("Time range", windows),
+    label("Compare with", overlay));
+  root.append(quick);
+  const selected = new Set(state.visibleSeries || (activeId ? [activeId] : []));
+  if (overlay.value) selected.add(overlay.value);
   const legend = el("div", undefined, "chart-controls");
-  let chart = el("div");
-  widget.append(label("Variable", choose), label("Resolution", cadence), label("Start date", start), label("End date", end));
-  root.append(widget, entityBox, legend, chart);
-  const selected = state.visibleSeries || new Set(peers.filter(peer => peer.scenario === active() ||
-    current().scenarios.no_bess === peer.scenario || current().scenarios.best_bess === peer.scenario).map(peer => peer.id));
-  peers.forEach(peer => {
-    const toggle = el("input");
-    toggle.type = "checkbox";
-    toggle.checked = selected.has(peer.id);
-    toggle.addEventListener("change", () => {
-      if (toggle.checked) selected.add(peer.id); else selected.delete(peer.id);
-      state.visibleSeries = selected;
-      redraw();
+  const dates = el("div", undefined, "chart-controls");
+  const multiple = el("div", undefined, "chart-controls");
+  dates.append(label("Start date", start), label("End date", end));
+  const options = advanced(root, "Advanced chart options", body => {
+    body.append(dates, legend, multiple);
+    peers.forEach(peer => {
+      const toggle = el("input");
+      toggle.type = "checkbox";
+      toggle.value = peer.id;
+      toggle.checked = selected.has(peer.id);
+      toggle.addEventListener("change", () => {
+        if (toggle.checked) selected.add(peer.id); else selected.delete(peer.id);
+        redraw();
+      });
+      legend.append(label(peer.label, toggle, "toggle"));
     });
-    legend.append(label(peer.label, toggle, "toggle"));
   });
+  let chart = el("div");
+  root.append(chart);
+  let pending = 0;
+  let entitySelect = null;
 
-  function redraw() {
+  function range() {
+    if (windows.value === "custom") return [start.value, end.value];
+    if (windows.value === "all") return [firstDay, lastDay];
+    const day = new Date((hourAt()?.slice(0, 10) || firstDay) + "T00:00:00Z");
+    const count = Number(windows.value);
+    const from = new Date(day);
+    from.setUTCDate(day.getUTCDate() - Math.floor(count / 2));
+    const through = new Date(from);
+    through.setUTCDate(from.getUTCDate() + count - 1);
+    return [from.toISOString().slice(0, 10), through.toISOString().slice(0, 10)];
+  }
+
+  async function redraw() {
+    const request = ++pending;
     state.variable = Number(choose.value);
     state.cadence = cadence.value;
+    state.chartWindow = windows.value;
     state.chartStart = start.value;
     state.chartEnd = end.value;
-    const [title, field, method, type] = variables[state.variable];
+    state.visibleSeries = selected;
+    const [title, field, method, type] = metrics[state.variable];
+    const fields = groups[state.variable] || [[title, field, method]];
+    const [from, through] = range();
+    const ids = type ? (state.chartEntities?.length ? state.chartEntities : [entitySelect.value]) : [""];
     const series = [];
-    const ids = type ? (state.chartEntities || []).slice(0, 6) : [""];
-    for (const peer of peers.filter(item => selected.has(item.id))) for (const id of ids) {
-      const scenario = peer.scenario;
-      const entity = type === "Bus" ? scenario.buses[id] : scenario.branches[id];
-      const records = [];
-      for (const row of active().hours) {
-        const day = row.timestamp.slice(0, 10);
-        if ((start.value && day < start.value) || (end.value && day > end.value)) continue;
-        const index = scenario.timeIndex.get(row.timestamp);
-        const candidate = scenario.hours[index];
-        const value = type ? (index === undefined || entity?.diagnostic_only?.[index] ? null :
-          entity?.[field]?.[index]) : candidate ? physicalValue(candidate, field) : null;
-        records.push([row.timestamp, value, candidate?.dt_hours]);
-      }
-      series.push({label: peer.label + (type ? " · " + type + " " + id : ""),
-        points: bucketed(records, cadence.value, method)});
-    }
-    const next = el("div");
-    chart.replaceWith(next);
-    chart = next;
-    if (!series.length) note(chart, "Select at least one stored series.");
-    else plot(chart, series, title);
-    note(chart, cadence.value + " · " + (cadence.value === "Hourly" && method !== "energy" ? "saved hourly values" :
-      aggregationLabel[method]) + " · " + fmt(manifest().clock) +
-      (series.length > 1 ? " · " + series.map((set, index) => (index + 1) + " " + set.label).join(" | ") : ""));
+    chart.setAttribute("aria-busy", "true");
+    if (!chart.childElementCount) note(chart, "Loading saved series…");
+    try {
+      await Promise.all(peers.filter(peer => selected.has(peer.id)).map(async peer => {
+        await loadHours(peer.scenario);
+        const columns = await Promise.all(ids.map(id => type ? entityColumns(peer.scenario, type, id) : null));
+        return {peer, columns};
+      })).then(results => {
+        for (const {peer, columns} of results) for (const [entityIndex, id] of ids.entries()) {
+          const entity = columns[entityIndex];
+          for (const [legendLabel, key, aggregate] of fields) {
+            const records = [];
+            for (const row of scenario.hours) {
+              const date = row.timestamp.slice(0, 10);
+              if ((from && date < from) || (through && date > through)) continue;
+              const i = peer.scenario.timeIndex.get(row.timestamp);
+              const sample = peer.scenario.hours[i];
+              let value = type ? (sample?.converged === false || entity?.diagnostic_only?.[i] ? null : entity?.[key]?.[i]) :
+                sample ? physicalValue(sample, key) : null;
+              if (key === "bess_accepted_soc" && number(value)) value *= 100;
+              records.push([row.timestamp, value, sample?.dt_hours]);
+            }
+            series.push({label: peer.label + (type ? " · " + type + " " + id : "") +
+              (fields.length > 1 ? " · " + legendLabel : ""), points: bucketed(records, cadence.value, aggregate)});
+          }
+        }
+      });
+      if (request !== pending || !chart.isConnected) return;
+      const next = el("div");
+      chart.replaceWith(next);
+      chart = next;
+      if (!series.length) note(chart, "Select a saved series to plot.");
+      else plot(chart, series, title, true);
+      const meaning = [...new Set(fields.map(([, , aggregate]) => cadence.value === "Hourly" && aggregate !== "energy" ?
+        "saved hourly values" : aggregationLabel[aggregate]))].join(" / ");
+      note(chart, cadence.value + " · " + meaning + " · " + fmt(manifest().clock));
+    } catch (error) { if (request === pending) note(chart, error.message); }
+    finally { if (request === pending) chart.removeAttribute("aria-busy"); }
   }
 
   function changeEntities() {
     entityBox.replaceChildren();
-    const type = variables[Number(choose.value)][3];
+    multiple.replaceChildren();
+    const type = metrics[Number(choose.value)][3];
     if (type) {
-      const entities = Object.keys(type === "Bus" ? active().buses : active().branches);
-      const control = select(entities.map(id => [id, type + " " + id]));
-      control.multiple = true;
-      control.size = Math.min(4, entities.length || 1);
-      state.chartEntities = (state.chartEntities || []).filter(id => entities.includes(id));
-      if (!state.chartEntities.length && entities.length) state.chartEntities = [entities[0]];
-      [...control.options].forEach(option => { option.selected = state.chartEntities.includes(option.value); });
-      control.addEventListener("change", () => {
-        state.chartEntities = [...control.selectedOptions].map(option => option.value).slice(0, 6);
-        [...control.options].forEach(option => { option.selected = state.chartEntities.includes(option.value); });
+      const entities = Object.keys(type === "Bus" ? scenario.bus_blocks || scenario.buses :
+        scenario.branch_blocks || scenario.branches);
+      entitySelect = select(entities.map(id => [id, type + " " + id]));
+      const picks = (state.chartEntities || []).filter(id => entities.includes(id));
+      if (picks.length) entitySelect.value = picks[0];
+      state.chartEntities = picks.length ? picks : entities.slice(0, 1);
+      const multi = select(entities.map(id => [id, type + " " + id]));
+      multi.multiple = true;
+      multi.size = Math.min(4, entities.length || 1);
+      const sync = () => [...multi.options].forEach(option => { option.selected = state.chartEntities.includes(option.value); });
+      sync();
+      entitySelect.addEventListener("change", () => { state.chartEntities = [entitySelect.value]; sync(); redraw(); });
+      multi.addEventListener("change", () => {
+        state.chartEntities = [...multi.selectedOptions].map(option => option.value).slice(0, 6);
+        if (!state.chartEntities.length && entitySelect.value) state.chartEntities = [entitySelect.value];
+        if (state.chartEntities.length) entitySelect.value = state.chartEntities[0];
+        sync();
         redraw();
       });
-      entityBox.append(label(type + " series (choose up to six)", control));
+      entityBox.append(label(type, entitySelect));
+      multiple.append(label("Additional " + type.toLowerCase() + " series (up to six)", multi));
     }
     redraw();
   }
+
   choose.addEventListener("change", changeEntities);
-  [cadence, start, end].forEach(control => control.addEventListener("change", redraw));
+  overlay.addEventListener("change", () => {
+    selected.clear();
+    if (activeId) selected.add(activeId);
+    if (overlay.value) selected.add(overlay.value);
+    state.chartPeer = overlay.value;
+    legend.querySelectorAll("input").forEach(input => { input.checked = selected.has(input.value); });
+    redraw();
+  });
+  [cadence, windows, start, end].forEach(control => control.addEventListener("change", () => {
+    if (windows.value === "custom") { options.open = true; }
+    redraw();
+  }));
+  state.hourChanged = () => windows.value === "7" || windows.value === "30" ? redraw() : state.redraw?.();
   changeEntities();
 }
 
-function bess(root) {
+async function bess(root) {
   const scenario = active();
-  if (!scenario.hours.some(row => number(row.bess_accepted_soc))) {
-    note(root, "Saved hourly battery records unavailable for this alternative.");
-    return;
-  }
-  const widget = el("div", undefined, "chart-controls");
-  const variables = select([["power", "Battery injection (kW)"], ["soc", "State of charge (%)"],
-    ["energy", "Stored energy (kWh)"], ["headroom", "Physical power headroom (kW)"]], state.bessVariable);
-  widget.append(label("Battery series", variables));
-  root.append(widget);
-  const box = el("div");
-  root.append(box);
+  const run = current();
+  const metrics = metricsOf(scenario.metrics);
+  const candidate = state.scenario === "best_bess" ? run.metadata.optimizer?.best_bess_candidate :
+    run.metadata.context?.["Manual BESS"];
+  const values = scenario.hours.filter(row => number(row.bess_accepted_soc));
+  if (!values.length) return note(root, "Saved hourly battery records are unavailable for this alternative.");
+  const min = Math.min(...values.map(row => row.bess_accepted_soc));
+  const max = Math.max(...values.map(row => row.bess_accepted_soc));
+  const configuredFloor = candidate?.soc_min ?? (number(run.metadata.context?.["Settings controls"]?.spin_soc_min_percent) ?
+    run.metadata.context["Settings controls"].spin_soc_min_percent / 100 : null);
+  const limits = values.filter(row => row.bess_limited === true).length;
+  const summary = section(root, "Battery operation");
+  cards(summary, [["Battery configuration", batteryName(candidate)],
+    ["Charged / discharged", number(metrics.bess_charge_energy_kwh) && number(metrics.bess_discharge_energy_kwh) ?
+      energy(metrics.bess_charge_energy_kwh) + " / " + energy(metrics.bess_discharge_energy_kwh) : null],
+    ["SOC range", fmt(min * 100, 2) + "–" + fmt(max * 100, 2) + "%"]]);
+  if (number(configuredFloor)) {
+    const floorHours = values.filter(row => row.bess_accepted_soc <= configuredFloor + 1e-8).length;
+    note(summary, fmt(floorHours) + " recorded hours at minimum SOC. " + fmt(limits) + " hours recorded a battery limit.");
+  } else if (limits) note(summary, fmt(limits) + " hours recorded a battery limit.");
+  if (metrics.load_shedding_energy_kwh > 0) summary.append(el("p",
+    energy(metrics.load_shedding_energy_kwh) + " of requested energy remained unserved with this battery.", "warning"));
+  const choose = select([["soc", "State of charge (%)"], ["power", "Battery injection (kW)"],
+    ["energy", "Stored energy (kWh)"], ["headroom", "Physical power headroom (kW)"]], state.bessVariable || "soc");
+  root.append(label("Battery series", choose));
+  const chart = el("div");
+  root.append(chart);
+  const records = new Map((await eventSummaries(scenario)).map(event => [event.timestamp, event]));
+  if (!root.isConnected) return;
   const definitions = {
     power: [["Requested", row => row.bess_request_kw], ["Accepted", (row, event) =>
       event ? event.accepted_kw : row.converged ? row.bess_trial_power_kw : null], ["Before terminal adjustment", (_, event) => event?.planned_kw]],
@@ -853,38 +1257,48 @@ function bess(root) {
     headroom: [["Charge (magnitude)", (_, event) => event?.charge_available_kw],
       ["Discharge", (_, event) => event?.discharge_available_kw]]
   };
-  function chart() {
-    state.bessVariable = variables.value;
-    box.replaceChildren();
-    const title = variables.selectedOptions[0].textContent;
-    plot(box, definitions[variables.value].map(([label, get]) => ({label,
+  function plotBattery() {
+    state.bessVariable = choose.value;
+    chart.replaceChildren();
+    plot(chart, definitions[choose.value].map(([label, get]) => ({label,
       points: scenario.hours.map(row => ({label: row.timestamp, timestamp: row.timestamp,
-        value: get(row, scenario.eventIndex.get(row.timestamp))}))})), title);
-    const row = scenario.hours[state.hour];
-    const event = eventAt();
-    const hour = section(box, hourAt() || "Selected hour");
-    kv(hour, [
-      ["Request (kW)", row?.bess_request_kw], ["Accepted (kW)", event ? event.accepted_kw :
-        row?.converged ? row.bess_trial_power_kw : null],
-      ["Injection before residual controls (kW)", event?.after_bess_kw],
-      ["Energy before (kWh)", event?.energy_before_kwh], ["Energy after (kWh)", event?.energy_after_kwh],
-      ["Remaining closure hours", event?.terminal_remaining_hours], ["Terminal target (kWh)", event?.terminal_target_kwh],
-      ["Tested remaining electrical charge headroom (kWh)", event?.terminal_charge_headroom_kwh],
-      ["Tested remaining electrical discharge headroom (kWh)", event?.terminal_discharge_headroom_kwh],
-      ["Cause", event?.reason_codes?.join(", ") || row?.bess_limit_reason]
-    ]);
-    if (event?.risks?.length) table(hour, ["Look-ahead hour", "Uncontrolled constraints", "Tested injection (kW)"],
-      event.risks.map(risk => [risk.timestamp, risk.converged ? risk.constraints.join(", ") : "FBS failed",
-        risk.tested_action_kw.join(", ") || null]));
-    if (event?.projected_stress_actions?.length) {
-      note(hour, "Projection uses the current plan and tested actions for stressed hours. Later hours are planned again as battery state changes.");
-      table(hour, ["Stressed hour", "Projected injection (kW)", "Projected energy (kWh)", "Realized injection (kW)"],
-        event.projected_stress_actions.map(action => [action.timestamp, action.forecast_kw, action.forecast_energy_kwh,
-          scenario.eventIndex.get(action.timestamp)?.accepted_kw]));
-    }
+        value: get(row, records.get(row.timestamp))}))})), choose.selectedOptions[0].textContent, true);
   }
-  variables.addEventListener("change", chart);
-  chart();
+  const hourly = el("div");
+  let hourPanel;
+  let request = 0;
+  async function showHour() {
+    state.redraw?.();
+    if (!hourPanel.open) return;
+    const sequence = ++request;
+    const index = state.hour;
+    const row = scenario.hours[index];
+    try {
+      const event = await hourEvent(scenario, index);
+      if (!hourly.isConnected || sequence !== request) return;
+      hourly.replaceChildren();
+      const box = section(hourly, row.timestamp);
+      kv(box, [["Requested (kW)", row.bess_request_kw], ["Accepted (kW)", event?.accepted_kw ?? row.bess_trial_power_kw],
+        ["Injection before residual controls (kW)", event?.after_bess_kw], ["Energy before (kWh)", event?.energy_before_kwh],
+        ["Energy after (kWh)", event?.energy_after_kwh], ["Remaining closure hours", event?.terminal_remaining_hours],
+        ["Terminal target (kWh)", event?.terminal_target_kwh], ["Remaining charge headroom (kWh)", event?.terminal_charge_headroom_kwh],
+        ["Remaining discharge headroom (kWh)", event?.terminal_discharge_headroom_kwh],
+        ["Reason codes", event?.reason_codes?.join(", ") || row.bess_limit_reason]]);
+      if (event?.risks?.length) table(box, ["Look-ahead hour", "Uncontrolled constraints", "Tested injection (kW)"],
+        event.risks.map(risk => [risk.timestamp, risk.converged ? risk.constraints.join(", ") : "FBS failed",
+          risk.tested_action_kw.join(", ") || null]));
+      if (event?.projected_stress_actions?.length)
+        table(box, ["Stressed hour", "Projected injection (kW)", "Projected energy (kWh)", "Realized injection (kW)"],
+          event.projected_stress_actions.map(action => [action.timestamp, action.forecast_kw, action.forecast_energy_kwh,
+            records.get(action.timestamp)?.accepted_kw]));
+      if (event) details(box, "Complete saved dispatch event", event);
+    } catch (error) { if (sequence === request) note(hourly, error.message); }
+  }
+  hourPanel = advanced(root, "Hourly battery limits and 24-hour schedule", body => body.append(hourly));
+  hourPanel.addEventListener("toggle", showHour);
+  choose.addEventListener("change", plotBattery);
+  state.hourChanged = showHour;
+  plotBattery();
 }
 
 function economicAlternatives(root) {
@@ -933,18 +1347,15 @@ function economics(root, printable = false) {
   ];
   const scenarios = [active(), ...Object.values(run.scenarios).filter(item => item !== active() && item.metrics.length)];
   const values = scenarios.map(item => metricsOf(item.metrics));
-  table(report, ["Component", ...scenarios.map(item => item.label)],
-    components.map(([text, field]) => [text, ...values.map(item => item[field])]));
+  const {base, selected, savings} = savedAlternatives(run);
+  const choice = run.metadata.optimizer ? selected : m;
+  cards(report, [["No BESS annual cost", currency(base.annual_total_cost)], ["Selected annual cost", currency(choice.annual_total_cost)],
+    ["Modeled annual savings", currency(savings)], ["Annualized ownership", currency(choice.annualized_bess_cost)]]
+    .filter(([, value]) => value !== null));
+  if (run.metadata.optimizer?.decision_message) note(report, run.metadata.optimizer.decision_message);
+  note(report, "The objective includes modeled costs for unserved energy and curtailed PV. Avoided penalties are modeled savings.");
   const rate = prices?.discount_rate, lifetime = prices?.lifetime_years;
   const crf = number(rate) && number(lifetime) && lifetime > 0 ? (rate ? rate / (1 - (1 + rate) ** -lifetime) : 1 / lifetime) : null;
-  kv(report, [
-    ["Annualization basis", m.annualization_basis], ["Grid import tariff (USD/kWh)", prices?.grid_import_tariff_per_kwh],
-    ["Grid export tariff (USD/kWh)", prices?.grid_export_tariff_per_kwh], ["Value of lost load (USD/kWh)", prices?.shedding_penalty_per_kwh],
-    ["Curtailment penalty (USD/kWh)", prices?.curtailment_penalty_per_kwh],
-    ["Discount rate (%)", number(rate) ? rate * 100 : null], ["Lifetime (years)", lifetime], ["Capital recovery factor", crf],
-    ["Terminal energy policy", prices?.terminal_policy]
-  ]);
-  economicAlternatives(report);
   if (!printable && values.some(item => number(item.annual_total_cost))) {
     const chart = section(root, "Annual cost contributions");
     const {canvas} = canvasFrame(chart, "USD/year · Negative bars are credits.");
@@ -973,39 +1384,62 @@ function economics(root, printable = false) {
     };
     draw();
     state.redraw = draw;
-    png(chart, canvas, "annual-cost-contributions");
+    advanced(chart, "Export chart", body => png(body, canvas, "annual-cost-contributions"));
   }
-  if (!printable && state.runs.length > 1) {
-    const cross = section(root, "Saved prices by run");
-    const fields = ["grid_import_tariff_per_kwh", "grid_export_tariff_per_kwh", "shedding_penalty_per_kwh",
-      "curtailment_penalty_per_kwh", "annualization_basis"];
-    table(cross, ["Run", "Import tariff", "Export tariff", "Shedding penalty", "Curtailment penalty", "Annualization", "Basis matched"],
-      state.runs.map(other => [other.manifest.folder, ...fields.map(field => other.manifest.economics?.[field]),
-        compare(run.manifest, other.manifest).economics]));
-  }
+  const breakdown = body => {
+    table(body, ["Component", ...scenarios.map(item => item.label)],
+      components.map(([text, field]) => [text, ...values.map(item => number(item[field]) ? String(item[field]) : null)]));
+    kv(body, [["Annualization basis", m.annualization_basis], ["Grid import tariff (USD/kWh)", prices?.grid_import_tariff_per_kwh],
+      ["Grid export tariff (USD/kWh)", prices?.grid_export_tariff_per_kwh], ["Value of lost load (USD/kWh)", prices?.shedding_penalty_per_kwh],
+      ["Curtailment penalty (USD/kWh)", prices?.curtailment_penalty_per_kwh], ["Discount rate (%)", number(rate) ? rate * 100 : null],
+      ["Lifetime (years)", lifetime], ["Capital recovery factor", crf], ["Terminal energy policy", prices?.terminal_policy]]);
+    if (run.economic_comparison?.length) economicAlternatives(body);
+    if (state.runs.length > 1) {
+      const cross = section(body, "Saved prices by run");
+      const fields = ["grid_import_tariff_per_kwh", "grid_export_tariff_per_kwh", "shedding_penalty_per_kwh",
+        "curtailment_penalty_per_kwh", "annualization_basis"];
+      table(cross, ["Run", "Import tariff", "Export tariff", "Shedding penalty", "Curtailment penalty", "Annualization", "Basis matched"],
+        state.runs.map(other => [other.manifest.folder, ...fields.map(field => other.manifest.economics?.[field]),
+          compare(run.manifest, other.manifest).economics]));
+    }
+  };
+  if (printable) breakdown(report);
+  else advanced(root, "Detailed economics", breakdown);
 }
 
 function optimization(root) {
   const run = current();
   const meta = run.metadata.optimizer;
-  if (!run.evaluations.length && !meta) return note(root, "Optimizer evaluations unavailable for this run.");
-  const summary = section(root, "Selection");
-  kv(summary, [["Selected", meta?.no_bess_selected ? "No BESS" : meta?.best_bess_feasible ?
-    batteryName(meta.best_bess_candidate) : null],
-    ["Best evaluated feasible BESS", batteryName(meta?.best_bess_candidate)],
-    ["Feasible BESS candidates", meta?.feasible_bess_candidates],
-    ["Candidates with reserve violations", meta?.reserve_rejected_bess_candidates],
-    ["Decision", meta?.decision_message], ["Replay check", meta?.best_bess_replay_mismatch]]);
-  economicAlternatives(summary);
+  const count = run.candidate_count ?? run.evaluations?.length ?? null;
+  const feasible = run.feasible_count ?? run.evaluations?.filter(candidate => candidate.feasible === true).length ?? null;
+  const infeasible = run.infeasible_count ?? run.evaluations?.filter(candidate => candidate.feasible === false).length ?? null;
+  if (!count && !meta) return note(root, "Optimizer evaluations unavailable for this run.");
+  const summary = section(root, "Candidate selection");
+  const {savings} = savedAlternatives(run);
+  cards(summary, [["Selected", selectedOutcome(run)], ["Feasible BESS candidates", feasible],
+    ["Infeasible BESS candidates", infeasible], ["Modeled annual savings", currency(savings)]]);
+  if (meta?.decision_message) note(summary, meta.decision_message);
+  if (meta?.best_bess_replay_mismatch) summary.append(el("p", meta.best_bess_replay_mismatch, "warning"));
   if (run.convergence.length) {
     const convergence = section(root, "Convergence");
     plot(convergence, [{label: "Best annual cost", points: run.convergence.map(row => ({
       label: nameOf(row.axis || "Iteration") + " " + row.index, timestamp: "", value: row.best_annual_cost
     }))}], "Best annual cost (USD/year)");
   }
-  const list = section(root, "Candidate rankings");
+  const best = run.ranked || run.evaluations?.filter(candidate => candidate.feasible === true && number(candidate.annual_cost))
+    .sort((a, b) => a.annual_cost - b.annual_cost).slice(0, 8) || [];
+  if (best.length) table(section(root, "Top feasible batteries"), ["Bus", "Power (kW)", "Energy (kWh)", "Annual cost (USD/year)"],
+    best.map(item => [item.bus_id, item.power_rating_kw, item.energy_capacity_kwh, item.annual_cost]));
+  if (count) advanced(root, "Explore all candidates", async body => {
+    const evaluations = run.evaluations || await block(run, run.evaluation_block);
+    if (body.isConnected) candidateExplorer(body, run, evaluations);
+  });
+}
+
+function candidateExplorer(list, run, evaluations) {
+  const meta = run.metadata.optimizer;
   const controls = el("div", undefined, "chart-controls");
-  const buses = [...new Set(run.evaluations.map(row => row.bus_id))].sort((a, b) => a - b);
+  const buses = [...new Set(evaluations.map(row => row.bus_id))].sort((a, b) => a - b);
   const bus = select([["", "All buses"], ...buses.map(value => [value, "Bus " + value])]);
   const status = select([["", "All candidates"], ["yes", "Feasible"], ["no", "Infeasible"]]);
   const size = select([["power_rating_kw", "Power (kW)"], ["energy_capacity_kwh", "Energy (kWh)"]]);
@@ -1025,7 +1459,7 @@ function optimization(root) {
   const pane = el("div");
   let page = 0;
   list.append(pane, inspection);
-  const pageSize = 40;
+  const pageSize = 16;
 
   const isBest = row => meta?.best_bess_candidate && ["bus_id", "energy_capacity_kwh", "power_rating_kw"].every(
     key => row[key] === meta.best_bess_candidate[key]);
@@ -1033,12 +1467,13 @@ function optimization(root) {
     inspection.replaceChildren();
     const info = section(inspection, batteryName(row));
     kv(info, [["Feasible", row.feasible], ["Annual cost (USD/year)", row.annual_cost], ["Result", row.message],
-      ["Available records", isBest(row) && run.scenarios.best_bess?.hours.length ?
+      ["Available records", isBest(row) && hourCount(run.scenarios.best_bess) ?
         "Saved replay · Best evaluated feasible BESS" : "Summary only"],
       ["Unserved energy (kWh)", row.load_shedding_energy_kwh],
       ["Curtailment (kWh)", row.curtailment_energy_kwh], ["Reserve violation hours", row.reserve_violation_hours]]);
-    if (isBest(row) && run.scenarios.best_bess?.hours.length) info.append(button("Inspect saved battery replay", () => {
-      state.tab = "BESS"; pickScenario("best_bess");
+    details(info, "Complete candidate record", row);
+    if (isBest(row) && hourCount(run.scenarios.best_bess)) info.append(button("Inspect saved battery replay", () => {
+      state.tab = "Analysis"; state.analysis = "BESS"; pickScenario("best_bess");
     }));
   }
 
@@ -1078,7 +1513,7 @@ function optimization(root) {
 
   function refresh() {
     pane.replaceChildren();
-    const rows = run.evaluations.filter(row => (!bus.value || String(row.bus_id) === bus.value) &&
+    const rows = evaluations.filter(row => (!bus.value || String(row.bus_id) === bus.value) &&
       (!status.value || row.feasible === (status.value === "yes")) &&
       (!minimum.value || row[size.value] >= Number(minimum.value)) &&
       (!maximum.value || row[size.value] <= Number(maximum.value)));
@@ -1088,7 +1523,7 @@ function optimization(root) {
     table(pane, ["Candidate", "Bus", "Power (kW)", "Energy (kWh)", "Feasible", "Annual cost", "Records", "Result"],
       rows.slice(page * pageSize, (page + 1) * pageSize).map(row => [button("Inspect " + row.evaluation_index, () => inspect(row)),
         row.bus_id, row.power_rating_kw, row.energy_capacity_kwh, row.feasible, row.annual_cost,
-        isBest(row) && run.scenarios.best_bess?.hours.length ? "Saved replay" : "Summary only", row.message]));
+        isBest(row) && hourCount(run.scenarios.best_bess) ? "Saved replay" : "Summary only", row.message]));
     const previous = button("Previous", () => { page--; refresh(); });
     const next = button("Next", () => { page++; refresh(); });
     previous.disabled = page === 0;
@@ -1103,135 +1538,213 @@ function optimization(root) {
   refresh();
 }
 
-function diagnostics(root) {
+function severity(event, row) {
+  return event?.severity ?? (row?.converged === false || event?.final?.converged === false ? 4 :
+    row?.feasible === false || Object.keys(event?.final?.violations || {}).length ? 3 :
+    (event?.shedding_kw ?? row?.shedding_kw) > 1e-9 ? 2 :
+    (event?.curtailment_kw ?? row?.curtailment_kw) > 1e-9 || row?.bess_limited === true ? 1 : 0);
+}
+
+async function diagnostics(root) {
   const scenario = active();
-  const event = eventAt();
-  if (!scenario.hours.length) return note(root, "Saved hourly diagnostics unavailable.");
-  const hour = section(root, hourAt() || "Selected hour");
-  const row = scenario.hours[state.hour];
-  if (event) {
-    const stages = [["Uncontrolled", event.pre], ["After BESS", event.after_bess], ["Final controls", event.final]];
-    table(hour, ["State", "FBS converged", "Min voltage (pu)", "Min bus", "Max voltage (pu)", "Max bus",
-      "Grid import (kW)", "Grid export (kW)", "Constraint excess"],
-      stages.map(([title, flow]) => [title, flow?.converged, flow?.minimum_pu, flow?.minimum_bus,
-        flow?.maximum_pu, flow?.maximum_bus, flow?.import_kw, flow?.export_kw,
-        flow?.converged ? Object.keys(flow.violations).length ? flow.violations :
-          flow.binding?.join(", ") || "None" : null]));
-    kv(hour, [["BESS injection (kW)", event.accepted_kw], ["Shedding after controls (kW)", event.shedding_kw],
-      ["Curtailment after controls (kW)", event.curtailment_kw], ["Matched No BESS shedding (kW)", event.no_bess_shedding_kw],
-      ["Matched No BESS curtailment (kW)", event.no_bess_curtailment_kw],
-      ["Avoided shedding (kW)", event.avoided_shedding_kw], ["Avoided curtailment (kW)", event.avoided_curtailment_kw],
-      ["Corrector status", event.correction?.status], ["Linear solver status", event.correction?.linear_status],
-      ["Corrector iterations", event.correction?.iterations], ["Corrector FBS calls", event.correction?.fbs_trials],
-      ["Corrective cost (USD)", event.correction?.objective_usd],
-      ["Power balance residual (kW)", row.power_balance_residual_kw], ["Reactive balance residual (kvar)", row.reactive_balance_residual_kvar],
-      ["Reason codes", event.reason_codes?.join(", ")], ["Look-ahead hours", event.horizon_hours],
-      ["Engineering messages", event.messages?.join(" · ")]]);
-    note(hour, "Constraint excess uses pu for voltage, amperes for branch current and kW for grid limits.");
-  } else {
-    kv(hour, [["FBS converged", row.converged], ["Final minimum voltage (pu)", row.voltage_min_pu],
-      ["Final maximum voltage (pu)", row.voltage_max_pu], ["Shedding after controls (kW)", row.shedding_kw],
-      ["Curtailment after controls (kW)", row.curtailment_kw], ["Messages", row.messages ?? row.fbs_message]]);
-    note(hour, "Pre-correction, BESS-only and matched counterfactual records unavailable.");
-  }
-  if (row.converged === false) note(hour, "Final electrical values belong to a nonconverged diagnostic iterate.");
-  if (row.converged && row.feasible === false) note(hour, "This operating point is infeasible. See the residual limits and engineering messages above.");
-  const controlled = Object.keys(scenario.buses).map(id => [id, entityAt(scenario, "Bus", id, hourAt())])
-    .filter(([, bus]) => bus.shedding_kw > 0 || bus.curtailment_kw > 0)
-    .sort(([, a], [, b]) => b.shedding_kw - a.shedding_kw);
-  if (controlled.length) table(hour, ["Bus", "Shed (kW)", "Shed (kvar)", "Curtailed (kW)", "Pre-control voltage (pu)", "Final voltage (pu)"],
-    controlled.map(([id, bus]) => [id, bus.shedding_kw, bus.shedding_kvar, bus.curtailment_kw, bus.pre_control_voltage_pu, bus.voltage_pu]));
-  if (number(textMetric("load_shedding_energy_kwh"))) {
-    const requested = textMetric("requested_load_energy_kwh");
-    const shed = textMetric("load_shedding_energy_kwh");
-    const totals = section(root, "Feeder shedding over the saved interval");
-    const peak = scenario.hours.reduce((current, item) => {
-      const demand = item.load_input_kw + item.shedding_kw;
-      return number(item.shedding_kw) && demand > 0 ? Math.max(current, item.shedding_kw / demand) : current;
-    }, 0);
-    kv(totals, [["Unserved energy (kWh)", shed], ["Energy unserved (%)", requested > 0 ? shed / requested * 100 : null],
-      ["Peak hourly shedding (%)", peak * 100], ["Curtailed energy (kWh)", textMetric("curtailment_energy_kwh")],
-      ["Feeder losses (kWh)", textMetric("loss_energy_kwh")]]);
-    const dt = manifest().dt_hours;
-    if (number(dt)) {
-      const ranking = Object.entries(scenario.buses).map(([id, bus]) => [id,
-        (bus.shedding_kw || []).reduce((sum, power) => sum + (power || 0), 0) * dt]);
-      ranking.sort((a, b) => b[1] - a[1]);
-      if (ranking.some(([, energy]) => energy > 0)) table(totals, ["Bus", "Unserved energy (kWh)"], ranking);
-    }
-  }
   const run = current();
-  const paired = state.runs.filter(other => {
-    const comparison = compare(run.manifest, other.manifest);
-    return other !== run && comparison.align && comparison.inputMatch &&
-      other.manifest.network_control && run.manifest.network_control &&
-      other.manifest.network_control !== run.manifest.network_control && other.scenarios[state.scenario] &&
-      stable(run.metadata.optimizer?.best_bess_candidate) === stable(other.metadata.optimizer?.best_bess_candidate) &&
-      stable(run.metadata.context?.["Manual BESS"]) === stable(other.metadata.context?.["Manual BESS"]);
-  });
-  if (paired.length) {
-    const comparison = section(root, "Matched corrective control policies");
-    const entries = [[run.manifest.network_control, scenario], ...paired.map(other =>
-      [other.manifest.network_control, other.scenarios[state.scenario]])];
-    table(comparison, ["Policy", "Feasible", "Unserved energy (kWh)", "Curtailed (kWh)", "Annual cost (USD/year)"],
-      entries.map(([policy, variant]) => {
-        const m = metricsOf(variant.metrics);
-        return [nameOf(policy), m.feasible, m.load_shedding_energy_kwh, m.curtailment_energy_kwh,
-          m.feasible ? m.annual_total_cost : null];
-      }));
-  }
-  if (!scenario.events.length) return;
-  const log = section(root, "Dispatch event filter");
+  if (!scenario.hours.length) return note(root, "Saved hourly diagnostics are unavailable.");
+  const digest = scenario.diagnostic || {};
+  const hourly = scenario.hours;
+  const infeasible = digest.infeasible ?? hourly.filter(row => row.feasible === false || row.converged === false).length;
+  const statusKnown = digest.known_status ?? hourly.some(row => row.feasible !== undefined || row.converged === false);
+  const summary = section(root, "Validation status");
+  const savedHours = key => hourly.some(row => number(row[key])) ? hourly.filter(row => row[key] > 1e-9).length : null;
+  cards(summary, [["Unresolved or failed hours", statusKnown ? infeasible : null],
+    ["Worst voltage after controls", number(digest.worst_voltage_pu ?? textMetric("voltage_min_pu")) ?
+      fmt(digest.worst_voltage_pu ?? textMetric("voltage_min_pu"), 5) + " pu" +
+      (digest.worst_bus ? " at bus " + digest.worst_bus : "") : null],
+    ["Hours with load shedding", digest.shedding_hours ?? savedHours("shedding_kw")],
+    ["Hours with PV curtailment", digest.curtailment_hours ?? savedHours("curtailment_kw")],
+    ["Battery limiter hours", digest.battery_limiter_hours ??
+      (hourly.some(row => typeof row.bess_limited === "boolean") ? hourly.filter(row => row.bess_limited === true).length : null)]]);
+  if (infeasible) summary.append(el("p", "Saved results contain unresolved constraints, nonconvergence, or a failed feasibility check.", "warning"));
+
+  const tableSection = section(root, "Event log");
   const controls = el("div", undefined, "chart-controls");
-  const causes = [...new Set(scenario.events.flatMap(item => item.reason_codes))].sort();
-  const cause = select([["", "All saved causes"], ...causes.map(code => [code, code])], state.filterCause);
+  const scope = select([["exceptional", "Exceptional events"], ["all", "All saved hours"]], state.eventScope);
+  controls.append(label("Show", scope));
+  tableSection.append(controls);
+  const filter = el("div", undefined, "chart-controls");
+  advanced(tableSection, "Filter by reason, date or bus", body => body.append(filter));
+  const list = el("div");
+  tableSection.append(list);
+  const selected = el("div", undefined, "selected-event");
+  const selectedHeading = section(root, "Selected event");
+  selectedHeading.append(selected);
+  note(selected, "Select an event to inspect the recorded stages.");
+  const eventRows = await eventSummaries(scenario);
+  if (!root.isConnected) return;
+  const byTime = new Map(eventRows.map(event => [event.timestamp, event]));
+  const reasons = [...new Set(eventRows.flatMap(item => item.reason_codes || []))].sort();
+  const reason = select([["", "All saved causes"], ...reasons.map(code => [code, code])], state.filterCause);
   const date = el("input"), bus = el("input");
   date.type = "date"; date.value = state.filterDate || "";
   bus.type = "number"; bus.min = 1; bus.value = state.filterBus || "";
-  controls.append(label("Cause", cause), label("Study date", date), label("Bus ID", bus));
-  log.append(controls);
-  const pane = el("div");
-  log.append(pane);
-  function refresh() {
-    state.filterCause = cause.value; state.filterDate = date.value; state.filterBus = bus.value;
-    pane.replaceChildren();
-    const list = scenario.events.filter(item =>
-      (!cause.value || item.reason_codes.includes(cause.value)) &&
-      (!date.value || item.timestamp.startsWith(date.value)) &&
-      (!bus.value || String(item.bus_id) === bus.value || Object.keys(item.pre.violations).some(
-        key => /voltage:/.test(key) && key.split(":")[1] === bus.value) ||
-        String(item.pre.minimum_bus) === bus.value || String(item.pre.maximum_bus) === bus.value));
-    table(pane, ["Hour", "Battery bus", "Raw voltage min (pu)", "Accepted (kW)", "Final shedding (kW)", "Causes"],
-      list.slice(0, 60).map(item => [button(item.timestamp, () => setHour(item.timestamp)), item.bus_id,
-        item.pre.minimum_pu, item.accepted_kw, item.shedding_kw, item.reason_codes.join(", ")]));
-    if (list.length > 60) note(pane, "Showing the first 60 of " + list.length + " matching records. Select a date or use the study-hour slider.");
+  filter.append(label("Cause", reason), label("Study date", date), label("Bus ID", bus));
+
+  let opened = false, view = 0, page = 0;
+  async function showHour() {
+    if (!opened) return;
+    const sequence = ++view;
+    const index = state.hour;
+    const row = hourly[index];
+    selected.replaceChildren();
+    note(selected, "Reading saved stages for " + row.timestamp + "…");
+    try {
+      const event = await hourEvent(scenario, index);
+      if (sequence !== view || !selected.isConnected) return;
+      selected.replaceChildren();
+      selected.append(el("h3", row.timestamp));
+      if (severity(event, row) >= 3) selected.append(el("p", "This operating point failed a recorded check.", "warning"));
+      const stages = event ? [["Uncontrolled", event.pre], ["After BESS", event.after_bess], ["Final controls", event.final]] : [];
+      if (stages.length) {
+        table(selected, ["Stage", "Converged", "Min voltage (pu)", "Bus", "Max voltage (pu)", "Bus",
+          "PCC import (kW)", "PCC export (kW)", "Residual limits"], stages.map(([title, flow]) => [
+          title, flow?.converged, flow?.minimum_pu, flow?.minimum_bus, flow?.maximum_pu, flow?.maximum_bus,
+          flow?.import_kw, flow?.export_kw, flow?.converged ? Object.keys(flow.violations || {}).length ? flow.violations :
+            flow.binding?.join(", ") || "None recorded" : null]));
+      } else kv(selected, [["FBS converged", row.converged], ["Minimum voltage (pu)", row.voltage_min_pu],
+        ["Maximum voltage (pu)", row.voltage_max_pu], ["PCC real power (kW)", row.slack_p_kw]]);
+      kv(selected, [["Load shed (kW)", event?.shedding_kw ?? row.shedding_kw],
+        ["Curtailed PV (kW)", event?.curtailment_kw ?? row.curtailment_kw], ["BESS injection (kW)", event?.accepted_kw],
+        ["Reasons", event?.reason_codes?.join(", ") || row.bess_limit_reason]]);
+      advanced(selected, "Advanced details for this event", async body => {
+        kv(body, [["Corrector status", event?.correction?.status], ["Linear solver status", event?.correction?.linear_status],
+          ["Corrector iterations", event?.correction?.iterations], ["Corrector FBS calls", event?.correction?.fbs_trials],
+          ["Corrective cost (USD)", event?.correction?.objective_usd], ["Power balance residual (kW)", row.power_balance_residual_kw],
+          ["Reactive balance residual (kvar)", row.reactive_balance_residual_kvar], ["Look-ahead hours", event?.horizon_hours],
+          ["Matched No BESS shedding (kW)", event?.no_bess_shedding_kw], ["Matched No BESS curtailment (kW)", event?.no_bess_curtailment_kw],
+          ["Avoided shedding (kW)", event?.avoided_shedding_kw], ["Avoided curtailment (kW)", event?.avoided_curtailment_kw],
+          ["Engineering messages", event?.messages?.join(" · ") || row.messages || row.fbs_message]]);
+        details(body, "Complete saved event and hourly record", {event, row});
+        const ids = Object.keys(scenario.bus_blocks || scenario.buses);
+        const controls = (await Promise.all(ids.map(async id => [id, entityValues(await entityColumns(scenario, "Bus", id), index)])))
+          .filter(([, bus]) => bus.shedding_kw > 0 || bus.curtailment_kw > 0)
+          .sort(([, a], [, b]) => b.shedding_kw - a.shedding_kw);
+        if (controls.length) table(body, ["Bus", "Shed (kW)", "Shed (kvar)", "Curtailed (kW)", "Pre-control (pu)", "Final (pu)"],
+          controls.map(([id, bus]) => [id, bus.shedding_kw, bus.shedding_kvar, bus.curtailment_kw, bus.pre_control_voltage_pu, bus.voltage_pu]));
+      });
+    } catch (error) { if (sequence === view) note(selected, error.message); }
   }
-  [cause, date, bus].forEach(control => control.addEventListener("change", refresh));
+
+  function refresh() {
+    state.eventScope = scope.value;
+    state.filterCause = reason.value;
+    state.filterDate = date.value;
+    state.filterBus = bus.value;
+    list.replaceChildren();
+    const matching = hourly.map(row => ({row, event: byTime.get(row.timestamp)})).filter(({row, event}) => {
+      const pre = event?.pre || {};
+      const matchingBus = [event?.bus_id, pre.minimum_bus, pre.maximum_bus].some(value => String(value) === bus.value) ||
+        (pre.violation_keys || Object.keys(pre.violations || {})).some(key => /voltage:/.test(key) && key.split(":")[1] === bus.value);
+      return (scope.value === "all" || severity(event, row) > 0) &&
+        (!reason.value || event?.reason_codes?.includes(reason.value)) && (!date.value || row.timestamp.startsWith(date.value)) &&
+        (!bus.value || matchingBus);
+    });
+    if (!matching.length) return note(list, "No saved hours match these filters.");
+    if (scope.value !== "all") matching.sort((a, b) => severity(b.event, b.row) - severity(a.event, a.row) ||
+      a.row.timestamp.localeCompare(b.row.timestamp));
+    const size = 10;
+    const last = Math.ceil(matching.length / size) - 1;
+    page = Math.min(page, last);
+    const status = ["Routine", "PV curtailment or BESS limit", "Load shedding", "Unresolved check", "Nonconverged"];
+    table(list, ["Saved hour", "Status", "Final min (pu)", "Load shed (kW)", "Reasons"], matching.slice(page * size, (page + 1) * size)
+      .map(({row, event}) => [button(row.timestamp, () => {
+        opened = true;
+        setHour(row.timestamp);
+        selectedHeading.scrollIntoView({block: "nearest"});
+      }), status[severity(event, row)], row.voltage_min_pu, event?.shedding_kw ?? row.shedding_kw, event?.reason_codes?.join(", ")]));
+    const pager = el("div", undefined, "chart-controls");
+    const previous = button("Previous", () => { page--; refresh(); });
+    const next = button("Next", () => { page++; refresh(); });
+    previous.disabled = page === 0;
+    next.disabled = page >= last;
+    pager.append(previous, el("span", fmt(matching.length) + " hours · Page " + (page + 1) + " of " + (last + 1)), next);
+    list.append(pager);
+  }
+  [scope, reason, date, bus].forEach(control => control.addEventListener("change", () => { page = 0; refresh(); }));
+  state.hourChanged = () => { opened = true; showHour(); };
   refresh();
+
+  advanced(root, "Feeder shedding and control comparisons", body => {
+    const requested = textMetric("requested_load_energy_kwh"), shed = textMetric("load_shedding_energy_kwh");
+    const fractions = hourly.filter(row => number(row.load_input_kw) && number(row.shedding_kw) && row.load_input_kw + row.shedding_kw > 0)
+      .map(row => row.shedding_kw / (row.load_input_kw + row.shedding_kw));
+    kv(body, [["Unserved energy (kWh)", shed], ["Energy unserved (%)", requested > 0 ? shed / requested * 100 : null],
+      ["Peak hourly shedding (%)", fractions.length ? Math.max(...fractions) * 100 : null],
+      ["Curtailed energy (kWh)", textMetric("curtailment_energy_kwh")], ["Feeder losses (kWh)", textMetric("loss_energy_kwh")]]);
+    const ranking = scenario.shedding_ranking || Object.entries(scenario.buses).map(([id, bus]) => [id,
+      (bus.shedding_kw || []).reduce((sum, power) => sum + (power || 0), 0) * manifest().dt_hours]);
+    if (ranking.some(([, kwh]) => kwh > 0)) table(body, ["Bus", "Unserved energy (kWh)"], ranking.sort((a, b) => b[1] - a[1]));
+    const peers = state.runs.filter(other => {
+      const match = compare(run.manifest, other.manifest);
+      return other !== run && match.align && match.inputMatch && other.manifest.network_control && run.manifest.network_control &&
+        other.manifest.network_control !== run.manifest.network_control && other.scenarios[state.scenario] &&
+        stable(run.metadata.optimizer?.best_bess_candidate) === stable(other.metadata.optimizer?.best_bess_candidate) &&
+        stable(run.metadata.context?.["Manual BESS"]) === stable(other.metadata.context?.["Manual BESS"]);
+    });
+    if (peers.length) table(body, ["Policy", "Feasible", "Unserved energy (kWh)", "Curtailed (kWh)", "Annual cost (USD/year)"],
+      [[run.manifest.network_control, scenario], ...peers.map(other => [other.manifest.network_control, other.scenarios[state.scenario]])]
+        .map(([policy, item]) => {
+          const m = metricsOf(item.metrics);
+          return [nameOf(policy), m.feasible, m.load_shedding_energy_kwh, m.curtailment_energy_kwh,
+            m.feasible ? m.annual_total_cost : null];
+        }));
+  });
+  if (scenario.unmatched_event_block !== null && scenario.unmatched_event_block !== undefined)
+    advanced(root, "Saved events without a matching hourly row", async body =>
+      details(body, "Complete saved records", await block(run, scenario.unmatched_event_block)));
 }
 
 function preparePrint() {
   const summary = $("print-summary");
   summary.replaceChildren(el("h1", $("title").textContent));
   overview(summary);
-  if (manifest().economics) economics(summary, true);
+  if (availableAnalysis(current(), active()).includes("Economics")) economics(summary, true);
 }
 
 async function start() {
-  const run = await unpack($("report-data").textContent);
+  const available = document.readyState === "loading" ? new Promise(resolve =>
+    document.addEventListener("DOMContentLoaded", resolve, {once: true})) : Promise.resolve();
+  const run = await unpack($("report-data").textContent, async id => {
+    if (!$("report-block-" + id)) await available;
+    const element = $("report-block-" + id);
+    if (!element) throw Error("The saved report is missing data block " + id);
+    return element.textContent;
+  });
   state.runs.push(run);
   $("run").add(new Option(run.manifest.folder, 0));
   for (const name of tabs) {
-    const control = button(name, () => { state.tab = name; render(); });
-    control.setAttribute("role", "tab");
+    const control = tabControl(name, "tab-" + name.toLowerCase(), () => navigate(name), state.tab === name);
     $("tabs").append(control);
   }
   $("tabs").setAttribute("role", "tablist");
+  $("analysis-tabs").setAttribute("role", "tablist");
+  $("tabs").addEventListener("keydown", tabKey);
+  $("analysis-tabs").addEventListener("keydown", tabKey);
+  const link = location.hash.slice(1).toLowerCase();
+  const linkedAnalysis = analysisTabs.find(name => name.toLowerCase() === link);
+  if (linkedAnalysis) { state.tab = "Analysis"; state.analysis = linkedAnalysis; }
+  else state.tab = link === "simulation" ? "Charts" : tabs.find(name => name.toLowerCase() === link) || "Overview";
   $("workspace").hidden = false;
+  $("report-actions").hidden = false;
   pickRun(0);
   $("run").addEventListener("change", () => pickRun(Number($("run").value)));
   $("scenario").addEventListener("change", () => pickScenario($("scenario").value));
-  $("hour").addEventListener("input", () => setHour(active().hours[Number($("hour").value)]?.timestamp));
+  let slideFrame;
+  $("hour").addEventListener("input", () => {
+    const index = Number($("hour").value);
+    cancelAnimationFrame(slideFrame);
+    slideFrame = requestAnimationFrame(() => setHour(active().hours[index]?.timestamp));
+  });
+  $("previous-hour").addEventListener("click", () => setHour(active().hours[state.hour - 1]?.timestamp));
+  $("next-hour").addEventListener("click", () => setHour(active().hours[state.hour + 1]?.timestamp));
   $("print").addEventListener("click", () => { preparePrint(); window.print(); });
   window.addEventListener("beforeprint", preparePrint);
   window.addEventListener("resize", () => state.redraw?.());
@@ -1244,7 +1757,10 @@ async function start() {
         if (existing < 0) {
           $("run").add(new Option(run.manifest.folder, state.runs.length));
           state.runs.push(run);
-        } else if (state.runs[existing].scenarios.summary && !run.scenarios.summary) state.runs[existing] = run;
+        } else if (state.runs[existing].scenarios.summary && !run.scenarios.summary) {
+          state.runs[existing] = run;
+          if (existing === state.run) pickRun(existing);
+        }
       } catch (error) { failures.push(file.name + " · " + error.message); }
     }
     event.target.value = "";
@@ -1253,6 +1769,7 @@ async function start() {
     render();
   });
   document.documentElement.dataset.ready = "true";
+  performance.mark("dashboard-bootstrap-ready");
 }
 
 start().catch(error => { $("notice").textContent = "Unable to open saved dashboard: " + error.message; });

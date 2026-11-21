@@ -55,8 +55,10 @@ def show_dashboard(parent, path):
         page.settings().setAttribute(getattr(QWebEngineSettings.WebAttribute, option), False)
 
     def download(request):
-        target, _ = QFileDialog.getSaveFileName(dialog, "Save chart image",
-                                               request.downloadFileName(), "PNG images (*.png)")
+        filename = request.downloadFileName()
+        csv = Path(filename).suffix.lower() == ".csv"
+        target, _ = QFileDialog.getSaveFileName(dialog, "Save chart data" if csv else "Save chart image",
+                                               filename, "CSV files (*.csv)" if csv else "PNG images (*.png)")
         if target:
             destination = Path(target)
             request.setDownloadDirectory(str(destination.parent.resolve()))

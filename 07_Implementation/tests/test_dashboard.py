@@ -33,9 +33,25 @@ def run_settings(**changes):
 
 def payload(path):
     html = path.read_text(encoding="utf-8")
-    data = re.search(r'data-bytes="\d+">([A-Za-z0-9+/=]+)</script>', html)
+    data = re.search(r'<script id="report-data"[^>]*>([A-Za-z0-9+/=]+)</script>', html)
     assert data
-    return json.loads(decompress(b64decode(data[1])))
+    packed = json.loads(decompress(b64decode(data[1])))
+    if packed["manifest"]["schema_version"] == 1:
+        return packed
+    blocks = {int(key): value for key, value in re.findall(
+        r'<script id="report-block-(\d+)"[^>]*>([A-Za-z0-9+/=]+)</script>', html)}
+
+    def unpack(key, default):
+        return default if key is None else json.loads(decompress(b64decode(blocks[key])))
+
+    for scenario in packed["scenarios"].values():
+        assert "hours" not in scenario and "events" not in scenario and "buses" not in scenario
+        scenario["hours"] = unpack(scenario["hours_block"], [])
+        scenario["buses"] = {key: unpack(block, {}) for key, block in scenario["bus_blocks"].items()}
+        scenario["branches"] = {key: unpack(block, {}) for key, block in scenario["branch_blocks"].items()}
+        scenario["events"] = [event for block in scenario["event_blocks"].values() for event in unpack(block, [])]
+    packed["evaluations"] = unpack(packed["evaluation_block"], [])
+    return packed
 
 
 def test_report_lifecycle_and_portable_exports(tmp_path, monkeypatch):
@@ -44,6 +60,7 @@ def test_report_lifecycle_and_portable_exports(tmp_path, monkeypatch):
     simulation = run_and_export(study, run_settings(manual_bess=None), False, tmp_path / "simulation")
     assert payload(base.dashboard_path)["scenarios"]["."]["hours"][0]["timestamp"] == "Static base case"
     unpacked = payload(simulation.dashboard_path)
+    assert unpacked["manifest"]["schema_version"] == 2
     assert unpacked["manifest"]["timestamp_count"] == 39
     assert unpacked["manifest"]["clock"] == "UTC"
     assert unpacked["scenarios"]["."]["events"][0]["no_bess_shedding_kw"] is None
@@ -58,17 +75,19 @@ def test_report_lifecycle_and_portable_exports(tmp_path, monkeypatch):
     assert unpacked["metadata"]["context"]["Network"] == study.context["Network"]
     assert '<script>alert("study")</script>' not in simulation.dashboard_path.read_text(encoding="utf-8")
     root = simulation.dashboard_path.parent
-    canonical = (root / "hourly.csv").read_bytes()
+    canonical = {name: (root / name).read_bytes() for name in ("hourly.csv", "buses.csv", "branches.csv",
+                 "dispatch_events.jsonl", "metrics.csv", "inputs/load_profile.csv")}
     regenerated = regenerate_dashboard(root)
-    assert payload(regenerated)["manifest"]["run_id"] == unpacked["manifest"]["run_id"]
+    assert payload(regenerated) == unpacked
     package = package_dashboard(root, tmp_path / "report.zip")
     with ZipFile(package) as files:
         assert files.testzip() is None
-        assert files.read("hourly.csv") == canonical
+        for name, content in canonical.items():
+            assert files.read(name) == (root / name).read_bytes() == content
         assert files.read(MANIFEST_FILE) == (root / MANIFEST_FILE).read_bytes()
         assert files.read("inputs/load_profile.csv") == (root / "inputs/load_profile.csv").read_bytes()
         assert files.read("dashboard.html") == regenerated.read_bytes()
-    (root / "hourly.csv").write_bytes(canonical + b"\n")
+    (root / "hourly.csv").write_bytes(canonical["hourly.csv"] + b"\n")
     with pytest.raises(ValueError, match="Canonical result file changed"):
         package_dashboard(root, tmp_path / "tampered.zip")
 
@@ -109,6 +128,12 @@ def test_no_bess_selection_preserves_real_battery_replay(tmp_path):
     assert sorted(data["scenarios"]) == ["best_bess", "no_bess"]
     assert len(data["scenarios"]["best_bess"]["hours"]) == len(data["scenarios"]["no_bess"]["hours"]) == 8760
     assert all(row["avoided_shedding_kw"] == 0. for row in data["scenarios"]["best_bess"]["events"])
+    assert len(data["scenarios"]["best_bess"]["event_blocks"]) == 53
+    assert data["candidate_count"] == len(data["evaluations"])
+    assert data["ranked"][0]["annual_cost"] == data["evaluations"][0]["annual_cost"]
+    html = report.dashboard_path.read_text(encoding="utf-8")
+    initial, total = map(int, re.search(r'data-bytes="(\d+)" data-total-bytes="(\d+)"', html).groups())
+    assert initial < total / 10
 
 
 def test_qt_webengine_interactions_and_pdf(tmp_path, monkeypatch):
@@ -153,25 +178,34 @@ def test_qt_webengine_interactions_and_pdf(tmp_path, monkeypatch):
             wait.exec()
         return result[0] if result else None
 
-    for _ in range(80):
-        wait = QEventLoop()
-        QTimer.singleShot(100, wait.quit)
-        wait.exec()
-        if js("document.documentElement.dataset.ready") == "true":
-            break
-    assert js("document.documentElement.dataset.ready") == "true", js("document.body.innerText")
-    assert js("document.querySelectorAll('nav button').length") == 7
+    def wait_for(script):
+        for _ in range(80):
+            if js(script):
+                return
+            wait = QEventLoop()
+            QTimer.singleShot(100, wait.quit)
+            wait.exec()
+        assert js(script), js("document.body.innerText")
+
+    wait_for("document.documentElement.dataset.ready === 'true'")
+    assert js("document.querySelectorAll('#tabs button').length") == 4
+    assert js("document.querySelector('#hour-controls').hidden") is True
+    assert js("active().hours.length") == 0
     assert js("document.querySelector('#subtitle').textContent.includes('<img src=x')") is True
     assert js("document.querySelectorAll('img').length") == 0
     assert js("performance.getEntriesByType('resource').length") == 0
-    assert js("document.querySelectorAll('nav button')[1].click();"
-              "document.querySelector('#hour').value=8; document.querySelector('#hour').dispatchEvent(new Event('input'));"
-              "const equipment=document.querySelector('#panel select'); equipment.value='Bus:2';"
-              "equipment.dispatchEvent(new Event('change'));"
-              "document.querySelector('#panel').textContent.includes('Bus 2')") is True
+    js("document.querySelector('#tab-network').click()")
+    wait_for("Boolean(document.querySelector('#panel canvas'))")
+    js("document.querySelector('#hour').value=8; document.querySelector('#hour').dispatchEvent(new Event('input'));"
+       "const equipment=document.querySelector('#panel select'); equipment.value='Bus:2';"
+       "equipment.dispatchEvent(new Event('change'))")
+    wait_for("document.querySelector('#panel aside').textContent.includes('Bus 2') && "
+             "document.querySelector('#timestamp').textContent.endsWith('08:00:00')")
     assert js("document.querySelector('#timestamp').textContent").endswith("08:00:00")
-    for index in (2, 3, 4, 5, 6):
-        assert js(f"document.querySelectorAll('nav button')[{index}].click(); document.querySelector('#panel').childElementCount") > 0
+    js("document.querySelector('#tab-analysis').click()")
+    wait_for("Boolean(document.querySelector('#analysis-bess'))")
+    js("document.querySelector('#analysis-diagnostics').click()")
+    wait_for("document.querySelector('#panel').textContent.includes('Exceptional events')")
     assert js("JSON.stringify(bucketed([['2021-01-31 23:00:00', 2, 1], ['2021-02-01 00:00:00', 4, 1],"
               "['2021-02-01 01:00:00', 6, 1]], 'Monthly', 'energy').map(bin => bin.value))") == "[2,10]"
     assert js("JSON.stringify(bucketed([['2021-01-01 00:00:00', 2, 1], ['2021-01-01 01:00:00', 4, 1]],"
@@ -190,9 +224,9 @@ def test_qt_webengine_interactions_and_pdf(tmp_path, monkeypatch):
     assert js("document.querySelector('#run').options.length") == 3
     assert js("document.querySelector('#notice').textContent.includes('timestamp coverage')") is True
     assert js("document.querySelector('#notice').textContent.includes('Matched data and comparison basis')") is True
-    assert js("document.querySelectorAll('nav button')[2].click();"
-              "document.querySelector('canvas').toDataURL('image/png').startsWith('data:image/png;base64,')") is True
-    assert js("preparePrint(); document.querySelector('#print-summary').textContent.includes('Economic results')") is True
+    js("document.querySelector('#tab-charts').click()")
+    wait_for("document.querySelector('#panel canvas')?.toDataURL('image/png').startsWith('data:image/png;base64,')")
+    assert js("preparePrint(); document.querySelector('#print-summary').textContent.includes('Results at a glance')") is True
     pdf = tmp_path / "summary.pdf"
     wait = QEventLoop()
     results = []

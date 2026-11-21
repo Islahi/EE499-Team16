@@ -20,7 +20,8 @@ ASSETS = Path(__file__).parent / "assets"
 RUN_FILE = "dashboard_run.json"
 MANIFEST_FILE = "dashboard_manifest.json"
 HTML_FILE = "dashboard.html"
-SCHEMA = 1
+SCHEMA = 2
+CHUNK_HOURS = 168
 TABLES = ("hourly.csv", "buses.csv", "branches.csv", "metrics.csv", "evaluations.csv",
           "convergence.csv", "economic_comparison.csv", "comparison.csv",
           "bus_voltages.csv", "line_flows.csv")
@@ -51,7 +52,8 @@ def _atomic_write(path, content):
     with NamedTemporaryFile(dir=path.parent, delete=False) as temporary:
         target = Path(temporary.name)
         try:
-            temporary.write(content.encode("utf-8"))
+            for part in (content,) if isinstance(content, str) else content:
+                temporary.write(part.encode("utf-8"))
         except BaseException:
             temporary.close()
             target.unlink(missing_ok=True)
@@ -187,6 +189,104 @@ def _scenario_folder(folder, name):
     return directory
 
 
+def _pack(value):
+    raw = _json(value).encode("utf-8")
+    return len(raw), b64encode(compress(raw, compresslevel=4, mtime=0)).decode("ascii")
+
+
+def _scenario_blocks(scenario, metadata, add):
+    """Keep the summary small and store exact traces behind independent blocks."""
+    hours, events, buses = (scenario[name] for name in ("hours", "events", "buses"))
+    hour_count = len(hours)
+    has_bess = any(row.get("bess_accepted_soc") is not None for row in hours)
+    minimum_hour = min((row for row in hours if row.get("converged") is not False
+                        and row.get("voltage_min_pu") is not None), key=lambda row: row["voltage_min_pu"], default={})
+    index = {row["timestamp"]: i for i, row in enumerate(hours)}
+    minimum_index = index.get(minimum_hour.get("timestamp"), 0)
+    low_buses = [(columns["voltage_pu"][minimum_index], bus) for bus, columns in buses.items()
+                 if columns.get("voltage_pu") and columns["voltage_pu"][minimum_index] is not None]
+    worst_bus = ((minimum_hour.get("minimum_voltage_bus") or minimum_hour.get("min_voltage_bus"))
+                or (min(low_buses)[1] if low_buses else None))
+    diagnostic = {
+        "nonconverged": sum(row.get("converged") is False for row in hours),
+        "infeasible": sum(row.get("feasible") is False or row.get("converged") is False for row in hours),
+        "known_status": any(row.get("feasible") is not None or row.get("converged") is False for row in hours),
+        "worst_voltage_pu": minimum_hour.get("voltage_min_pu"), "worst_bus": worst_bus,
+        "shedding_hours": sum((row.get("shedding_kw") or 0) > 1e-9 for row in hours)
+        if any(row.get("shedding_kw") is not None for row in hours) else None,
+        "curtailment_hours": sum((row.get("curtailment_kw") or 0) > 1e-9 for row in hours)
+        if any(row.get("curtailment_kw") is not None for row in hours) else None,
+        "battery_limiter_hours": sum(row.get("bess_limited") is True for row in hours) if has_bess else None,
+    }
+    event_chunks = {}
+    unmatched_events = []
+    event_index = []
+    for event in events:
+        hour_index = index.get(event["timestamp"])
+        if hour_index is None:
+            unmatched_events.append(event)
+            continue
+        event_chunks.setdefault(hour_index // CHUNK_HOURS, []).append(event)
+        pre = event.get("pre") or {}
+        final = event.get("final") or {}
+        row = hours[hour_index]
+        compact = {key: event[key] for key in ("timestamp", "bus_id", "accepted_kw", "shedding_kw", "curtailment_kw",
+                   "planned_kw", "terminal_target_kwh", "charge_available_kw", "discharge_available_kw", "reason_codes")
+                   if key in event}
+        compact["pre"] = {key: pre[key] for key in ("minimum_pu", "minimum_bus", "maximum_bus") if key in pre}
+        compact["pre"]["violation_keys"] = list((pre.get("violations") or {}).keys())
+        compact["severity"] = (4 if row.get("converged") is False or final.get("converged") is False else
+                               3 if final.get("violations") or row.get("feasible") is False else
+                               2 if (event.get("shedding_kw") or 0) > 1e-9 else
+                               1 if (event.get("curtailment_kw") or 0) > 1e-9 or row.get("bess_limited") is True else 0)
+        event_index.append(compact)
+
+    network_chunks = []
+    limits = metadata.get("simulation") or {}
+    low, high = limits.get("voltage_min_pu"), limits.get("voltage_max_pu")
+    rated = {line["line_id"]: line["ampacity_a"] for line in (metadata.get("topology") or {}).get("lines", [])
+             if limits.get("enforce_line_ampacity", True) and line.get("ampacity_a") is not None}
+    if buses:
+        for start in range(0, hour_count, CHUNK_HOURS):
+            stop = min(start + CHUNK_HOURS, hour_count)
+            data = {}
+            for bus, columns in buses.items():
+                voltage = columns.get("voltage_pu", [])
+                shed = columns.get("shedding_kw", [])
+                served = columns.get("load_input_kw", [])
+                # Display-only encodings for the overview schematic. Exact
+                # electrical values remain in their independent entity blocks.
+                flags = "".join("?" if value is None or low is None or high is None else
+                                "L" if value < low else "H" if value > high else "N" for value in voltage[start:stop])
+                intensities = [max(1, round(100 * power / (power + load))) if power is not None and power > 0
+                               and load is not None and power + load > 0 else 0
+                               for power, load in zip(shed[start:stop], served[start:stop])]
+                data[bus] = [flags, intensities]
+            overloads = {line: "".join("X" if amps is not None and amps > limit + 1e-6 else "-" for amps in
+                         scenario["branches"].get(line, {}).get("current_a", [])[start:stop]) for line, limit in rated.items()}
+            network_chunks.append(add({"buses": data, "overloads": overloads}))
+
+    shedding_ranking = []
+    for bus, columns in buses.items():
+        observed = [(power, row.get("dt_hours")) for power, row in zip(columns.get("shedding_kw", []), hours)
+                    if power is not None]
+        if observed and all(dt is not None for _, dt in observed):
+            shedding_ranking.append((bus, sum(power * dt for power, dt in observed)))
+
+    return {
+        "label": scenario["label"], "metrics": scenario["metrics"], "hour_count": hour_count,
+        "first": hours[0] if hours else None, "has_bess": has_bess, "diagnostic": diagnostic,
+        "shedding_ranking": shedding_ranking,
+        "hours_block": add(hours) if hours else None,
+        "bus_blocks": {key: add(value) for key, value in buses.items()},
+        "branch_blocks": {key: add(value) for key, value in scenario["branches"].items()},
+        "network_blocks": network_chunks, "chunk_hours": CHUNK_HOURS,
+        "event_index_block": add(event_index) if event_index else None,
+        "event_blocks": {key: add(value) for key, value in event_chunks.items()},
+        "unmatched_event_block": add(unmatched_events) if unmatched_events else None,
+    }
+
+
 def regenerate_dashboard(run_folder):
     """Read saved numeric data and atomically rebuild the report and manifest."""
     folder = Path(run_folder).resolve(strict=True)
@@ -238,23 +338,47 @@ def regenerate_dashboard(run_folder):
         "summary": (list(_rows(folder / "metrics.csv")) or
                     next((scenario["metrics"] for scenario in trace_data.values() if scenario["metrics"]), [])),
     }
-    payload = {"manifest": manifest, "metadata": metadata, "scenarios": trace_data,
-               "evaluations": list(_rows(folder / "evaluations.csv")),
+    blocks = []
+
+    def add(data):
+        key = len(blocks)
+        blocks.append(_pack(data))
+        return key
+
+    evaluations = list(_rows(folder / "evaluations.csv"))
+    feasible = [item for item in evaluations if item.get("feasible") is True]
+    ranked = sorted((item for item in feasible if item.get("annual_cost") is not None),
+                    key=lambda item: item["annual_cost"])[:8]
+    payload = {"manifest": manifest, "metadata": metadata,
+               "scenarios": {key: _scenario_blocks(value, metadata, add) for key, value in trace_data.items()},
+               "ranked": ranked, "feasible_count": len(feasible), "candidate_count": len(evaluations),
+               "infeasible_count": sum(item.get("feasible") is False for item in evaluations),
+               "evaluation_block": add(evaluations) if evaluations else None,
                "convergence": list(_rows(folder / "convergence.csv")),
                "economic_comparison": list(_rows(folder / "economic_comparison.csv"))}
-    raw = _json(payload).encode("utf-8")
-    packed = b64encode(compress(raw, compresslevel=4, mtime=0)).decode("ascii")
+    raw_size, packed = _pack(payload)
     template = (ASSETS / "dashboard.html").read_text(encoding="utf-8")
     replacements = {
         "<!-- REPORT_STYLE -->": (ASSETS / "dashboard.css").read_text(encoding="utf-8"),
         "<!-- REPORT_SCRIPT -->": (ASSETS / "dashboard.js").read_text(encoding="utf-8"),
         "<!-- REPORT_DATA -->": packed,
-        "<!-- REPORT_SIZE -->": str(len(raw)),
+        "<!-- REPORT_SIZE -->": str(raw_size),
+        "<!-- TOTAL_SIZE -->": str(raw_size + sum(size for size, _ in blocks)),
     }
     for marker, value in replacements.items():
         template = template.replace(marker, value)
-    _atomic_write(folder / HTML_FILE, template)
-    manifest["html_sha256"] = sha256(template.encode("utf-8")).hexdigest()
+    header, footer = template.split("<!-- REPORT_BLOCKS -->")
+
+    def html_parts():
+        yield header
+        for key, (size, data) in enumerate(blocks):
+            yield f'<script id="report-block-{key}" type="application/octet-stream" data-bytes="{size}">'
+            yield data
+            yield "</script>\n"
+        yield footer
+
+    _atomic_write(folder / HTML_FILE, html_parts())
+    manifest["html_sha256"] = _hash(folder / HTML_FILE)
     _atomic_write(folder / MANIFEST_FILE, _json(manifest))
     return folder / HTML_FILE
 
