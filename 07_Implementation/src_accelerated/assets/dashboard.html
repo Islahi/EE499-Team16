@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data: blob:; base-uri 'none'; form-action 'none'">
+<title>BESS Planning Tool · Run dashboard</title>
+<style><!-- REPORT_STYLE --></style>
+</head>
+<body>
+<header>
+  <div><div class="app-name">BESS Planning Tool</div><h1 id="title">Run dashboard</h1><p id="subtitle" class="muted"></p></div>
+  <div class="actions">
+    <label class="button">Import runs<input id="import" type="file" accept=".html,.json,.zip" multiple></label>
+    <button id="print" type="button">Print / Save PDF</button>
+  </div>
+</header>
+<div id="notice" role="status" aria-live="polite">Reading saved results…</div>
+<div id="workspace" hidden>
+  <div class="controls">
+    <label>Run<select id="run"></select></label>
+    <label>Alternative<select id="scenario"></select></label>
+    <label class="clock">Study hour<input id="hour" type="range" min="0" max="0" value="0"></label>
+    <output id="timestamp" for="hour"></output>
+  </div>
+  <nav id="tabs" aria-label="Results sections"></nav>
+  <main id="panel" tabindex="-1"></main>
+</div>
+<section id="print-summary" aria-label="Printable run summary"></section>
+<script id="report-data" type="application/octet-stream" data-bytes="<!-- REPORT_SIZE -->"><!-- REPORT_DATA --></script>
+<script><!-- REPORT_SCRIPT --></script>
+</body>
+</html>

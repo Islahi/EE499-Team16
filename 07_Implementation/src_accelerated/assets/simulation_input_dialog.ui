@@ -1,0 +1,245 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<ui version="4.0">
+  <class>SimulationInputDialog</class>
+  <widget class="QDialog" name="SimulationInputDialog">
+    <property name="windowTitle">
+      <string>Study interval</string>
+    </property>
+    <property name="minimumSize">
+      <size>
+        <width>850</width>
+        <height>310</height>
+      </size>
+    </property>
+    <layout class="QVBoxLayout" name="layout_input_dialog">
+      <property name="leftMargin">
+        <number>20</number>
+      </property>
+      <property name="topMargin">
+        <number>20</number>
+      </property>
+      <property name="rightMargin">
+        <number>20</number>
+      </property>
+      <property name="bottomMargin">
+        <number>20</number>
+      </property>
+      <property name="spacing">
+        <number>12</number>
+      </property>
+      <item>
+        <widget class="QLabel" name="lbl_interval_title">
+          <property name="text">
+            <string>Study interval</string>
+          </property>
+          <property name="role" stdset="0">
+            <string>title</string>
+          </property>
+        </widget>
+      </item>
+      <item>
+        <widget class="QLabel" name="lbl_interval_help">
+          <property name="text">
+            <string>Choose historical or forecast input, then apply the interval. Annual optimization requires a complete calendar year.</string>
+          </property>
+          <property name="wordWrap">
+            <bool>true</bool>
+          </property>
+        </widget>
+      </item>
+      <item>
+        <widget class="QGroupBox" name="group_simulation_source">
+          <layout class="QGridLayout" name="layout_simulation_source" columnstretch="0,1,0,1,0">
+            <item row="0" column="0">
+              <widget class="QLabel" name="lbl_combo_simulation_source">
+                <property name="text">
+                  <string>Source</string>
+                </property>
+              </widget>
+            </item>
+            <item row="0" column="1">
+              <widget class="QComboBox" name="combo_simulation_source">
+                <item>
+                  <property name="text">
+                    <string>Historical data</string>
+                  </property>
+                  <property name="userData">
+                    <string>historical</string>
+                  </property>
+                </item>
+                <item>
+                  <property name="text">
+                    <string>Generated forecast</string>
+                  </property>
+                  <property name="userData">
+                    <string>forecast</string>
+                  </property>
+                </item>
+              </widget>
+            </item>
+            <item row="0" column="2">
+              <widget class="QLabel" name="lbl_combo_history_window">
+                <property name="text">
+                  <string>Interval preset</string>
+                </property>
+              </widget>
+            </item>
+            <item row="0" column="3">
+              <widget class="QComboBox" name="combo_history_window">
+                <item>
+                  <property name="text">
+                    <string>First 24 hours</string>
+                  </property>
+                  <property name="userData">
+                    <string>24</string>
+                  </property>
+                </item>
+                <item>
+                  <property name="text">
+                    <string>7 days</string>
+                  </property>
+                  <property name="userData">
+                    <string>168</string>
+                  </property>
+                </item>
+                <item>
+                  <property name="text">
+                    <string>30 days</string>
+                  </property>
+                  <property name="userData">
+                    <string>720</string>
+                  </property>
+                </item>
+                <item>
+                  <property name="text">
+                    <string>Full calendar year</string>
+                  </property>
+                  <property name="userData">
+                    <string>8760</string>
+                  </property>
+                </item>
+                <item>
+                  <property name="text">
+                    <string>Full source</string>
+                  </property>
+                  <property name="userData">
+                    <string>0</string>
+                  </property>
+                </item>
+                <item>
+                  <property name="text">
+                    <string>Custom</string>
+                  </property>
+                  <property name="userData">
+                    <string>-1</string>
+                  </property>
+                </item>
+                <property name="toolTip">
+                  <string>A technical simulation interval; annual economic planning requires validated yearly coverage.</string>
+                </property>
+                <property name="currentIndex">
+                  <number>3</number>
+                </property>
+              </widget>
+            </item>
+            <item row="0" column="4">
+              <widget class="QPushButton" name="btn_browse_history">
+                <property name="text">
+                  <string>Saved studies</string>
+                </property>
+              </widget>
+            </item>
+            <item row="1" column="0">
+              <widget class="QLabel" name="lbl_date_simulation_start">
+                <property name="text">
+                  <string>From</string>
+                </property>
+              </widget>
+            </item>
+            <item row="1" column="1">
+              <widget class="QDateTimeEdit" name="date_simulation_start">
+                <property name="displayFormat">
+                  <string>dd MMM yyyy, HH:mm</string>
+                </property>
+                <property name="calendarPopup">
+                  <bool>true</bool>
+                </property>
+              </widget>
+            </item>
+            <item row="1" column="2">
+              <widget class="QLabel" name="lbl_date_simulation_end">
+                <property name="text">
+                  <string>Until (exclusive)</string>
+                </property>
+              </widget>
+            </item>
+            <item row="1" column="3">
+              <widget class="QDateTimeEdit" name="date_simulation_end">
+                <property name="displayFormat">
+                  <string>dd MMM yyyy, HH:mm</string>
+                </property>
+                <property name="calendarPopup">
+                  <bool>true</bool>
+                </property>
+              </widget>
+            </item>
+            <item row="1" column="4">
+              <widget class="QPushButton" name="btn_apply_simulation_window">
+                <property name="text">
+                  <string>Apply interval</string>
+                </property>
+              </widget>
+            </item>
+            <item row="2" column="0" colspan="5">
+              <widget class="QLabel" name="lbl_active_source">
+                <property name="text">
+                  <string>Import a distributed dataset</string>
+                </property>
+                <property name="role" stdset="0">
+                  <string>hint</string>
+                </property>
+                <property name="wordWrap">
+                  <bool>true</bool>
+                </property>
+              </widget>
+            </item>
+            <property name="leftMargin">
+              <number>14</number>
+            </property>
+            <property name="topMargin">
+              <number>14</number>
+            </property>
+            <property name="rightMargin">
+              <number>14</number>
+            </property>
+            <property name="bottomMargin">
+              <number>14</number>
+            </property>
+            <property name="spacing">
+              <number>9</number>
+            </property>
+          </layout>
+          <property name="title">
+            <string>Simulation input</string>
+          </property>
+        </widget>
+      </item>
+      <item>
+        <widget class="QDialogButtonBox" name="buttons_input_window">
+          <property name="standardButtons">
+            <set>QDialogButtonBox::StandardButton::Close</set>
+          </property>
+        </widget>
+      </item>
+    </layout>
+  </widget>
+  <resources/>
+  <connections>
+    <connection>
+      <sender>buttons_input_window</sender>
+      <signal>rejected()</signal>
+      <receiver>SimulationInputDialog</receiver>
+      <slot>reject()</slot>
+    </connection>
+  </connections>
+</ui>

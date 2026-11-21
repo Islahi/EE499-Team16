@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from math import isfinite
 from numbers import Real
 from pathlib import Path
+import csv
+import re
 
 import pandas as pd
 
@@ -81,6 +83,53 @@ def _read_provider_csv(path, header_prefix):
     raise ValueError(f"Cannot find the expected CSV header: {header_prefix}")
 
 
+def read_nasa_csv(path):
+    """Read raw POWER tables or the project's processed hourly NASA exports."""
+    preamble = []
+    with Path(path).open(encoding="utf-8-sig",newline="") as source_file:
+        for index,line in enumerate(source_file):
+            columns = [v.strip() for v in next(csv.reader([line],skipinitialspace=True))]
+            if ({"YEAR","MO","DY","HR","ALLSKY_SFC_SW_DWN"}.issubset(columns) or
+                "timestamp" in columns and {"ghi_wh_m2","irradiance_w_m2"}.intersection(columns)):
+                table = pd.read_csv(path,skiprows=index,encoding="utf-8-sig",skipinitialspace=True)
+                table.columns = table.columns.str.strip()
+                break
+            preamble.append(line)
+        else:
+            raise ValueError("NASA CSV needs YEAR, MO, DY, HR, ALLSKY_SFC_SW_DWN or timestamp with ghi_wh_m2 / irradiance_w_m2")
+    metadata = {}
+    aliases = {"latitude":("site_lat","latitude"),"longitude":("site_lon","longitude"),
+               "reference_capacity_kw":("reference_capacity_kw","capacity_kw"),
+               "source_clock":("source_clock","timezone","time_standard")}
+    for key,names in aliases.items():
+        for name in names:
+            if name not in table: continue
+            values = table[name]
+            if values.isna().any() or values.nunique()!=1:
+                raise ValueError(f"NASA source metadata {name} must be consistent on every row")
+            value = str(values.iloc[0]).strip() if key=="source_clock" else float(values.iloc[0])
+            if key in metadata and metadata[key]!=value:
+                raise ValueError(f"Conflicting NASA source metadata for {key}")
+            metadata[key]=value
+    header = "".join(preamble)
+    for key in ("latitude","longitude"):
+        # Standard NASA POWER exports use "Location: Latitude  21.4858
+        # Longitude 39.1925"; the coordinate names have no punctuation.
+        matches = re.finditer(rf"\b{key}\s*[:=]?\s*([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)",header,re.I)
+        for match in matches:
+            value = float(match.group(1))
+            if key in metadata and metadata[key]!=value:
+                raise ValueError(f"Conflicting NASA source metadata for {key}")
+            metadata[key]=value
+    match = re.search(r"(?:time\s*standard\s*[:=]\s*|\b)(UTC|LST)\b",header,re.I)
+    if match:
+        clock = match.group(1).upper()
+        if "source_clock" in metadata and metadata["source_clock"]!=clock:
+            raise ValueError("Conflicting NASA source clocks")
+        metadata["source_clock"]=clock
+    return table,metadata
+
+
 def read_irradiance(path: str | Path, *, source: str) -> pd.DataFrame:
     """Read prepared W/m², Open-Meteo mean W/m², or NASA hourly Wh/m² data."""
     if source == "prepared":
@@ -92,7 +141,12 @@ def read_irradiance(path: str | Path, *, source: str) -> pd.DataFrame:
             raise ValueError(f"Open-Meteo CSV needs {radiation_column}")
         frame = table.rename(columns={"time": "timestamp", radiation_column: "irradiance_w_m2"})
     elif source == "nasa_power":
-        table = _read_provider_csv(path, "YEAR,MO,DY,HR,")
+        table,_ = read_nasa_csv(path)
+        if "timestamp" in table:
+            radiation = "ghi_wh_m2" if "ghi_wh_m2" in table else "irradiance_w_m2"
+            # Hourly Wh/m² / 1 h is W/m². Ignore p_kw: it is already modeled
+            # and must never be treated as irradiance or converted twice.
+            return _validated_irradiance(table[["timestamp",radiation]].rename(columns={radiation:"irradiance_w_m2"}))
         required = {"YEAR", "MO", "DY", "HR", "ALLSKY_SFC_SW_DWN"}
         if not required.issubset(table.columns):
             raise ValueError("NASA CSV needs YEAR, MO, DY, HR and ALLSKY_SFC_SW_DWN")

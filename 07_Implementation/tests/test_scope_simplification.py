@@ -33,4 +33,5 @@ def test_out_of_scope_controls_removed_from_active_gui():
     assert 'spin_transformer_kva' not in source
     assert 'Net-load target' not in source
     settings = (Path(__file__).parents[1] / 'src_accelerated' / 'assets' / 'settings_dialog.ui').read_text()
-    assert 'Grid-aware rule' in settings
+    assert 'Constraint-aware (24h look-ahead)' in settings
+    assert 'Grid-aware rule' not in settings

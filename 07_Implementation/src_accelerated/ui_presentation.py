@@ -15,7 +15,7 @@ def compact_summary(report):
     if report is None:
         return "No results yet. Load data and run a simulation or optimization."
     result = report.result
-    metrics = getattr(report, "metrics", None)
+    metrics = getattr(report, "metrics", None) or getattr(result,"metrics",None)
     context = getattr(report, "context", {})
     # Base-case FBS returns a power-flow object and has a compact native summary.
     if not hasattr(result, "steps") and not hasattr(result, "best_objective"):
@@ -32,6 +32,8 @@ def compact_summary(report):
             ])
         elif getattr(result, "metadata", {}).get("no_bess_selected"):
             lines.append("Best option            No BESS")
+            if getattr(result, "message", None):
+                lines.append(result.message)
         else:
             lines.append("Best option            No feasible battery selected")
         if getattr(result, "best_objective", None) is not None:
@@ -56,6 +58,13 @@ def compact_summary(report):
             "", "PERFORMANCE", "",
             "Feasibility            " + ("Feasible" if metrics.feasible else "Infeasible"),
         ])
+        for name,label in (("bess_cost","Initial CAPEX (USD)"),("annualized_bess_cost","Annual ownership"),
+                           ("annual_grid_purchases","Annual grid purchases"),("annual_export_credit","Annual export credit"),
+                           ("annual_curtailment_cost","Annual curtailment"),("annual_shedding_cost","Annual shedding")):
+            value = getattr(metrics,name,None)
+            if value is not None: lines.append(label+"    "+_number(value,metrics.currency if name=="bess_cost" else metrics.currency+"/year"))
+        delta = getattr(result,"metadata",{}).get("delta_annual_cost")
+        if delta is not None: lines.append("Annual delta vs no BESS    "+_number(delta,metrics.currency+"/year"))
         if metrics.annual_total_cost is not None:
             lines.append("Annual total cost      " + _number(metrics.annual_total_cost, metrics.currency + "/year"))
         if metrics.annual_grid_cost is not None:

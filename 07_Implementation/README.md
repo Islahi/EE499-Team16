@@ -1,31 +1,31 @@
 # Term 2 Implementation
 
-## Current stable application — 5 November 2026
+## Current desktop application
 
-The supported desktop application is `src_accelerated`, updated to the v4
-Qt Designer wiring release. It includes annual economic optimization, GA and
-GWO search, chronological StatsForecast forecasting, session-based results,
-and the unified Designer-owned interface. The previous scenario/Monte-Carlo
-workflow was intentionally removed from the active application.
+The desktop application in `src_accelerated` uses Numba CPU forward/backward
+sweep, GoiEner folder input, sector-sum demand forecasts, common modeled PV
+forecasts, and GA/GWO annual economic optimization. New historical studies open
+on their first 24 hours. See the [BESS Planning Tool user guide](BESS_Planning_Tool_User_Guide.md)
+for the full workflow.
 
 See [`README_ACCELERATED.md`](README_ACCELERATED.md) and
-[`Release_Notes/2026-11-05_v4/`](Release_Notes/2026-11-05_v4/) for the current
-workflow, limitations, and change history. The original `src` package remains
+[`Release_Notes/2026-11-05_v4/`](Release_Notes/2026-11-05_v4/) for application
+details and earlier release history. The original `src` package remains
 as a legacy implementation baseline for earlier Term 2 work.
 
 ## Run
 
-Python 3.11 or newer is recommended. From the repository root:
+Use the existing Windows Python 3.14 interpreter. From the repository root:
 
 ```bash
 cd 07_Implementation
 python -m pip install -r requirements-accelerated.txt
 python -m src_accelerated.ui
-python -m pytest -q tests
 ```
 
 On Windows, `start_windows.bat` installs the stable dependencies and launches
-the application. `test_windows.bat` runs the complete regression suite.
+the application. See [the regression commands](README_ACCELERATED.md) for test
+dependencies and archived fixtures.
 
 Standalone data-preparation and plotting utilities are under `Tools/`. Cleaned
 GoiEner profiles and NASA POWER inputs are under `Data/`. Original large source

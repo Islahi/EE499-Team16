@@ -1,9 +1,10 @@
 """Readable summaries and CSV exports; no simulation or optimization equations."""
 import csv
-from dataclasses import fields
+from dataclasses import asdict, fields
 from math import isclose
 from pathlib import Path
 from collections.abc import Mapping
+import json
 
 from .metrics import PerformanceMetrics, percentage_reduction
 from .optimizer import OptimizationResult
@@ -13,6 +14,7 @@ from .simulation import TimeSeriesSimulationResult
 Result = TimeSeriesSimulationResult | PerformanceMetrics | OptimizationResult
 
 COMPARISON_FIELDS = (
+    "annual_capital_recovery", "annual_fixed_om", "annual_grid_purchases", "annual_export_credit",
     "bess_cost", "annual_total_cost", "annualized_bess_cost", "annual_grid_cost",
     "annual_curtailment_cost", "annual_shedding_cost", "curtailment_energy_kwh", "load_shedding_energy_kwh",
     "loss_energy_kwh", "grid_import_energy_kwh", "grid_export_energy_kwh",
@@ -31,7 +33,7 @@ def _result_metrics(result, supplied):
                 raise ValueError("Do not attach performance metrics to an incomplete/non-converged run")
             if not isclose(supplied.duration_hours, len(result.steps) * result.dt_hours):
                 raise ValueError("Metrics duration does not match the simulation")
-            if supplied.feasible != (result.feasible and all(step.feasible for step in result.steps)):
+            if supplied.feasible and not (result.feasible and all(step.feasible for step in result.steps)):
                 raise ValueError("Metrics feasibility does not match the simulation")
         return supplied
     if supplied is not None:
@@ -52,9 +54,7 @@ def _context_items(context):
         return []
     if not isinstance(context, Mapping):
         raise TypeError("context must be a mapping of text labels to text values")
-    if any(not isinstance(key, str) or not isinstance(value, str) for key, value in context.items()):
-        raise TypeError("Context keys/values must be strings; describe settings explicitly")
-    return sorted(context.items())
+    return sorted((str(key), value if isinstance(value,str) else json.dumps(value,default=str)) for key,value in context.items())
 
 
 def _display(value):
@@ -68,6 +68,8 @@ def _display(value):
 
 
 def _unit(name, metrics):
+    if name.startswith("annual_") and name not in ("annualization_basis",):
+        return metrics.currency + "/year"
     if name in ("bess_cost", "annual_total_cost", "annualized_bess_cost",
                 "annual_grid_cost", "annual_curtailment_cost", "annual_shedding_cost",
                 "annual_terminal_energy_cost"):
@@ -244,10 +246,36 @@ def _comparison_rows(baseline, candidate):
     return rows
 
 
+def _dispatch_rows(result, baseline, context):
+    for index, step in enumerate(result.steps):
+        event = step.dispatch
+        if event is None:
+            continue
+        matched = baseline.steps[index] if baseline is not None else None
+        row = asdict(event)
+        row.update(step_index=index, timestamp=str(step.timestamp), run_id=context.get("Run ID"),
+                   scenario=context.get("Alternative", "Simulation"),
+                   source=event.source or context.get("Active input source"),
+                   shedding_kw=step.shedding_kw, curtailment_kw=step.curtailment_kw,
+                   soc_before=step.bess_step.soc_before if step.bess_step else None,
+                   soc_after=step.bess_state.soc if step.bess_state and step.power_flow.converged else None,
+                   energy_before_kwh=step.bess_step.energy_before_kwh if step.bess_step else None,
+                   energy_after_kwh=step.bess_state.energy_kwh if step.bess_state and step.power_flow.converged else None,
+                   messages=step.messages)
+        for name in ("shedding", "curtailment"):
+            actual = getattr(step, f"{name}_kw")
+            counterfactual = getattr(matched, f"{name}_kw") if matched else None
+            row[f"no_bess_{name}_kw"] = counterfactual
+            row[f"avoided_{name}_kw"] = (counterfactual - actual
+                                        if actual is not None and counterfactual is not None else None)
+        yield row
+
+
 def export_results(result: Result, output_path: str | Path, *,
                    metrics: PerformanceMetrics | None = None,
                    baseline_metrics: PerformanceMetrics | None = None,
-                   context: Mapping[str, str] | None = None) -> dict[str, Path]:
+                   context: Mapping[str, str] | None = None, input_snapshot=None,
+                   baseline_series: TimeSeriesSimulationResult | None = None) -> dict[str, Path]:
     """Create a new export directory. Existing paths are never overwritten.
 
     Matching duration/currency is necessary, not sufficient, for a fair baseline
@@ -260,6 +288,9 @@ def export_results(result: Result, output_path: str | Path, *,
     output = Path(output_path).resolve()
     output.mkdir(parents=True, exist_ok=False)
     written = {}
+    if input_snapshot is not None:
+        from .study_session import write_input_snapshot
+        written.update(write_input_snapshot(output, **input_snapshot))
 
     def write_table(filename, header, rows):
         path = output / filename
@@ -271,6 +302,17 @@ def export_results(result: Result, output_path: str | Path, *,
                     ([item.name, getattr(performance, item.name), _unit(item.name, performance)]
                      for item in fields(performance)))
     if isinstance(result, TimeSeriesSimulationResult):
+        matched = (baseline_series if baseline_series is not None and
+                   baseline_series.dt_hours == result.dt_hours and
+                   [step.timestamp for step in baseline_series.steps] == [step.timestamp for step in result.steps]
+                   else None)
+        if any(step.dispatch is not None for step in result.steps):
+            path = output / "dispatch_events.jsonl"
+            with path.open("w", encoding="utf-8") as stream:
+                for row in _dispatch_rows(result, matched, context or {}):
+                    json.dump(row, stream, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+                    stream.write("\n")
+            written[path.name] = path
         write_table("hourly.csv", [
             "step_index", "timestamp", "dt_hours", "converged", "feasible", "diagnostic_only",
             "fbs_iterations", "fbs_message", "load_input_kw", "pv_input_kw", "slack_p_kw", "slack_q_kvar",
@@ -299,10 +341,11 @@ def export_results(result: Result, output_path: str | Path, *,
         write_table("economic_comparison.csv", ["alternative", "annual_cost", "currency", "feasible", "selected"], [
             ["No BESS", baseline, performance.currency if performance else "", result.metadata.get("no_bess_feasible"),
              bool(result.metadata.get("no_bess_selected"))],
-            ["Best search or selected option", result.best_objective,
-             performance.currency if performance else "", result.success, not result.metadata.get("no_bess_selected", False)],
+            ["Best feasible BESS", result.metadata.get("best_bess_annual_cost"),
+             performance.currency if performance else "", bool(result.metadata.get("best_bess_feasible")),
+             bool(result.success and result.best_candidate is not None)],
         ])
-        if baseline is not None and result.success:
+        if baseline is not None and result.success and result.metadata.get("no_bess_feasible"):
             summary += f"\nAnnual savings relative to no BESS: {baseline - result.best_objective:.6g} {performance.currency if performance else ''}/year\n"
     if comparison is not None:
         write_table("comparison.csv", ["metric", "unit", "baseline", "candidate", "reduction_percent",

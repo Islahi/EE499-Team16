@@ -10,6 +10,7 @@ class ProgressEvent:
     total: int
     detail: str = ""
     log: bool = False
+    hour_finished: bool = False
 
     @property
     def percent(self):
@@ -25,18 +26,33 @@ class StageReporter:
     Numerical hooks update the latest nested counters. Only snapshots at most
     four times per second (plus explicit boundaries) enter the GUI event queue.
     """
-    levels = ("GWO", "GA", "Candidate", "Forecast", "Simulation", "Control", "FBS")
+    levels = ("GWO", "GA", "Candidate", "Forecast", "Simulation", "Base case", "Control", "FBS")
 
-    def __init__(self, stage_callback, progress_callback, interval=0.25):
+    def __init__(self, stage_callback, progress_callback, interval=0.25, *, hourly_log=None):
         self.stage_callback = stage_callback
         self.progress_callback = progress_callback
         self.interval = interval
         self.events = {}
         self.last_sent = 0.0
+        self.hourly_log = hourly_log
+        self.pending_hours = []
 
     def __call__(self, message):
+        self.flush()
         self.events.clear()
         self.stage_callback(message)
+
+    def flush(self):
+        """Retain the latest timestep even when work finishes between UI ticks."""
+        self.flush_hours()
+        if self.events:
+            self.progress_callback((dict(self.events),True))
+            self.last_sent = perf_counter()
+
+    def flush_hours(self):
+        if self.pending_hours:
+            self.hourly_log(tuple(self.pending_hours))
+            self.pending_hours.clear()
 
     def progress(self, event):
         if event.phase in ("Forecast", "GWO", "GA") and event.phase not in self.events:
@@ -47,7 +63,12 @@ class StageReporter:
                 self.events.pop(child, None)
         self.events[event.phase] = event
         now = perf_counter()
+        if self.hourly_log is not None and event.hour_finished:
+            self.pending_hours.append(f"Time step {event.completed}/{event.total} | {event.detail}")
+            if len(self.pending_hours) >= 128:
+                self.flush_hours()
         if event.log or now - self.last_sent >= self.interval:
+            self.flush_hours()
             self.progress_callback((dict(self.events), event.log))
             self.last_sent = now
 

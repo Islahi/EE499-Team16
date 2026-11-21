@@ -21,7 +21,7 @@ def test_no_runtime_primary_toolbar_or_permanent_settings_construction():
 def test_single_toolbar_contains_primary_and_network_view_actions():
     panel = MAIN.xpath('//widget[@name="panel_top_actions"]')[0]
     controls = {w.get('name') for w in panel.xpath('.//widget[@class="QPushButton"]')}
-    assert controls == {'btn_load_data','btn_scenarios','btn_run_simulation',
+    assert controls == {'btn_load_data','btn_scenarios','btn_run_simulation','btn_input_window',
                         'btn_run_base_case','btn_run_optimization','btn_settings',
                         'btn_fit_network','btn_zoom_out','btn_zoom_in','btn_rotate_network'}
     assert not MAIN.xpath('//widget[@name="frame_action"]')
@@ -42,7 +42,7 @@ def test_all_live_optimizer_settings_defined_in_designer():
               'spin_ga_crossover','spin_ga_mutation','spin_discount_rate',
               'spin_bess_lifetime','spin_annual_om_percent','spin_curtailment_penalty',
               'spin_shedding_penalty','spin_grid_import_tariff','spin_grid_export_tariff',
-              'spin_fixed_cost','combo_compute_backend','spin_cpu_workers',
+              'spin_fixed_cost','combo_terminal_policy','spin_terminal_energy_price','spin_cpu_workers',
               'spin_opt_power_step_kw','spin_opt_energy_step_kwh',
               'btn_select_all_buses','btn_clear_allowed_buses','lbl_allowed_bus_count'}
     assert needed <= names
@@ -50,8 +50,7 @@ def test_all_live_optimizer_settings_defined_in_designer():
     assert all(t.text in names for t in SETTINGS.xpath('//tabstop'))
     algorithm = SETTINGS.xpath('//widget[@name="combo_optimizer_algorithm"]')[0]
     assert [n.text for n in algorithm.xpath('./item/property[@name="userData"]/string')] == ['GWO','GA']
-    backend = SETTINGS.xpath('//widget[@name="combo_compute_backend"]')[0]
-    assert [n.text for n in backend.xpath('./item/property[@name="userData"]/string')] == ['python','numpy','numba']
+    assert not SETTINGS.xpath('//widget[@name="combo_compute_backend"]')
 
 
 def test_no_number_tag_for_double_spinbox_settings():
@@ -71,7 +70,7 @@ def test_no_broken_widget_references_in_all_designer_forms():
 def test_forecast_dialog_controls_defined_in_designer():
     tree = etree.parse(str(ASSETS / 'forecast_dialog.ui'))
     assert {w.get('name') for w in tree.xpath('//widget[@class="QSpinBox"]')} == {
-        'spin_forecast_horizon','spin_forecast_training','spin_forecast_validation'}
+        'spin_forecast_horizon'}
     assert tree.xpath('//widget[@name="combo_forecast_method"]')
     assert tree.xpath('//widget[@name="btn_generate_forecast"]')
     source=(ROOT / 'src_accelerated' / 'ui.py').read_text()

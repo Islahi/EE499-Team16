@@ -1,39 +1,44 @@
 """Designer-backed PySide6 desktop; see README_ui.md for launch and inputs."""
 from copy import deepcopy
+from dataclasses import asdict
 from datetime import datetime
 from functools import partial
 from pathlib import Path
 import os
 import sys
 import traceback
+import json
+from math import isfinite
+import pandas as pd
 from time import perf_counter
 
-from PySide6.QtCore import QDir, QFile, QIODevice, QObject, QSize, QThread, QTimer, Qt, Signal, Slot
-from PySide6.QtGui import QColor, QIcon, QPainter, QPainterPath, QPalette, QPen
+from PySide6.QtCore import QDateTime, QDir, QFile, QIODevice, QLocale, QObject, QSize, QThread, QTimer, Qt, QUrl, Signal, Slot
+from PySide6.QtGui import QColor, QDesktopServices, QDoubleValidator, QIcon, QPainter, QPainterPath, QPalette, QPen
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
-    QApplication, QComboBox, QDateTimeEdit, QDialog, QDialogButtonBox,
-    QDoubleSpinBox, QFileDialog, QFormLayout, QGraphicsScene,
-    QGroupBox, QLabel, QListWidgetItem, QMainWindow, QMessageBox,
+    QApplication, QCheckBox, QComboBox, QDateTimeEdit, QDialog, QDialogButtonBox,
+    QDoubleSpinBox, QFileDialog, QFormLayout, QGraphicsScene, QHeaderView, QAbstractItemView,
+    QGroupBox, QInputDialog, QLabel, QLineEdit, QListWidgetItem, QTextEdit, QMainWindow, QMenu, QMessageBox,
     QPushButton, QSizePolicy, QSpinBox, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
 from .bess import BESSConfig
-from .fbs import FBSConfig, backend_available, backend_status
-from .metrics import EconomicConfig
+from .fbs import FBSConfig, warm_numba
+from .metrics import EconomicConfig, validate_annual_inputs
 from .network_diagram import NetworkScene, NetworkView
 from .network_loader import load_network
 from .optimizer import BESSParameters, OptimizationResult
-from .simulation import GridAwareDispatchPolicy, SimulationConfig, TimeSeriesSimulationResult
-from .forecasting import ForecastConfig, generate_forecast
-from .study_session import _write_profile
+from .simulation import ConstraintAwareDispatch, SimulationConfig, TimeSeriesSimulationResult
+from .forecasting import ForecastConfig
 from .progress import StageReporter, format_duration
 from .ui_presentation import compact_summary
 from .ui_bindings import restore_designer_combo_data
-from .study_session import StudySession, study_fingerprint
+from .study_session import StudySession, study_fingerprint, migrate_inputs
+from .distributed_dataset import discover_cases, summary_pv_ratings
+from .pv_model import read_nasa_csv
 from .ui_workflow import (
     BaseCaseReport, DataRequest, RunSettings, prepare_study, run_and_export,
-    run_base_case_and_export, size_catalog,
+    first_calendar_year, forecast_and_export, run_base_case_and_export, size_catalog,
 )
 
 
@@ -73,6 +78,7 @@ def load_form(root, filename):
     # is restored here, before any dialog captures settings or connects events.
     restore_designer_combo_data(ASSETS / filename,
                                 lambda name: root.findChild(QComboBox, name))
+    root.setStyleSheet((ASSETS / "theme.qss").read_text(encoding="utf-8").replace("@ASSET@",ASSETS.as_posix()))
 
 
 def widget(root, name):
@@ -82,24 +88,40 @@ def widget(root, name):
     return result
 
 
+def set_status(label, text, state="info"):
+    """Consistent, accessible status feedback across the existing dialogs."""
+    label.setTextFormat(Qt.TextFormat.PlainText)
+    label.setText(text)
+    label.setProperty("state", state)
+    label.style().unpolish(label)
+    label.style().polish(label)
+
+
+
 class Worker(QObject):
     stage = Signal(str)
     progress = Signal(object)
     succeeded = Signal(object)
     failed = Signal(str, str)
     finished = Signal()
+    hourly_log = Signal(object)
 
-    def __init__(self, task):
+    def __init__(self, task, log_hours=False):
         super().__init__()
         self.task = task
+        self.log_hours = log_hours
 
     @Slot()
     def run(self):
+        reporter = StageReporter(self.stage.emit, self.progress.emit,
+                                 hourly_log=self.hourly_log.emit if self.log_hours else None)
         try:
-            reporter = StageReporter(self.stage.emit, self.progress.emit)
-            self.succeeded.emit(self.task(reporter))
+            result = self.task(reporter)
+            reporter.flush()
+            self.succeeded.emit(result)
         except Exception as error:
             # Boundary catch: restore UI state and retain unexpected error details.
+            reporter.flush()
             self.failed.emit(str(error), traceback.format_exc())
         finally:
             self.finished.emit()
@@ -111,6 +133,7 @@ class JobRunner(QObject):
     succeeded = Signal(object)
     failed = Signal(str, str)
     busy_changed = Signal(bool)
+    hourly_log = Signal(object)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -123,16 +146,17 @@ class JobRunner(QObject):
     def busy(self):
         return self.thread is not None
 
-    def start(self, task):
+    def start(self, task, *, log_hours=False):
         if self.busy:
             raise RuntimeError("A job is already running")
         self.result, self.failure = None, None
         self.thread = QThread(self)
-        self.worker = Worker(task)
+        self.worker = Worker(task, log_hours)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.worker.stage.connect(self.stage)
         self.worker.progress.connect(self.progress)
+        self.worker.hourly_log.connect(self.hourly_log)
         self.worker.succeeded.connect(self.store_result)
         self.worker.failed.connect(self.store_failure)
         self.worker.finished.connect(self.thread.quit)
@@ -166,20 +190,18 @@ class JobRunner(QObject):
 
 
 class LoadDataDialog(QDialog):
+    solar_csv_modes = ("nasa_power", "prepared", "power")
+
     def __init__(self, parent=None):
         super().__init__(parent)
         load_form(self, "load_data_dialog.ui")
         self.runner = JobRunner(self)
         self.study = None
         self.pending_action = ""
-        source = widget(self, "combo_pv_source")
-        source.clear()
-        for title, key in (("Open-Meteo irradiance CSV", "open_meteo"),
-                           ("NASA POWER irradiance CSV", "nasa_power"),
-                           ("Prepared irradiance CSV", "prepared"),
-                           ("Prepared PV power CSV", "power"), ("No PV", "none")):
-            source.addItem(title, key)
-        source.setCurrentIndex(2)
+        self.preview_network = None
+        self.preview_path = None
+        self.ratings_seed = ()
+        self.preselected_metadata = {}
         for name in ("edit_network_path", "edit_pv_source_path", "edit_load_path"):
             widget(self, name).setReadOnly(True)
         # Imported load timestamps determine the full simulation interval.
@@ -187,10 +209,21 @@ class LoadDataDialog(QDialog):
         widget(self, "combo_load_source").setCurrentIndex(1)
         widget(self, "combo_load_source").setEnabled(False)
         widget(self, "group_synthetic_load").hide()
-        for name in ("lbl_load_help", "lbl_load_method"):
+        for name in ("lbl_load_method",):
             control = self.findChild(QLabel, name)
             if control is not None:
                 control.hide()
+        table = widget(self,"table_pv_installations")
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        table.verticalHeader().hide()
+        table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        for name,low,high in (("edit_site_latitude",-90.,90.),("edit_site_longitude",-180.,180.),("edit_reference_capacity",0.,1e9)):
+            validator = QDoubleValidator(low,high,6,self)
+            validator.setNotation(QDoubleValidator.Notation.StandardNotation)
+            validator.setLocale(QLocale.c())
+            widget(self,name).setValidator(validator)
+        buttons = widget(self,"buttons_load_data")
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Prepare study")
         self.connect_events()
         self.update_modes()
 
@@ -201,6 +234,8 @@ class LoadDataDialog(QDialog):
         widget(self, "btn_load_network").clicked.connect(self.load_network_preview)
         widget(self, "edit_network_path").textChanged.connect(self.update_network_button)
         widget(self, "combo_pv_source").currentIndexChanged.connect(self.update_modes)
+        widget(self, "chk_no_pv").toggled.connect(self.update_modes)
+        widget(self, "chk_pv_fallback").toggled.connect(self.update_modes)
         widget(self, "combo_load_source").currentIndexChanged.connect(self.update_modes)
         widget(self, "btn_add_pv_row").clicked.connect(self.add_pv_row)
         widget(self, "btn_remove_pv_row").clicked.connect(self.remove_pv_row)
@@ -217,28 +252,138 @@ class LoadDataDialog(QDialog):
             widget(self, "lbl_network_summary").setText("Load this network to inspect its buses and PV installations.")
 
     def browse_pv(self):
-        path, _ = QFileDialog.getOpenFileName(self, "PV / irradiance CSV", str(REPO), "CSV files (*.csv)")
+        path, _ = QFileDialog.getOpenFileName(self, "Historical solar source", str(REPO), "CSV files (*.csv)")
         if path:
             widget(self, "edit_pv_source_path").setText(path)
+            if widget(self,"combo_pv_source").currentData()=="nasa_power":
+                try:
+                    _,metadata = read_nasa_csv(path)
+                    if metadata.get("source_clock"):
+                        widget(self,"edit_solar_clock").setText(metadata["source_clock"])
+                    if "latitude" in metadata and "longitude" in metadata:
+                        widget(self,"lbl_pv_status").setText(
+                            f"CSV location detected: latitude {metadata['latitude']:g}°, longitude {metadata['longitude']:g}°. "
+                            "Coordinates are read from this file; confirm its source clock below.")
+                except ValueError as error:
+                    self.show_failure(str(error),"")
 
     def browse_load(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Prepared load CSV", str(REPO), "CSV files (*.csv)")
+        path = QFileDialog.getExistingDirectory(self,"GoiEner case or multi-case parent folder",str(REPO))
         if path:
-            widget(self, "edit_load_path").setText(path)
+            try:
+                cases = discover_cases(path)
+                if len(cases)>1:
+                    chosen,ok = QInputDialog.getItem(self,"Select GoiEner case","Case",[p.name for p in cases],0,False)
+                    if not ok: return
+                    path = str(next(p for p in cases if p.name==chosen))
+                else:
+                    path = str(cases[0])
+                widget(self,"edit_load_path").setText(path)
+                self.populate_folder_metadata()
+            except (ValueError,OSError) as error:
+                self.show_failure(str(error), "")
+
+    def pv_rows(self):
+        table = widget(self, "table_pv_installations")
+        rows = [[table.item(row, col).text().strip() if table.item(row, col) else ""
+                 for col in (0, 1)] for row in range(table.rowCount())]
+        return tuple(tuple(row) for row in rows if any(row))
+
+    def populate_folder_metadata(self):
+        folder = Path(widget(self,"edit_load_path").text())
+        manifest = folder / "manifest.json"
+        meta = json.loads(manifest.read_text(encoding="utf-8-sig")) if manifest.is_file() else {}
+        reference = meta.get("pv_reference") or {}
+        site = meta.get("site") or reference.get("site") or {}
+        for name,value in (("edit_site_latitude",site.get("latitude",meta.get("site_lat"))),
+                           ("edit_site_longitude",site.get("longitude",meta.get("site_lon"))),
+                           ("edit_source_clock",meta.get("clock",meta.get("timezone"))),
+                           ("edit_reference_capacity",reference.get("capacity_kw"))):
+            control = widget(self, name)
+            previous = self.preselected_metadata.get(name, "")
+            if control.text().strip() == previous:
+                next_value = "" if value is None else str(value)
+                control.setText(next_value)
+                self.preselected_metadata[name] = next_value
+        conflicts = ""
+        summary = folder/"bus_summary.csv"
+        network = self.preview_network if self.preview_path == widget(self, "edit_network_path").text() else None
+        ids = {b.bus_id for b in network.buses} if network else None
+        folder_ratings = summary_pv_ratings(pd.read_csv(summary), ids) if manifest.is_file() and summary.is_file() else {}
+        workbook_ratings = {}
+        if network:
+            for unit in network.pv_units:
+                workbook_ratings[unit.bus_id] = workbook_ratings.get(unit.bus_id, 0.) + unit.p_rated_kw
+            workbook_ratings = {bus: kw for bus, kw in workbook_ratings.items() if kw > 0}
+        existing = self.pv_rows()
+        if existing == self.ratings_seed:
+            # Replace only suggestions. Workbook and edited ratings take precedence.
+            seed = workbook_ratings or folder_ratings
+            table = widget(self, "table_pv_installations")
+            table.setRowCount(max(1, len(seed)))
+            table.clearContents()
+            for row, (bus, rating) in enumerate(sorted(seed.items())):
+                table.setItem(row, 0, QTableWidgetItem(str(bus)))
+                table.setItem(row, 1, QTableWidgetItem(str(rating)))
+            self.ratings_seed = self.pv_rows()
+        if folder_ratings and (workbook_ratings or existing != self.ratings_seed) and folder_ratings != workbook_ratings:
+            conflicts = f" Folder ratings {folder_ratings} differ from the workbook or edited table. Review or edit the final table to choose the installed ratings."
+        if not manifest.is_file():
+            return
+        hours = meta.get("hours")
+        coverage = f"{int(hours):,} hourly observations" if isinstance(hours,(int,float)) else "Hourly dataset found"
+        widget(self,"lbl_load_status").setText(f"{folder.name} · {coverage}")
+        placeholder = "placeholder" in str(meta.get("pv_status","")).lower()
+        pv_text = ("The dataset contains a zero-PV placeholder. Enable Use fallback solar source if PV is installed."
+                   if placeholder else "Dataset PV history will be checked during preparation.")
+        widget(self,"lbl_pv_status").setText(pv_text+conflicts)
+        widget(self,"lbl_pv_status").setToolTip(str(meta.get("pv_status",""))+conflicts)
+        set_status(widget(self,"lbl_load_validation"),"Dataset selected. Review the clock and final PV capacities, then choose Prepare study.",
+                   "warning" if conflicts else "info")
 
     def update_network_button(self):
         widget(self, "btn_load_network").setEnabled(bool(widget(self, "edit_network_path").text()) and not self.runner.busy)
 
+    def solar_source_mode(self):
+        if widget(self, "chk_no_pv").isChecked():
+            return "none"
+        if widget(self, "chk_pv_fallback").isChecked():
+            return widget(self, "combo_pv_source").currentData()
+        return "dataset"
+
     def update_modes(self):
-        mode = widget(self, "combo_pv_source").currentData()
-        for name in ("edit_pv_source_path", "btn_browse_pv_source", "group_pv_conversion"):
-            widget(self, name).setEnabled(mode != "none")
-        widget(self, "group_pv_conversion").setTitle("PV Installations and Irradiance Conversion")
-        for name in ("spin_critical_irradiance", "spin_standard_irradiance"):
-            widget(self, name).setEnabled(mode not in ("none", "power"))
-        imported = widget(self, "combo_load_source").currentIndex() == 1
-        widget(self, "panel_load_import").setEnabled(imported)
-        widget(self, "group_synthetic_load").setEnabled(not imported)
+        mode = self.solar_source_mode()
+        manual = mode in self.solar_csv_modes
+        installed = mode != "none"
+        fallback = installed and mode != "dataset"
+        widget(self, "chk_pv_fallback").setVisible(installed)
+        widget(self, "panel_pv_source_fields").setVisible(fallback)
+        widget(self, "panel_pv_source_fields").setEnabled(fallback)
+        for name in ("edit_reference_capacity", "lbl_edit_reference_capacity"):
+            widget(self, name).setVisible(fallback)
+        for name in ("panel_pv_source_file","label_5","edit_solar_clock","lbl_edit_solar_clock"):
+            widget(self,name).setVisible(manual)
+        for name in ("edit_site_latitude","edit_site_longitude","lbl_edit_site_latitude","lbl_edit_site_longitude"):
+            widget(self,name).setVisible(installed)
+        for name in ("group_pv_conversion","group_solar_metadata"):
+            widget(self,name).setVisible(installed)
+            widget(self,name).setEnabled(installed)
+        widget(self,"edit_solar_clock").setEnabled(manual)
+        widget(self,"panel_irradiance_fields").setVisible(fallback and mode != "power")
+        widget(self,"edit_reference_capacity").setPlaceholderText(
+            "Enter the modeled profile nameplate" if mode == "power" else "Defaults to total installed PV kW")
+        widget(self,"panel_load_import").setEnabled(True)
+        if not installed:
+            message = "No PV study: no solar source or site metadata is required."
+        elif not fallback:
+            message = "Using PV history from the study folder. Enable Use fallback solar source if you need a CSV or provider."
+        elif manual:
+            message = ("If the dataset has no valid PV history, supply historical modeled electrical kW, reference kW, site and file clock."
+                       if mode == "power" else "If the dataset has no valid PV history, supply a historical irradiance CSV and its source clock. Review the site coordinates.")
+        else:
+            message = "Validated dataset PV is used when available. Otherwise the selected provider retrieves historical irradiance for this site if PV is installed."
+        widget(self,"lbl_pv_status").setText(message)
+
 
     def add_pv_row(self):
         table = widget(self, "table_pv_installations")
@@ -264,6 +409,7 @@ class LoadDataDialog(QDialog):
                 stage("Reading network workbook")
                 return load_network(path, workbook_format=format_name, frequency_hz=frequency)
             self.pending_action = "network"
+            self.preview_path = str(path)
             self.runner.start(task)
         except (ValueError, OSError) as error:
             self.show_failure(str(error), "")
@@ -271,29 +417,37 @@ class LoadDataDialog(QDialog):
     def read_request(self):
         path, frequency, format_name = self.network_arguments()
         ratings = {}
-        table = widget(self, "table_pv_installations")
-        row_count = 0 if widget(self, "combo_pv_source").currentData() == "none" else table.rowCount()
-        for row in range(row_count):
-            cells = [table.item(row, col).text().strip() if table.item(row, col) else "" for col in (0, 1)]
-            if not any(cells):
-                continue
+        mode = self.solar_source_mode()
+        for row, cells in enumerate(self.pv_rows() if mode != "none" else ()):
             try:
                 bus, rating = int(cells[0]), float(cells[1])
             except ValueError as error:
                 raise ValueError(f"PV row {row + 1}: supply an integer bus ID and numeric kW") from error
             if bus in ratings:
                 raise ValueError(f"Duplicate PV bus {bus}; enter one total rating per bus")
+            if not isfinite(rating) or rating < 0:
+                raise ValueError(f"PV row {row + 1}: enter finite nonnegative kW")
             ratings[bus] = rating
 
         pv_path = widget(self, "edit_pv_source_path").text().strip()
+        manual = mode in self.solar_csv_modes
+        reference_capacity = widget(self, "edit_reference_capacity").text().strip() if mode not in ("none", "dataset") else ""
         load_path = widget(self, "edit_load_path").text().strip()
+        if not load_path:
+            raise ValueError("Choose a GoiEner case or multi-case output folder")
         return DataRequest(
             network_path=path, frequency_hz=frequency, workbook_format=format_name,
             start=None, months=None,
-            pv_source=widget(self, "combo_pv_source").currentData(), pv_path=Path(pv_path) if pv_path else None,
+            pv_source=mode, pv_path=Path(pv_path) if manual and pv_path else None,
             pv_ratings_kw=ratings, critical_irradiance=widget(self, "spin_critical_irradiance").value(),
             standard_irradiance=widget(self, "spin_standard_irradiance").value(),
-            load_source="imported" if widget(self, "combo_load_source").currentIndex() == 1 else "synthetic",
+            load_source="distributed", dataset_folder=Path(load_path), pv_override=self.pv_rows() != self.ratings_seed,
+            pv_rating_selection="Edited PV table" if self.pv_rows() != self.ratings_seed else "",
+            latitude=float(widget(self,"edit_site_latitude").text()) if mode != "none" and widget(self,"edit_site_latitude").text().strip() else None,
+            longitude=float(widget(self,"edit_site_longitude").text()) if mode != "none" and widget(self,"edit_site_longitude").text().strip() else None,
+            clock=widget(self,"edit_source_clock").text().strip() or None,
+            solar_source_clock=(widget(self,"edit_solar_clock").text().strip() or None) if manual else None,
+            reference_capacity_kw=float(reference_capacity) if reference_capacity else None,
             load_path=Path(load_path) if load_path else None, load_seed=widget(self, "spin_load_seed").value())
 
     def prepare_data(self):
@@ -310,28 +464,25 @@ class LoadDataDialog(QDialog):
         self.update_network_button()
 
     def show_failure(self, message, details):
-        widget(self, "lbl_load_validation").setText(f"Error: {message}")
+        set_status(widget(self, "lbl_load_validation"),message,"error")
         widget(self, "lbl_load_validation").setToolTip(details)
 
     def job_succeeded(self, result):
         if self.pending_action == "prepare":
             self.study = result
-            widget(self, "lbl_load_validation").setText("Data prepared and validated")
+            set_status(widget(self,"lbl_load_validation"),"Data prepared and validated","success")
+            widget(self,"lbl_load_validation").setToolTip("")
             self.accept()
             return
         widget(self, "lbl_network_summary").setText(
             f"{len(result.buses)} buses, {len(result.lines)} lines; slack {result.slack_bus_id()}; "
             f"base load {sum(load.p_base_kw for load in result.loads):g} kW; frequency {result.frequency_hz:g} Hz")
-        table = widget(self, "table_pv_installations")
-        ratings = {}
-        for unit in result.pv_units:
-            ratings[unit.bus_id] = ratings.get(unit.bus_id, 0.0) + unit.p_rated_kw
-        table.setRowCount(max(1, len(ratings)))
-        table.clearContents()
-        for row, (bus, rating) in enumerate(sorted(ratings.items())):
-            table.setItem(row, 0, QTableWidgetItem(str(bus)))
-            table.setItem(row, 1, QTableWidgetItem(str(rating)))
-        widget(self, "lbl_load_validation").setText("Network inspected. Configure PV/load inputs, then press OK.")
+        self.preview_network = result
+        widget(self, "lbl_load_validation").setText("Network inspected. Configure PV and load, then choose Prepare study.")
+        try:
+            self.populate_folder_metadata()
+        except (ValueError, OSError) as error:
+            self.show_failure(str(error), "")
 
     def reject(self):
         if self.runner.busy:
@@ -357,13 +508,21 @@ class SettingsDialog(QDialog):
         self.connect_designer_settings()
         self.committed = self.capture_values()
         buttons = widget(self, "buttons_settings")
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Save settings")
         buttons.accepted.connect(self.accept_settings)
         buttons.button(QDialogButtonBox.StandardButton.Apply).clicked.connect(self.apply_settings)
         widget(self, "combo_dispatch_policy").currentIndexChanged.connect(self.update_dispatch)
-        widget(self, "combo_compute_backend").currentIndexChanged.connect(self.update_compute_status)
+        widget(self, "combo_terminal_policy").currentIndexChanged.connect(self.update_optional_controls)
+        self.engine_ready = False
+        self.jit_metadata = None
+        self.jit_runner = JobRunner(self)
+        self.jit_runner.succeeded.connect(self.numba_ready)
+        self.jit_runner.failed.connect(self.numba_failed)
+        QTimer.singleShot(0, lambda: self.jit_runner.start(lambda stage: warm_numba()))
         self.update_dispatch()
         self.update_compute_status()
         self.update_algorithm_controls()
+        self.update_optional_controls()
 
     def connect_designer_settings(self):
         """Attach behavior to controls declared in settings_dialog.ui.
@@ -375,23 +534,37 @@ class SettingsDialog(QDialog):
         widget(self, "btn_clear_allowed_buses").clicked.connect(self.clear_allowed_buses)
         widget(self, "list_allowed_buses").itemSelectionChanged.connect(self.update_allowed_bus_count)
         widget(self, "combo_optimizer_algorithm").currentIndexChanged.connect(self.update_algorithm_controls)
+        for name in ("group_manual_bess","group_reserve","group_import_limit","group_export_limit","group_economic_inputs","group_terminal_soc"):
+            widget(self,name).toggled.connect(self.update_optional_controls)
         # A CPU-dependent value is runtime data, not a visual layout change.
         workers = widget(self, "spin_cpu_workers")
         workers.setMaximum(max(1, os.cpu_count() or 1))
         workers.setValue(max(1, (os.cpu_count() or 1) - 1))
 
-    def update_algorithm_controls(self):
-        """Only show parameter rows for the selected search algorithm."""
-        ga = widget(self, "combo_optimizer_algorithm").currentData() == "GA"
-        widget(self, "group_gwo_settings").setVisible(not ga)
-        group = widget(self, "combo_optimizer_algorithm").parentWidget()
-        layout = group.layout()
-        for name in ("spin_ga_population", "spin_ga_generations", "spin_ga_crossover", "spin_ga_mutation"):
-            control = widget(self, name)
-            control.setVisible(ga)
-            label = layout.labelForField(control)
-            if label is not None:
-                label.setVisible(ga)
+    def update_algorithm_controls(self, *args):
+        """Collapse inactive rows while keeping both methods in the same form."""
+        ga = widget(self,"combo_optimizer_algorithm").currentData() == "GA"
+        form = widget(self,"group_ga_settings").layout()
+        for name in ("spin_gwo_population","spin_gwo_iterations"):
+            form.setRowVisible(widget(self,name),not ga)
+        for name in ("spin_ga_population","spin_ga_generations","spin_ga_crossover","spin_ga_mutation"):
+            form.setRowVisible(widget(self,name),ga)
+        compute = widget(self,"group_compute_backend").layout()
+        compute.setRowVisible(widget(self,"spin_cpu_workers"),not ga)
+
+    def update_optional_controls(self, *args):
+        for name in ("group_manual_bess","group_reserve","group_import_limit","group_export_limit","group_economic_inputs","group_terminal_soc"):
+            group = widget(self,name)
+            form = group.layout()
+            for row in range(form.rowCount()):
+                form.setRowVisible(row,group.isChecked())
+            group.setProperty("collapsed",not group.isChecked())
+            group.style().unpolish(group)
+            group.style().polish(group)
+        economic_group = widget(self, "group_economic_inputs")
+        economic_group.layout().setRowVisible(widget(self, "spin_terminal_energy_price"),
+            economic_group.isChecked() and widget(self, "combo_terminal_policy").currentData() == "priced_energy")
+
 
     def select_all_allowed_buses(self):
         choices = widget(self, "list_allowed_buses")
@@ -409,22 +582,29 @@ class SettingsDialog(QDialog):
             f"{len(choices.selectedItems())} of {choices.count()} eligible buses selected")
 
     def update_compute_status(self):
-        backend = widget(self, "combo_compute_backend").currentData()
-        available, reason = backend_available(backend)
-        workers = widget(self, "spin_cpu_workers")
-        status = backend_status()
-        prefix = "Ready" if available else "Unavailable"
-        message = f"{prefix}: {reason}. Numba: {status['numba']}."
-        label = widget(self, "lbl_compute_status")
-        label.setText(message)
-        label.setToolTip(message)
-        label.setVisible(not available)  # Critical errors stay visible; healthy status is hover-only.
-        widget(self, "combo_compute_backend").setToolTip(message)
+        widget(self,"lbl_compute_status").setVisible(True)
+        set_status(widget(self,"lbl_compute_status"),"FBS — Numba (CPU) ready" if self.engine_ready else "Preparing the Numba solver. You can continue reviewing settings.",
+                   "success" if self.engine_ready else "busy")
+        buttons = widget(self,"buttons_settings")
+        for button in (QDialogButtonBox.StandardButton.Ok,QDialogButtonBox.StandardButton.Apply):
+            buttons.button(button).setEnabled(self.engine_ready)
+
+    def numba_ready(self, metadata):
+        self.engine_ready = True
+        self.jit_metadata = metadata
+        self.update_compute_status()
+
+    def numba_failed(self, message, details):
+        self.engine_ready = False
+        set_status(widget(self,"lbl_compute_status"),message,"error")
+        for button in (QDialogButtonBox.StandardButton.Ok,QDialogButtonBox.StandardButton.Apply):
+            widget(self,"buttons_settings").button(button).setEnabled(False)
+        widget(self,"lbl_compute_status").setToolTip(details)
 
 
     def update_dispatch(self):
         mode = widget(self, "combo_dispatch_policy").currentIndex()
-        details = ("Grid-aware: charge from surplus PV and discharge against demand/import caps; no tariff arbitrage."
+        details = ("Looks ahead up to 24 study hours and tests battery actions against voltage, grid and line limits."
                    if mode == 1 else "Idle diagnostic mode: no scheduled charge/discharge request.")
         widget(self, "lbl_dispatch_status").setText(details)
         widget(self, "combo_dispatch_policy").setToolTip(details)
@@ -440,8 +620,11 @@ class SettingsDialog(QDialog):
         values["bess_bus"] = widget(self, "combo_bess_bus").currentData()
         values["allowed_buses"] = tuple(item.data(Qt.ItemDataRole.UserRole) for item in widget(self, "list_allowed_buses").selectedItems())
         values["dispatch_mode"] = widget(self, "combo_dispatch_policy").currentIndex()
-        values["compute_backend"] = widget(self, "combo_compute_backend").currentData()
+        values["compute_backend"] = "numba"
+        values["numba_readiness"] = getattr(self,"jit_metadata",None)
+        values["chk_tariffs_confirmed"] = widget(self,"chk_tariffs_confirmed").isChecked()
         values["optimizer_algorithm"] = widget(self, "combo_optimizer_algorithm").currentData()
+        values["terminal_policy"] = widget(self, "combo_terminal_policy").currentData()
         return values
 
     def restore_values(self):
@@ -451,7 +634,7 @@ class SettingsDialog(QDialog):
                 control.setValue(value)
             elif isinstance(control, QGroupBox):
                 control.setChecked(value)
-            elif name.startswith("chk_"):
+            elif isinstance(control,QCheckBox):
                 control.setChecked(value)
         widget(self, "edit_currency").setText(self.committed["edit_currency"])
         combo = widget(self, "combo_bess_bus")
@@ -463,11 +646,14 @@ class SettingsDialog(QDialog):
         widget(self, "combo_dispatch_policy").setCurrentIndex(self.committed["dispatch_mode"])
         algorithm = widget(self, "combo_optimizer_algorithm")
         algorithm.setCurrentIndex(max(0, algorithm.findData(self.committed["optimizer_algorithm"])))
-        compute = widget(self, "combo_compute_backend")
-        compute.setCurrentIndex(max(0, compute.findData(self.committed["compute_backend"])))
+        widget(self,"chk_tariffs_confirmed").setChecked(self.committed.get("chk_tariffs_confirmed",False))
+        terminal = widget(self, "combo_terminal_policy")
+        terminal.setCurrentIndex(max(0, terminal.findData(self.committed.get("terminal_policy", "equal_soc"))))
+        self.update_optional_controls()
         self.update_dispatch()
         self.update_compute_status()
         self.update_algorithm_controls()
+        self.update_optional_controls()
 
     def set_network(self, network):
         previous_network = self.network
@@ -493,10 +679,8 @@ class SettingsDialog(QDialog):
 
     def read_settings(self, optimization=False):
         values = self.capture_values()
-        backend = values["compute_backend"]
-        available, reason = backend_available(backend)
-        if not available:
-            raise ValueError(f"Selected compute backend is unavailable: {reason}")
+        if not self.engine_ready:
+            raise ValueError("Mandatory Numba solver is not ready: "+widget(self,"lbl_compute_status").text())
         simulation = SimulationConfig(
             voltage_min_pu=values["spin_voltage_min_pu"], voltage_max_pu=values["spin_voltage_max_pu"],
             reserve_fraction=values["spin_reserve_percent"] / 100 if values["group_reserve"] else 0,
@@ -506,7 +690,8 @@ class SettingsDialog(QDialog):
             terminal_soc_tolerance=(values["spin_terminal_soc_percent"] / 100
                                     if values["group_terminal_soc"] else None),
             allow_pv_curtailment=values["chk_allow_curtailment"], allow_load_shedding=values["chk_allow_shedding"],
-            fbs_config=FBSConfig(backend=backend))
+            fbs_config=FBSConfig())
+        terminal_policy = values["terminal_policy"] if values["group_economic_inputs"] else "equal_soc"
         economics = EconomicConfig(
             values["spin_cost_per_kwh"] if values["group_economic_inputs"] else None,
             values["spin_cost_per_kw"] if values["group_economic_inputs"] else None,
@@ -515,12 +700,12 @@ class SettingsDialog(QDialog):
             annual_om_fraction=values["spin_annual_om_percent"] / 100,
             curtailment_penalty_per_kwh=values["spin_curtailment_penalty"],
             shedding_penalty_per_kwh=values["spin_shedding_penalty"],
-            grid_import_tariff_per_kwh=values["spin_grid_import_tariff"],
-            grid_export_tariff_per_kwh=values["spin_grid_export_tariff"],
-            fixed_installation_cost=values["spin_fixed_cost"])
-        dispatch = (GridAwareDispatchPolicy(simulation.grid_import_limit_kw,
-                                            simulation.grid_export_limit_kw)
-                    if values["dispatch_mode"] == 1 else None)
+            grid_import_tariff_per_kwh=values["spin_grid_import_tariff"] if values["chk_tariffs_confirmed"] else None,
+            grid_export_tariff_per_kwh=values["spin_grid_export_tariff"] if values["chk_tariffs_confirmed"] else None,
+            fixed_installation_cost=values["spin_fixed_cost"],
+            terminal_policy=terminal_policy,
+            terminal_energy_price_per_kwh=(values["spin_terminal_energy_price"] if terminal_policy == "priced_energy" else None))
+        dispatch = ConstraintAwareDispatch() if values["dispatch_mode"] == 1 else None
         battery = None
         if values["group_manual_bess"] or optimization:
             parameters = BESSParameters(values["spin_eta_charge_percent"] / 100, values["spin_eta_discharge_percent"] / 100,
@@ -537,21 +722,28 @@ class SettingsDialog(QDialog):
         if optimization:
             if dispatch is None or economics.cost_per_kw is None or economics.cost_per_kwh is None:
                 raise ValueError("Optimization requires active dispatch and both economic cost coefficients")
+            if economics.grid_import_tariff_per_kwh is None or economics.grid_export_tariff_per_kwh is None:
+                raise ValueError("Enter import/export tariffs and confirm the explicit values before economic optimization")
             if not values["allowed_buses"]:
                 raise ValueError("Select allowed battery buses")
-            size_catalog(values["spin_opt_power_min_kw"], values["spin_opt_power_max_kw"], values["spin_opt_power_step_kw"])
-            size_catalog(values["spin_opt_energy_min_kwh"], values["spin_opt_energy_max_kwh"], values["spin_opt_energy_step_kwh"])
+            for quantity, unit in (("power", "kw"), ("energy", "kwh")):
+                try:
+                    size_catalog(*(values[f"spin_opt_{quantity}_{field}_{unit}"]
+                                   for field in ("min", "max", "step")))
+                except ValueError as error:
+                    label = "power (kW)" if quantity == "power" else "energy capacity (kWh)"
+                    raise ValueError(f"Set a valid battery {label} minimum, maximum and step in Settings. {error}") from error
         return RunSettings(simulation, economics, battery, values, dispatch)
 
     def apply_settings(self):
         try:
             settings = self.read_settings()
             self.committed = settings.values
-            widget(self, "lbl_settings_validation").setText("Settings applied. Runs use these explicit inputs.")
+            set_status(widget(self,"lbl_settings_validation"),"Settings saved. The next run will use these values.","success")
             self.applied.emit(settings)
             return True
         except ValueError as error:
-            widget(self, "lbl_settings_validation").setText(f"Error: {error}")
+            set_status(widget(self,"lbl_settings_validation"),str(error),"error")
             return False
 
     def accept_settings(self):
@@ -571,8 +763,18 @@ class ForecastDialog(QDialog):
         load_form(self, "forecast_dialog.ui")
         self.method = widget(self, "combo_forecast_method")
         self.horizon = widget(self, "spin_forecast_horizon")
-        self.train = widget(self, "spin_forecast_training")
-        self.validation = widget(self, "spin_forecast_validation")
+        self.train_start = widget(self,"date_training_start")
+        self.train_end = widget(self,"date_training_end")
+        self.origin = widget(self,"date_forecast_origin")
+        history = study.historical_profiles or study.profiles
+        self.history_times = pd.DatetimeIndex(history.timestamps)
+        self.train_start.setDateTime(QDateTime(pd.Timestamp(history.timestamps[0]).to_pydatetime()))
+        self.train_end.setDateTime(QDateTime(pd.Timestamp(history.timestamps[-1]).to_pydatetime()))
+        self.origin.setDateTime(QDateTime((pd.Timestamp(history.timestamps[-1])+pd.Timedelta(hours=1)).to_pydatetime()))
+        self.train_end.dateTimeChanged.connect(self.training_end_changed)
+        self.origin.dateTimeChanged.connect(self.origin_changed)
+        widget(self,"combo_horizon_preset").currentIndexChanged.connect(self.change_horizon)
+        self.method.setEnabled(False)
         self.status = widget(self, "lbl_forecast_status")
         self.generate_button = widget(self, "btn_generate_forecast")
         self.generate_button.clicked.connect(self.start_forecast)
@@ -580,6 +782,54 @@ class ForecastDialog(QDialog):
         self.runner = JobRunner(self)
         self.runner.succeeded.connect(self.forecast_ready)
         self.runner.failed.connect(self.forecast_failed)
+        self.runner.busy_changed.connect(self.forecast_busy)
+        self.train_start.dateTimeChanged.connect(self.update_training_status)
+        self.train_end.dateTimeChanged.connect(self.update_training_status)
+        self.horizon.valueChanged.connect(self.update_training_status)
+        self.horizon.valueChanged.connect(self.sync_horizon_preset)
+        first,last = pd.Timestamp(history.timestamps[0]),pd.Timestamp(history.timestamps[-1])
+        widget(self,"lbl_forecast_coverage").setText(f"Available history · {len(history.timestamps):,} hours · {first:%d %b %Y} to {last:%d %b %Y}")
+        for control in (self.train_start,self.train_end):
+            control.setMinimumDateTime(QDateTime(first.to_pydatetime()))
+            control.setMaximumDateTime(QDateTime(last.to_pydatetime()))
+        self.origin.setMinimumDateTime(QDateTime((first+pd.Timedelta(hours=1)).to_pydatetime()))
+        self.origin.setMaximumDateTime(QDateTime((last+pd.Timedelta(hours=1)).to_pydatetime()))
+        self.update_training_status()
+
+    def training_end_changed(self, dt):
+        self.origin.blockSignals(True)
+        self.origin.setDateTime(dt.addSecs(3600))
+        self.origin.blockSignals(False)
+        if hasattr(self,"runner"): self.update_training_status()
+
+    def origin_changed(self, dt):
+        self.train_end.setDateTime(dt.addSecs(-3600))
+        expected = self.train_end.dateTime().addSecs(3600)
+        if self.origin.dateTime() != expected:
+            self.origin.blockSignals(True)
+            self.origin.setDateTime(expected)
+            self.origin.blockSignals(False)
+        if hasattr(self,"runner"): self.update_training_status()
+
+    def update_training_status(self, *args):
+        if self.runner.busy: return
+        hours = self.train_start.dateTime().secsTo(self.train_end.dateTime())//3600+1
+        aligned = (pd.Timestamp(self.train_start.dateTime().toPython()) in self.history_times and
+                   pd.Timestamp(self.train_end.dateTime().toPython()) in self.history_times)
+        valid = aligned and hours >= 8760
+        self.generate_button.setEnabled(valid)
+        if not aligned:
+            set_status(self.status,"Choose exact hourly observations from the imported history.","warning")
+        elif valid:
+            set_status(self.status,f"Ready · {hours:,} training hours → {self.horizon.value():,} forecast hours. Historical data is retained.","success")
+        else:
+            set_status(self.status,f"Select at least one year of hourly history (8,760 hours). Current selection: {max(0,hours):,} hours.","warning")
+
+    def forecast_busy(self, busy):
+        for name in ("combo_horizon_preset","spin_forecast_horizon","date_training_start","date_training_end","date_forecast_origin","btn_cancel_forecast"):
+            widget(self,name).setEnabled(not busy)
+        self.generate_button.setText("Generating…" if busy else "Generate forecast")
+        self.generate_button.setEnabled(not busy)
 
     def start_forecast(self):
         if self.runner.busy:
@@ -589,35 +839,42 @@ class ForecastDialog(QDialog):
             if method is None:
                 raise ValueError("Forecast model has no backend identifier; reopen the dialog")
             cfg = ForecastConfig(horizon_hours=self.horizon.value(),
-                                 train_hours=self.train.value(),
-                                 validation_hours=self.validation.value(),
+                                 training_start=self.train_start.dateTime().toPython(),
+                                 training_end=self.train_end.dateTime().toPython(),
+                                 forecast_start=self.origin.dateTime().toPython(),
                                  method=method)
         except ValueError as error:
             self.forecast_failed(str(error), "")
             return
-        history = self.study.historical_profiles or self.study.profiles
+        output = self.session.root / "forecasts" / datetime.now().strftime("forecast_%Y%m%d_%H%M%S_%f")
         self.generate_button.setEnabled(False)
-        self.status.setText("Fitting models and evaluating chronological holdout...")
-        self.runner.start(lambda stage: generate_forecast(history, cfg))
+        set_status(self.status, "Training the sector models and preparing the common PV forecast, when installed.", "busy")
+        self.runner.start(partial(forecast_and_export, self.study, cfg, output,
+                                  network_snapshot=self.session.network_snapshot_path()))
+
+    def sync_horizon_preset(self, value):
+        preset = widget(self,"combo_horizon_preset")
+        preset.blockSignals(True)
+        index = preset.findData(str(value))
+        preset.setCurrentIndex(index if index>=0 else preset.findData("0"))
+        preset.blockSignals(False)
+
+    def change_horizon(self):
+        value = widget(self,"combo_horizon_preset").currentData()
+        if int(value or 0)>0: self.horizon.setValue(int(value))
 
     def forecast_failed(self, message, details):
-        self.status.setText(f"Forecast failed: {message}")
+        set_status(self.status,f"Forecast failed: {message}","error")
         self.generate_button.setEnabled(True)
         QMessageBox.warning(self, "Forecast error", message)
 
-    def forecast_ready(self, report):
+    def forecast_ready(self, result):
         try:
-            forecast_root = self.session.root / "forecasts"
-            forecast_root.mkdir(exist_ok=True)
-            output = forecast_root / datetime.now().strftime("forecast_%Y%m%d_%H%M%S")
-            output.mkdir(exist_ok=False)
-            _write_profile(output / "load_profile.csv", report.profiles.timestamps,
-                           report.profiles.load_p_kw, report.profiles.load_q_kvar)
-            _write_profile(output / "pv_profile.csv", report.profiles.timestamps,
-                           report.profiles.pv_p_kw, report.profiles.pv_q_kvar)
+            report, output = result
             history = self.study.historical_profiles or self.study.profiles
             self.study.historical_profiles = history
-            self.study.profiles = report.profiles
+            self.study.forecast_profiles = report.profiles
+            self.study.select_source("forecast")
             self.study.forecast_info = {"model": report.model_info, "validation_scores": report.scores,
                                         "training_ends": str(report.historical_end),
                                         "forecast_hours": report.horizon_hours,
@@ -661,6 +918,15 @@ class TimestampDialog(QDialog):
         layout.addWidget(buttons)
 
 
+class SimulationInputDialog(QDialog):
+    def __init__(self,parent=None):
+        super().__init__(parent)
+        load_form(self,"simulation_input_dialog.ui")
+        for button in self.findChildren(QPushButton):
+            button.setAutoDefault(False)
+
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -671,6 +937,7 @@ class MainWindow(QMainWindow):
         self.result_index = None
         self.pending_action = ""
         self.pending_run_output = None
+        self.dashboard_folder = None
         self.pending_run_optimization = False
         self.runner = JobRunner(self)
         self.run_started = None
@@ -686,15 +953,203 @@ class MainWindow(QMainWindow):
         self.run_clock.timeout.connect(self.update_run_clock)
         self.settings_dialog = SettingsDialog(self)
         self.load_dialog = LoadDataDialog(self)
+        self.input_dialog = SimulationInputDialog(self)
         self.scene = NetworkScene(self)
         view = widget(self, "network_view")
         view.setScene(self.scene)
         view.setRenderHint(QPainter.RenderHint.Antialiasing)
         # Toolbar, icons and view layout are defined in main_window.ui.
         self.add_network_controls()
+        self.add_dashboard_actions()
         widget(self, "run_log").setMaximumBlockCount(5000)
         self.connect_events()
+        self.connect_source_events()
+        self.connect_solver_status()
         self.set_busy(False)
+
+    def connect_solver_status(self):
+        self.settings_dialog.jit_runner.succeeded.connect(lambda *_: self.set_busy(self.runner.busy))
+        self.settings_dialog.jit_runner.failed.connect(lambda *_: self.set_busy(self.runner.busy))
+
+    def add_dashboard_actions(self):
+        control = widget(self, "btn_dashboard")
+        menu = QMenu(control)
+        embedded = menu.addAction("Open latest report in the app", lambda: self.open_dashboard("embedded"))
+        browser = menu.addAction("Open latest report in browser", lambda: self.open_dashboard("browser"))
+        menu.addAction("Open saved report / compare runs", lambda: self.open_dashboard("saved"))
+        menu.addAction("Regenerate saved report", lambda: self.open_dashboard("regenerate"))
+        menu.addAction("Export portable ZIP", lambda: self.open_dashboard("package"))
+        def refresh():
+            available = self.dashboard_folder is not None
+            embedded.setEnabled(available)
+            browser.setEnabled(available)
+        menu.aboutToShow.connect(refresh)
+        control.setMenu(menu)
+
+    def open_dashboard(self, action):
+        from .dashboard import HTML_FILE, package_dashboard, regenerate_dashboard
+        folder = self.dashboard_folder
+        if action in ("saved", "regenerate") or folder is None:
+            selected = QFileDialog.getExistingDirectory(self, "Select saved run directory",
+                                                         str(folder or REPO))
+            if not selected:
+                return
+            folder = Path(selected)
+        try:
+            path = folder / HTML_FILE
+            if action == "package":
+                target, _ = QFileDialog.getSaveFileName(self, "Export portable report",
+                                                       str(folder / "dashboard.zip"), "ZIP archives (*.zip)")
+                if not target:
+                    return
+                package_dashboard(folder, target)
+                self.statusBar().showMessage(f"Portable report saved to {target}", 7000)
+                return
+            if action == "regenerate" or not path.is_file():
+                path = regenerate_dashboard(folder)
+            if action == "browser":
+                if not QDesktopServices.openUrl(QUrl.fromLocalFile(str(path))):
+                    raise OSError("The system could not open the default browser.")
+            else:
+                from .dashboard_viewer import show_dashboard
+                show_dashboard(self, path)
+        except (OSError, ValueError, RuntimeError) as error:
+            QMessageBox.warning(self, "Results dashboard", str(error))
+
+    def open_input_window(self):
+        if self.runner.busy: return
+        if self.study is not None: self.sync_time_controls()
+        else: self.update_interval_state()
+        self.input_dialog.exec()
+
+    def connect_source_events(self):
+        widget(self,"combo_simulation_source").currentIndexChanged.connect(self.preview_source_window)
+        widget(self,"combo_history_window").currentIndexChanged.connect(self.preview_source_window)
+        widget(self,"btn_apply_simulation_window").clicked.connect(self.apply_source_window)
+        widget(self,"btn_browse_history").clicked.connect(self.browse_history)
+        widget(self,"btn_empty_import").clicked.connect(self.load_data)
+        widget(self,"btn_input_window").clicked.connect(self.open_input_window)
+        for name in ("date_simulation_start","date_simulation_end"):
+            widget(self,name).dateTimeChanged.connect(self.update_interval_state)
+
+    def sync_time_controls(self):
+        if self.study is None: return
+        combo = widget(self,"combo_simulation_source")
+        combo.blockSignals(True)
+        combo.setCurrentIndex(combo.findData(self.study.input_mode))
+        combo.blockSignals(False)
+        widget(self,"date_simulation_start").setDateTime(QDateTime(pd.Timestamp(self.study.profiles.timestamps[0]).to_pydatetime()))
+        widget(self,"date_simulation_end").setDateTime(QDateTime((pd.Timestamp(self.study.profiles.timestamps[-1])+pd.Timedelta(hours=1)).to_pydatetime()))
+        # Match the preset to the applied range when reopening the dialog.
+        start = pd.Timestamp(self.study.profiles.timestamps[0])
+        end = pd.Timestamp(self.study.profiles.timestamps[-1])+pd.Timedelta(hours=1)
+        raw = self.study.historical_profiles if self.study.input_mode == "historical" else self.study.forecast_profiles
+        preset = "-1"
+        if raw is not None:
+            if (start, end) == first_calendar_year(raw.timestamps):
+                preset = "8760"
+            elif start == pd.Timestamp(raw.timestamps[0]):
+                hours = len(self.study.profiles.timestamps)
+                if hours in (24,168,720): preset = str(hours)
+                elif hours == len(raw.timestamps): preset = "0"
+        window = widget(self,"combo_history_window")
+        window.blockSignals(True)
+        window.setCurrentIndex(window.findData(preset))
+        window.blockSignals(False)
+        self.update_interval_state()
+
+    def preview_source_window(self):
+        if self.study is None: return
+        mode = widget(self,"combo_simulation_source").currentData()
+        raw = self.study.historical_profiles if mode=="historical" else self.study.forecast_profiles
+        if raw is None:
+            widget(self,"lbl_active_source").setText("Generate forecast before selecting this source; active source unchanged")
+            return
+        preset = int(widget(self,"combo_history_window").currentData() or 0)
+        if preset<0:
+            self.update_interval_state()
+            return
+        a = pd.Timestamp(raw.timestamps[0])
+        b = pd.Timestamp(raw.timestamps[-1])+pd.Timedelta(hours=1)
+        if preset == 8760:
+            window = first_calendar_year(raw.timestamps)
+            if window is None:
+                widget(self,"btn_apply_simulation_window").setEnabled(False)
+                widget(self,"lbl_active_source").setText(
+                    "This source has no complete January-to-January year. Select a different source, extend the forecast, or choose a shorter simulation interval.")
+                return
+            a,b = window
+        elif preset: b = min(b,a+pd.Timedelta(hours=preset))
+        widget(self,"date_simulation_start").setDateTime(QDateTime(a.to_pydatetime()))
+        widget(self,"date_simulation_end").setDateTime(QDateTime(b.to_pydatetime()))
+        self.update_interval_state()
+
+    def update_interval_state(self, *args):
+        has_study = self.study is not None
+        available = has_study and not self.runner.busy
+        mode = widget(self,"combo_simulation_source").currentData()
+        for name in ("combo_simulation_source","date_simulation_start","date_simulation_end"):
+            widget(self,name).setEnabled(available)
+        widget(self,"combo_history_window").setEnabled(available)
+        model = widget(self,"combo_simulation_source").model()
+        model.item(1).setEnabled(has_study and self.study.forecast_profiles is not None)
+        button = widget(self,"btn_apply_simulation_window")
+        if not has_study:
+            for name in ("date_simulation_start","date_simulation_end"):
+                control = widget(self,name)
+                control.blockSignals(True)
+                control.setSpecialValueText("Import data first")
+                control.setDateTime(control.minimumDateTime())
+                control.blockSignals(False)
+            button.setEnabled(False)
+            widget(self,"lbl_active_source").setText("Import a dataset to select a simulation interval. Full history is kept for forecasting.")
+            return
+        times = self.study.profiles.timestamps
+        start,end = pd.Timestamp(times[0]),pd.Timestamp(times[-1])+pd.Timedelta(hours=1)
+        pending = (mode != self.study.input_mode or
+            pd.Timestamp(widget(self,"date_simulation_start").dateTime().toPython()) != start or
+            pd.Timestamp(widget(self,"date_simulation_end").dateTime().toPython()) != end)
+        button.setEnabled(available and pending)
+        title = "Historical data" if self.study.input_mode=="historical" else "Generated forecast"
+        clock = self.study.context.get("Clock", "source clock")
+        summary = f"{title} · {len(times):,} hours · {start:%d %b %Y, %H:%M} → {end:%d %b %Y, %H:%M} · {clock}"
+        if pending: summary += "  —  New selection not applied"
+        widget(self,"lbl_active_source").setText(summary)
+
+    def apply_source_window(self):
+        if self.study is None or self.runner.busy: return
+        try:
+            self.study.select_source(widget(self,"combo_simulation_source").currentData(),
+                widget(self,"date_simulation_start").dateTime().toPython(),widget(self,"date_simulation_end").dateTime().toPython())
+            self.sync_time_controls()
+            self.invalidate_results("Simulation source/interval changed; full raw history retained")
+        except ValueError as error:
+            self.show_failure(str(error),"")
+
+    def browse_history(self):
+        if self.runner.busy: return
+        path = QFileDialog.getExistingDirectory(self,"Select saved study folder",str(REPO))
+        if not path: return
+        try:
+            historical = StudySession.open_read_only(path)
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Historical study — read-only")
+            layout = QVBoxLayout(dialog)
+            text = QTextEdit(dialog);text.setReadOnly(True);text.setPlainText(historical.history_text());layout.addWidget(text)
+            migrate = QPushButton("Migrate compatible inputs to a new study ID",dialog);layout.addWidget(migrate)
+            def create_new():
+                if QMessageBox.question(dialog,"Create new study","Copy compatible inputs to a new study with Numba and approved forecasts? Historical outputs remain read-only.") != QMessageBox.StandardButton.Yes: return
+                try:
+                    self.study,self.session = migrate_inputs(historical,Path(__file__).resolve().parent/"Results")
+                    self.settings_dialog.set_network(self.study.network)
+                    self.sync_time_controls();self.invalidate_results("Inputs migrated to new study ID; configure economics anew")
+                    self.arrange_network_view();self.set_busy(False);dialog.accept()
+                except Exception as error:
+                    QMessageBox.warning(dialog,"Migration blocked",str(error))
+            migrate.clicked.connect(create_new)
+            dialog.resize(850,600);dialog.exec();dialog.deleteLater()
+        except (ValueError,OSError,KeyError) as error:
+            self.show_failure(str(error),"")
 
     def add_network_controls(self):
         self.diagram_status = widget(self, "lbl_diagram_timestamp")
@@ -715,6 +1170,7 @@ class MainWindow(QMainWindow):
         self.resize_fit_timer.setInterval(80)
         self.resize_fit_timer.timeout.connect(self.fit_network)
         widget(self, "chk_show_log").toggled.connect(self.schedule_network_fit)
+        widget(self, "chk_show_log").toggled.connect(self.scroll_log_to_latest)
         widget(self, "tabs_workspace").currentChanged.connect(self.schedule_network_fit)
         widget(self, "btn_result_details").clicked.connect(self.toggle_result_details)
 
@@ -827,7 +1283,7 @@ class MainWindow(QMainWindow):
         self.set_busy(False)
 
     def clear_workspace(self):
-        if self.runner.busy or self.load_dialog.runner.busy:
+        if self.runner.busy or self.load_dialog.runner.busy or self.settings_dialog.jit_runner.busy:
             return
         answer = QMessageBox.question(self, "Clear workspace?",
                                       "Discard loaded inputs, calculated results, settings and layout overrides?\nSource files and exported folders will NOT be deleted.")
@@ -848,6 +1304,7 @@ class MainWindow(QMainWindow):
         self.settings_dialog.deleteLater()
         self.load_dialog.deleteLater()
         self.settings_dialog = SettingsDialog(self)
+        self.connect_solver_status()
         self.settings_dialog.applied.connect(self.settings_applied)
         self.load_dialog = LoadDataDialog(self)
         widget(self, "chk_network_properties").setChecked(False)
@@ -871,6 +1328,7 @@ class MainWindow(QMainWindow):
         self.runner.busy_changed.connect(self.set_busy)
         self.runner.stage.connect(self.show_stage)
         self.runner.progress.connect(self.show_progress)
+        self.runner.hourly_log.connect(self.append_log_lines)
         self.runner.succeeded.connect(self.job_succeeded)
         self.runner.failed.connect(self.show_failure)
         self.scene.bus_selected.connect(self.show_bus)
@@ -888,6 +1346,7 @@ class MainWindow(QMainWindow):
 
             self.study = next_study
             self.settings_dialog.set_network(self.study.network)
+            self.sync_time_controls()
             self.invalidate_results("New data loaded; previous results cleared.")
             self.scene.branch_sides.clear()
             self.arrange_network_view()
@@ -903,6 +1362,7 @@ class MainWindow(QMainWindow):
             return
         dialog = ForecastDialog(self.study, self.session, self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.sync_time_controls()
             self.invalidate_results("Forecast profiles selected; previous results cleared.")
             self.append_log(
                 f"Forecast selected: {len(self.study.network.buses)} buses; "
@@ -947,6 +1407,20 @@ class MainWindow(QMainWindow):
     def run_optimization(self):
         self.start_run(True)
 
+    def optimization_settings(self):
+        times = self.study.profiles.timestamps
+        start = pd.Timestamp(times[0])
+        end = pd.Timestamp(times[-1]) + pd.Timedelta(hours=1)
+        if (start, end) != first_calendar_year(times):
+            raise ValueError(
+                f"Active interval: {start:%d %b %Y %H:%M} to {end:%d %b %Y %H:%M} (end excluded). "
+                "Choose Study interval → Full calendar year → Apply interval. "
+                "If the forecast lacks a full January-to-January year, use historical data or extend the forecast."
+            )
+        settings = self.settings_dialog.read_settings(optimization=True)
+        validate_annual_inputs(times, settings.economics, self.study.profiles.dt_hours)
+        return settings
+
     def run_base_case(self):
         if self.study is None or self.runner.busy:
             return
@@ -964,7 +1438,8 @@ class MainWindow(QMainWindow):
             self.last_heartbeat = self.run_started
             self.run_elapsed_seconds = 0.0
             self.run_clock.start()
-            self.runner.start(partial(run_base_case_and_export, deepcopy(self.study), deepcopy(settings), self.pending_run_output))
+            self.runner.start(partial(run_base_case_and_export, deepcopy(self.study), deepcopy(settings),
+                                      self.pending_run_output, network_snapshot=self.session.network_snapshot_path()))
         except ValueError as error:
             self.show_failure(str(error), "")
 
@@ -975,7 +1450,7 @@ class MainWindow(QMainWindow):
         self.pending_base_case = False
         try:
             self.settings_dialog.restore_values()
-            settings = self.settings_dialog.read_settings(optimization=optimization)
+            settings = self.optimization_settings() if optimization else self.settings_dialog.read_settings()
             self.pending_action = "run"
             self.statusBar().clearMessage()
             self.last_progress = 0
@@ -988,16 +1463,25 @@ class MainWindow(QMainWindow):
             self.run_elapsed_seconds = 0.0
             self.run_clock.start()
             self.update_run_clock()
+            self.pending_run_provenance = {"input_mode":self.study.input_mode,"simulation_window":self.study.simulation_window,
+                "solver":asdict(settings.simulation.fbs_config),"economics":asdict(settings.economics),"controls":settings.values}
             self.pending_run_optimization = optimization
             self.pending_run_output = self.session.next_run_path(optimization)
             self.runner.start(partial(
-                run_and_export, deepcopy(self.study), deepcopy(settings), optimization,
-                self.pending_run_output,
-            ))
+                run_and_export, self.study, deepcopy(settings), optimization,
+                self.pending_run_output, network_snapshot=self.session.network_snapshot_path(),
+            ), log_hours=not optimization)
         except ValueError as error:
             self.show_failure(str(error), "")
 
     def set_busy(self, busy):
+        widget(self,"group_simulation_source").setEnabled(not busy)
+        widget(self,"btn_input_window").setEnabled(not busy)
+        ready = self.settings_dialog.engine_ready
+        set_status(widget(self,"lbl_engine_status"),"FBS Numba · Ready" if ready else
+            "Solver unavailable" if self.settings_dialog.jit_runner.failure else "Preparing solver…",
+            "success" if ready else "error" if self.settings_dialog.jit_runner.failure else "busy")
+        widget(self,"lbl_engine_status").setToolTip(widget(self.settings_dialog,"lbl_compute_status").text())
         for name in ("btn_load_data", "btn_settings"):
             widget(self, name).setEnabled(not busy)
         widget(self, "btn_scenarios").setEnabled(self.study is not None and not busy)
@@ -1011,6 +1495,27 @@ class MainWindow(QMainWindow):
         widget(self, "btn_clear_results").setEnabled(self.report is not None and not busy)
         widget(self, "btn_clear_workspace").setEnabled(not busy)
         widget(self, "btn_result_details").setEnabled(self.report is not None and not busy)
+        for name in ("btn_run_simulation","btn_run_base_case"):
+            widget(self,name).setEnabled(self.study is not None and ready and not busy)
+        economic_reason = "Import a study to configure annual economic optimization."
+        annual_ready = False
+        if self.study is not None and ready:
+            try:
+                self.optimization_settings()
+                annual_ready = True
+                economic_reason = "Compare battery options and the no-storage baseline using annual cost."
+            except ValueError as error:
+                economic_reason = "Annual optimization: "+str(error)
+        widget(self,"btn_run_optimization").setEnabled(annual_ready and not busy)
+        widget(self,"btn_run_optimization").setToolTip(economic_reason)
+        widget(self,"btn_run_optimization").setStatusTip(economic_reason)
+        widget(self,"btn_empty_import").setEnabled(not busy)
+        widget(self,"panel_empty_state").setVisible(self.study is None)
+        widget(self,"network_view").setVisible(self.study is not None and not widget(self,"chk_hide_diagram").isChecked())
+        widget(self,"btn_clear_workspace").setEnabled(not busy and not self.settings_dialog.jit_runner.busy)
+        self.update_interval_state()
+        if self.study is not None and not busy:
+            self.schedule_network_fit()
         progress = widget(self, "progress_run")
         progress.setRange(0, 0 if busy else 100)
         if not busy:
@@ -1019,15 +1524,24 @@ class MainWindow(QMainWindow):
     def show_stage(self, message):
         self.last_worker_update = perf_counter()
         self.last_stage_message = message
+        self.logged_progress_phase = None
         if self.runner.busy:
             widget(self, "progress_run").setRange(0, 0)
         self.append_log(message)
 
     def append_log(self, message):
+        self.append_log_lines((message,))
+
+    def append_log_lines(self, messages):
         stamp = datetime.now().astimezone().isoformat(timespec="seconds")
-        widget(self, "run_log").appendPlainText(f"[{stamp}] {message}")
+        widget(self, "run_log").appendPlainText("\n".join(f"[{stamp}] {message}" for message in messages))
+        self.scroll_log_to_latest()
         if self.session is not None:
-            self.session.append_log(message)
+            self.session.append_log_lines(messages)
+
+    def scroll_log_to_latest(self):
+        scroll = widget(self, "run_log").verticalScrollBar()
+        scroll.setValue(scroll.maximum())
 
     def update_run_clock(self):
         now = perf_counter()
@@ -1046,7 +1560,7 @@ class MainWindow(QMainWindow):
     def show_progress(self, snapshot):
         events, boundary = snapshot
         self.last_worker_update = perf_counter()
-        primary = next((events[name] for name in ("GWO", "GA", "Simulation") if name in events), None)
+        primary = next((events[name] for name in ("GWO", "GA", "Simulation", "Base case") if name in events), None)
         if primary is not None:
             bar = widget(self, "progress_run")
             bar.setRange(0, 100)
@@ -1055,13 +1569,18 @@ class MainWindow(QMainWindow):
             bar.setFormat(f"{primary.phase}: %p% ({primary.completed}/{primary.total})")
         details = " | ".join(event.text() for event in events.values())
         self.last_stage_message = details
-        if boundary or perf_counter() - self.last_progress_log >= 10:
+        phase = primary.phase if primary is not None else next(iter(events),None)
+        if boundary or phase != getattr(self,"logged_progress_phase",None) or perf_counter() - self.last_progress_log >= 1:
             self.append_log(f"Elapsed {format_duration(self.run_elapsed_seconds)} | {details}")
             self.last_progress_log = perf_counter()
+            self.logged_progress_phase = phase
 
     def show_failure(self, message, details):
         if self.pending_action == "run":
             self.finish_run_clock()
+            if self.session is not None and self.pending_run_output is not None:
+                self.session.record_failure(self.pending_run_output,"base_case" if getattr(self,"pending_base_case",False) else
+                    "optimization" if self.pending_run_optimization else "simulation",message,getattr(self,"pending_run_provenance",None))
             widget(self, "results_text").setPlainText(f"Run failed after {format_duration(self.run_elapsed_seconds)}\n{message}")
         self.show_stage(f"Error: {message}")
         if details:
@@ -1077,9 +1596,12 @@ class MainWindow(QMainWindow):
                     self.session.record_base_case(self.pending_run_output)
                 else:
                     self.session.record_run(
-                        self.pending_run_output, self.pending_run_optimization,
+                        self.pending_run_output, self.pending_run_optimization, self.report,
                     )
                 self.append_log(f"Run files saved in {self.pending_run_output}")
+                self.dashboard_folder = Path(self.pending_run_output)
+                if result.dashboard_path:
+                    self.append_log(f"Dashboard saved to {result.dashboard_path}")
             self.show_full_result_details = False
             widget(self, "results_text").setPlainText(compact_summary(result))
             widget(self, "btn_result_details").setText("Show full details")
@@ -1183,7 +1705,7 @@ class MainWindow(QMainWindow):
         widget(self, "lbl_line_details").setText("\n".join(lines))
 
     def closeEvent(self, event):
-        if self.runner.busy or self.load_dialog.runner.busy:
+        if self.runner.busy or self.load_dialog.runner.busy or self.settings_dialog.jit_runner.busy:
             event.ignore()
             self.statusBar().showMessage("A job is running. Wait for completion; cancellation is not implemented.")
         else:
