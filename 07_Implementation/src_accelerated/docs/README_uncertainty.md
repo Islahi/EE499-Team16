@@ -1,3 +1,5 @@
+> Historical implementation reference. For executable production behavior, see [the current application instructions](../../README_ACCELERATED.md). Retired solver, forecasting and objective descriptions below are preserved for historical interpretation.
+
 # `uncertainty.py` — forecasting and scenario guide
 
 This is the next backend module after simulation, metrics and optimization.

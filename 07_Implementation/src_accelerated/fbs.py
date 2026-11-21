@@ -25,7 +25,10 @@ class FBSConfig:
     voltage_tolerance_pu: float = 1e-6
     slack_angle_deg: float = 0.0
     record_history: bool = False
-    backend: str = "python"
+    backend: str = "numba"
+
+    def __post_init__(self):
+        validate_config(self)
 
 
 @dataclass
@@ -52,115 +55,47 @@ class PowerFlowResult:
 
 def run_fbs(network: NetworkModel, operating_point: OperatingPoint,
             config: FBSConfig, *, progress=None) -> PowerFlowResult:
-    order = network.radial_order()
-    ids = {b.bus_id for b in network.buses}
-    if (not isinstance(config.max_iterations, int) or isinstance(config.max_iterations, bool)
-            or config.max_iterations < 1):
+    return run_array_fbs(network, operating_point, config, progress)
+
+
+def validate_config(config):
+    if not isinstance(config, FBSConfig) or config.backend != "numba":
+        raise ValueError("Only FBS — Numba (CPU) is supported for new execution")
+    if isinstance(config.max_iterations, bool) or not isinstance(config.max_iterations, int) or config.max_iterations < 1:
         raise ValueError("max_iterations must be a positive integer")
     _finite(config.voltage_tolerance_pu, "voltage_tolerance_pu", positive=True)
     _finite(config.slack_angle_deg, "slack_angle_deg")
-    if config.backend not in ("python", "numpy", "numba", "gpu"):
-        raise ValueError("FBS backend must be python, numpy, numba or gpu")
-    for name in operating_point.__dataclass_fields__:
-        values = getattr(operating_point, name)
-        if set(values) != ids:
-            raise ValueError(f"{name} must contain exactly every network bus (explicit zeros)")
-        for value in values.values():
-            _finite(value, name, minimum=0 if name in ("p_load_kw", "q_load_kvar", "p_pv_kw") else None)
-    if config.backend != "python":
-        return run_array_fbs(network, operating_point, config, progress)
-    slack = next(b for b in network.buses if b.bus_id == order.slack_bus_id)
-    sbase = network.base_power_kva
-    zbase = slack.base_kv ** 2 / (sbase / 1000)
-    ibase = sbase / (sqrt(3) * slack.base_kv)
-    impedances = {l.line_id: complex(l.r_ohm, l.x_ohm) / zbase for l in network.lines}
-    children = {line_id: bus for bus, line_id in order.parent_line_by_bus.items()}
-    op = operating_point
-    demand = {i: complex(op.p_load_kw[i] - op.p_pv_kw[i] - op.p_bess_kw[i],
-                         op.q_load_kvar[i] - op.q_pv_kvar[i] - op.q_bess_kvar[i]) / sbase for i in ids}
-    reference = cmath.rect(slack.v_set_pu, config.slack_angle_deg * cmath.pi / 180)
-    voltages = {i: reference for i in ids}
-    currents = {l.line_id: 0j for l in network.lines}
-    history = [voltages.copy()] if config.record_history else []
-    converged, delta = False, float("inf")
-    completed_sweeps = 0
-    message = "Maximum iterations reached; last iterate is diagnostic only"
-    if progress is not None:
-        progress(ProgressEvent("FBS", 0, config.max_iterations, "Starting power flow"))
-    for iteration in range(1, config.max_iterations + 1):
-        if any(abs(v) < 1e-12 for v in voltages.values()):
-            message = "Near-zero bus voltage; constant-power current is undefined"
-            break
-        injections = {i: (demand[i] / voltages[i]).conjugate() for i in ids}
-        new_currents = {}
-        for line_id in order.backward_line_ids:
-            bus = children[line_id]
-            new_currents[line_id] = injections[bus] + sum(
-                (new_currents[order.parent_line_by_bus[c]] for c in order.children_by_bus[bus]), 0j)
-        new_voltages = {order.slack_bus_id: reference}
-        for line_id in order.forward_line_ids:
-            bus = children[line_id]
-            new_voltages[bus] = new_voltages[order.parent_bus_by_bus[bus]] - impedances[line_id] * new_currents[line_id]
-        if any(not isfinite(v.real) or not isfinite(v.imag) for v in [*new_currents.values(), *new_voltages.values()]):
-            message = "Non-finite numerical iterate; power flow failed"
-            break
-        delta = max(abs(new_voltages[i] - voltages[i]) for i in ids)
-        voltages, currents = new_voltages, new_currents
-        completed_sweeps = iteration
-        if progress is not None and (iteration == 1 or iteration % 10 == 0
-                                     or delta <= config.voltage_tolerance_pu or iteration == config.max_iterations):
-            progress(ProgressEvent("FBS", iteration, config.max_iterations,
-                                   f"voltage error {delta:.3g} pu; tolerance {config.voltage_tolerance_pu:g}"))
-        if config.record_history:
-            history.append(voltages.copy())
-        if delta <= config.voltage_tolerance_pu:
-            converged, message = True, "Converged"
-            break
-    # Retain voltage/current from the same completed sweep for Ohm's law.
-    sending = {l: voltages[order.parent_bus_by_bus[children[l]]] * currents[l].conjugate() * sbase for l in currents}
-    losses = {l: abs(currents[l]) ** 2 * impedances[l] * sbase for l in currents}
-    slack_power = demand[order.slack_bus_id] * sbase + sum(
-        (sending[order.parent_line_by_bus[c]] for c in order.children_by_bus[order.slack_bus_id]), 0j)
-    return PowerFlowResult(
-        voltages, {i: abs(v) for i, v in voltages.items()},
-        {i: degrees(cmath.phase(v)) for i, v in voltages.items()},
-        {l: abs(i) * ibase for l, i in currents.items()},
-        {l: s.real for l, s in sending.items()}, {l: s.imag for l, s in sending.items()},
-        {l: s.real for l, s in losses.items()}, {l: s.imag for l, s in losses.items()},
-        sum(s.real for s in losses.values()), sum(s.imag for s in losses.values()),
-        slack_power.real, slack_power.imag, converged, completed_sweeps, delta, message, currents, history)
 
 
 def backend_status():
-    """Report availability of every supported numerical backend."""
-    status = {
-        "python": "available", "numpy": "available",
-        "numba": "unavailable", "gpu": "unavailable",
-    }
     try:
-        import numba  # noqa: F401
-        status["numba"] = "available"
-    except ImportError:
-        status["numba"] = "install numba"
-    try:
-        import cupy as cp
-        count = cp.cuda.runtime.getDeviceCount()
-        status["gpu"] = (f"available ({count} CUDA device{'s' if count != 1 else ''})"
-                         if count else "no CUDA device")
-    except (ImportError, RuntimeError) as error:
-        status["gpu"] = f"unavailable ({error})"
-    return status
+        import numba, llvmlite
+        return {"numba": f"available ({numba.__version__}; llvmlite {llvmlite.__version__})"}
+    except Exception as error:
+        return {"numba": f"unavailable: {error}. Install requirements-accelerated.txt with the application interpreter"}
 
 
 def backend_available(backend):
-    """Return whether a named backend can run, plus a user-facing reason."""
-    if backend in ("python", "numpy"):
-        return True, f"{backend.title()} backend is available"
-    status = backend_status()
-    if backend not in status:
-        return False, f"Unknown backend: {backend}"
-    message = status[backend]
+    if backend != "numba":
+        return False, "Only FBS — Numba (CPU) is supported"
+    message = backend_status()["numba"]
     return message.startswith("available"), message
+
+
+def warm_numba():
+    """Compile/execute the production signature off the GUI thread; return measured JIT time."""
+    from time import perf_counter
+    started = perf_counter()
+    values = _numba_sweeps(np.array([0j, .01+.005j]), np.array([.01+.01j]),
+        np.array([0], dtype=np.int64), np.array([1], dtype=np.int64),
+        complex(1), 100, 1e-8, False)
+    if not values[2] or not np.isfinite(values[0]).all():
+        raise RuntimeError("Numba readiness case failed to converge")
+    readiness = perf_counter()-started
+    warm_start = perf_counter()
+    _numba_sweeps(np.array([0j, .01+.005j]), np.array([.01+.01j]),
+        np.array([0],dtype=np.int64), np.array([1],dtype=np.int64),complex(1),100,1e-8,False)
+    return {"jit_readiness_seconds":readiness, "warm_kernel_seconds":perf_counter()-warm_start, "backend":"numba"}
 
 
 def _cpu_sweeps(demand, impedance, from_bus, to_bus, reference,
@@ -213,62 +148,27 @@ def _numba_sweeps(*arguments):
     if _NUMBA_SWEEPS is None:
         try:
             from numba import njit
-        except ImportError as error:
-            raise RuntimeError("Numba backend selected, but numba is not installed") from error
+        except Exception as error:
+            raise RuntimeError("Mandatory Numba import failed. Install requirements-accelerated.txt with the application interpreter: "+str(error)) from error
         _NUMBA_SWEEPS = njit(cache=True)(_cpu_sweeps)
-    return _NUMBA_SWEEPS(*arguments)
-
-
-def _gpu_sweeps(demand, impedance, from_bus, to_bus, reference,
-                max_iterations, tolerance, record_history):
     try:
-        import cupy as cp
-    except ImportError as error:
-        raise RuntimeError("GPU backend selected, but CuPy is not installed") from error
-    if cp.cuda.runtime.getDeviceCount() < 1:
-        raise RuntimeError("GPU backend selected, but no CUDA device is available")
-    demand = cp.asarray(demand)
-    impedance = cp.asarray(impedance)
-    from_bus = cp.asarray(from_bus)
-    to_bus = cp.asarray(to_bus)
-    voltage = cp.full(len(demand), reference, dtype=cp.complex128)
-    current = cp.zeros(len(impedance), dtype=cp.complex128)
-    history = [voltage.copy()] if record_history else []
-    converged, completed, delta, status = False, 0, float("inf"), 0
-    for iteration in range(1, max_iterations + 1):
-        if bool(cp.any(cp.abs(voltage) < 1e-12).item()):
-            status = 1
-            break
-        injection = cp.conj(demand / voltage)
-        total = injection.copy()
-        for line_index in range(len(impedance) - 1, -1, -1):
-            child = int(to_bus[line_index].item())
-            parent = int(from_bus[line_index].item())
-            current[line_index] = total[child]
-            total[parent] += current[line_index]
-        new_voltage = cp.full_like(voltage, reference)
-        for line_index in range(len(impedance)):
-            parent = int(from_bus[line_index].item())
-            child = int(to_bus[line_index].item())
-            new_voltage[child] = new_voltage[parent] - impedance[line_index] * current[line_index]
-        if not bool(cp.all(cp.isfinite(new_voltage)).item() and cp.all(cp.isfinite(current)).item()):
-            status = 2
-            break
-        delta = float(cp.max(cp.abs(new_voltage - voltage)).item())
-        voltage = new_voltage
-        completed = iteration
-        if record_history:
-            history.append(voltage.copy())
-        if delta <= tolerance:
-            converged = True
-            break
-    history_array = cp.stack(history) if history else cp.empty((0, len(demand)), dtype=cp.complex128)
-    return (cp.asnumpy(voltage), cp.asnumpy(current), converged, completed,
-            delta, status, cp.asnumpy(history_array))
+        return _NUMBA_SWEEPS(*arguments)
+    except Exception as error:
+        import sys
+        raise RuntimeError(f"FBS Numba compilation/execution failed in {sys.executable}: {error}. "
+                           "Install compatible numba/numpy/llvmlite using this interpreter; no fallback is enabled") from error
 
 
 def run_array_fbs(network, operating_point, config, progress=None):
     """Run one array backend and rebuild the public dictionary result."""
+    validate_config(config)
+    ids = {bus.bus_id for bus in network.buses}
+    for name in operating_point.__dataclass_fields__:
+        values = getattr(operating_point, name)
+        if set(values) != ids:
+            raise ValueError(f"{name} must contain exactly every network bus (explicit zeros)")
+        for value in values.values():
+            _finite(value, name, minimum=0 if name in ("p_load_kw", "q_load_kvar", "p_pv_kw") else None)
     order = network.radial_order()
     buses = sorted(network.buses, key=lambda bus: bus.bus_id)
     bus_ids = [bus.bus_id for bus in buses]
@@ -300,14 +200,7 @@ def run_array_fbs(network, operating_point, config, progress=None):
     if progress is not None:
         progress(ProgressEvent("FBS", 0, config.max_iterations,
                                f"Starting {config.backend} power flow"))
-    if config.backend == "numpy":
-        values = _cpu_sweeps(*arguments)
-    elif config.backend == "numba":
-        values = _numba_sweeps(*arguments)
-    elif config.backend == "gpu":
-        values = _gpu_sweeps(*arguments)
-    else:
-        raise ValueError(f"Unsupported accelerated FBS backend: {config.backend}")
+    values = _numba_sweeps(*arguments)
     voltage, current, converged, completed, delta, status, history_array = values
     if progress is not None:
         progress(ProgressEvent("FBS", completed, config.max_iterations,

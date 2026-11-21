@@ -4,6 +4,7 @@ from dataclasses import fields
 from math import isclose
 from pathlib import Path
 from collections.abc import Mapping
+import json
 
 from .metrics import PerformanceMetrics, percentage_reduction
 from .optimizer import OptimizationResult
@@ -13,6 +14,7 @@ from .simulation import TimeSeriesSimulationResult
 Result = TimeSeriesSimulationResult | PerformanceMetrics | OptimizationResult
 
 COMPARISON_FIELDS = (
+    "annual_capital_recovery", "annual_fixed_om", "annual_grid_purchases", "annual_export_credit",
     "bess_cost", "annual_total_cost", "annualized_bess_cost", "annual_grid_cost",
     "annual_curtailment_cost", "annual_shedding_cost", "curtailment_energy_kwh", "load_shedding_energy_kwh",
     "loss_energy_kwh", "grid_import_energy_kwh", "grid_export_energy_kwh",
@@ -31,7 +33,7 @@ def _result_metrics(result, supplied):
                 raise ValueError("Do not attach performance metrics to an incomplete/non-converged run")
             if not isclose(supplied.duration_hours, len(result.steps) * result.dt_hours):
                 raise ValueError("Metrics duration does not match the simulation")
-            if supplied.feasible != (result.feasible and all(step.feasible for step in result.steps)):
+            if supplied.feasible and not (result.feasible and all(step.feasible for step in result.steps)):
                 raise ValueError("Metrics feasibility does not match the simulation")
         return supplied
     if supplied is not None:
@@ -52,9 +54,7 @@ def _context_items(context):
         return []
     if not isinstance(context, Mapping):
         raise TypeError("context must be a mapping of text labels to text values")
-    if any(not isinstance(key, str) or not isinstance(value, str) for key, value in context.items()):
-        raise TypeError("Context keys/values must be strings; describe settings explicitly")
-    return sorted(context.items())
+    return sorted((str(key), value if isinstance(value,str) else json.dumps(value,default=str)) for key,value in context.items())
 
 
 def _display(value):
@@ -68,6 +68,8 @@ def _display(value):
 
 
 def _unit(name, metrics):
+    if name.startswith("annual_") and name not in ("annualization_basis",):
+        return metrics.currency + "/year"
     if name in ("bess_cost", "annual_total_cost", "annualized_bess_cost",
                 "annual_grid_cost", "annual_curtailment_cost", "annual_shedding_cost",
                 "annual_terminal_energy_cost"):
@@ -302,7 +304,7 @@ def export_results(result: Result, output_path: str | Path, *,
             ["Best search or selected option", result.best_objective,
              performance.currency if performance else "", result.success, not result.metadata.get("no_bess_selected", False)],
         ])
-        if baseline is not None and result.success:
+        if baseline is not None and result.success and result.metadata.get("no_bess_feasible"):
             summary += f"\nAnnual savings relative to no BESS: {baseline - result.best_objective:.6g} {performance.currency if performance else ''}/year\n"
     if comparison is not None:
         write_table("comparison.csv", ["metric", "unit", "baseline", "candidate", "reduction_percent",

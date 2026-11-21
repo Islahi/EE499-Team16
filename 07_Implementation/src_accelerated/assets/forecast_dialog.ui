@@ -10,39 +10,10 @@
         <height>302</height>
       </rect>
     </property>
-    <property name="minimumSize">
-      <size>
-        <width>450</width>
-        <height>265</height>
-      </size>
-    </property>
-    <property name="windowTitle">
-      <string>Forecasting — StatsForecast AutoARIMA</string>
-    </property>
     <layout class="QVBoxLayout" name="layout_forecast">
-      <property name="leftMargin">
-        <number>14</number>
-      </property>
-      <property name="rightMargin">
-        <number>14</number>
-      </property>
-      <property name="topMargin">
-        <number>12</number>
-      </property>
-      <property name="bottomMargin">
-        <number>12</number>
-      </property>
-      <property name="spacing">
-        <number>9</number>
-      </property>
-      <item>
+      <item><widget class="QLabel" name="lbl_forecast_title"><property name="text"><string>Forecast demand &amp; solar</string></property><property name="wordWrap"><bool>true</bool></property><property name="role" stdset="0"><string>title</string></property></widget></item><item><widget class="QLabel" name="lbl_forecast_coverage"><property name="text"><string>Historical coverage</string></property><property name="wordWrap"><bool>true</bool></property><property name="role" stdset="0"><string>hint</string></property></widget></item><item><widget class="QLabel" name="lbl_forecast_models"><property name="text"><string>LOAD  ·  Residential: CalendarRidge   /   Commercial: XGBoost   /   Manufacturing: LightGBM
+SOLAR  ·  One common modeled-PV XGBoost forecast, when PV is installed.</string></property><property name="wordWrap"><bool>true</bool></property><property name="role" stdset="0"><string>hint</string></property></widget></item><item>
         <layout class="QFormLayout" name="layout_forecast_fields">
-          <property name="horizontalSpacing">
-            <number>10</number>
-          </property>
-          <property name="verticalSpacing">
-            <number>8</number>
-          </property>
           <item row="0" column="0">
             <widget class="QLabel" name="lbl_combo_forecast_method">
               <property name="text">
@@ -52,150 +23,51 @@
           </item>
           <item row="0" column="1">
             <widget class="QComboBox" name="combo_forecast_method">
-              <property name="toolTip">
-                <string>Automatically select ARIMA model orders using StatsForecast.</string>
-              </property>
-              <item>
-                <property name="text">
-                  <string>AutoARIMA (seasonal)</string>
-                </property>
-                <property name="userData">
-                  <string>autoarima</string>
-                </property>
-              </item>
-              <item>
-                <property name="text">
-                  <string>AutoARIMA (nonseasonal)</string>
-                </property>
-                <property name="userData">
-                  <string>arima</string>
-                </property>
-              </item>
-              <item>
-                <property name="text">
-                  <string>AutoARIMA (SARIMA)</string>
-                </property>
-                <property name="userData">
-                  <string>sarima</string>
-                </property>
-              </item>
-              <item>
-                <property name="text">
-                  <string>AutoARIMA (SARIMAX + calendar)</string>
-                </property>
-                <property name="userData">
-                  <string>sarimax</string>
-                </property>
-              </item>
-            </widget>
+              <item><property name="text"><string>Sector winners + common PV XGBoost</string></property><property name="userData"><string>sector_sum</string></property></item><property name="toolTip"><string>Three sector-sum demand fits; one independent common modeled-PV fit when installed</string></property></widget>
           </item>
-          <item row="1" column="0">
+          <item row="5" column="0">
             <widget class="QLabel" name="lbl_spin_forecast_horizon">
               <property name="text">
                 <string>Horizon (hours)</string>
               </property>
             </widget>
           </item>
-          <item row="1" column="1">
+          <item row="5" column="1">
             <widget class="QSpinBox" name="spin_forecast_horizon">
-              <property name="minimum">
-                <number>2</number>
-              </property>
-              <property name="maximum">
-                <number>8760</number>
-              </property>
-              <property name="value">
-                <number>24</number>
-              </property>
               <property name="toolTip">
                 <string>Number of future hourly samples.</string>
               </property>
-            </widget>
+            <property name="minimum"><number>1</number></property><property name="maximum"><number>1000000</number></property><property name="value"><number>8760</number></property></widget>
           </item>
-          <item row="2" column="0">
-            <widget class="QLabel" name="lbl_spin_forecast_training">
-              <property name="text">
-                <string>Training (hours)</string>
-              </property>
-            </widget>
-          </item>
-          <item row="2" column="1">
-            <widget class="QSpinBox" name="spin_forecast_training">
-              <property name="minimum">
-                <number>48</number>
-              </property>
-              <property name="maximum">
-                <number>17520</number>
-              </property>
-              <property name="value">
-                <number>336</number>
-              </property>
-              <property name="toolTip">
-                <string>Most recent historical hours used for fitting.</string>
-              </property>
-            </widget>
-          </item>
-          <item row="3" column="0">
-            <widget class="QLabel" name="lbl_spin_forecast_validation">
-              <property name="text">
-                <string>Validation (hours)</string>
-              </property>
-            </widget>
-          </item>
-          <item row="3" column="1">
-            <widget class="QSpinBox" name="spin_forecast_validation">
-              <property name="minimum">
-                <number>2</number>
-              </property>
-              <property name="maximum">
-                <number>336</number>
-              </property>
-              <property name="value">
-                <number>24</number>
-              </property>
-              <property name="toolTip">
-                <string>Chronological holdout duration.</string>
-              </property>
-            </widget>
-          </item>
-        </layout>
+          <item row="1" column="0"><widget class="QLabel" name="lbl_date_training_start"><property name="text"><string>Training start</string></property></widget></item><item row="1" column="1"><widget class="QDateTimeEdit" name="date_training_start"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd MMM yyyy, HH:mm</string></property></widget></item><item row="2" column="0"><widget class="QLabel" name="lbl_date_training_end"><property name="text"><string>Training end (inclusive)</string></property></widget></item><item row="2" column="1"><widget class="QDateTimeEdit" name="date_training_end"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd MMM yyyy, HH:mm</string></property></widget></item><item row="3" column="0"><widget class="QLabel" name="lbl_date_forecast_origin"><property name="text"><string>Forecast origin</string></property></widget></item><item row="3" column="1"><widget class="QDateTimeEdit" name="date_forecast_origin"><property name="calendarPopup"><bool>true</bool></property><property name="displayFormat"><string>dd MMM yyyy, HH:mm</string></property></widget></item><item row="4" column="0"><widget class="QLabel" name="lbl_combo_horizon_preset"><property name="text"><string>Horizon preset</string></property></widget></item><item row="4" column="1"><widget class="QComboBox" name="combo_horizon_preset"><item><property name="text"><string>24 h</string></property><property name="userData"><string>24</string></property></item><item><property name="text"><string>7 days</string></property><property name="userData"><string>168</string></property></item><item><property name="text"><string>1 year</string></property><property name="userData"><string>8760</string></property></item><item><property name="text"><string>Custom</string></property><property name="userData"><string>0</string></property></item><property name="toolTip"><string>Quickly set a 24-hour, 7-day or annual forecast; choose Custom for another hourly horizon.</string></property><property name="currentIndex"><number>2</number></property></widget></item><property name="horizontalSpacing"><number>18</number></property><property name="verticalSpacing"><number>10</number></property></layout>
       </item>
       <item>
         <widget class="QLabel" name="lbl_forecast_status">
-          <property name="text">
-            <string>Ready</string>
-          </property>
           <property name="wordWrap">
             <bool>true</bool>
           </property>
-        </widget>
+        <property name="role" stdset="0"><string>status</string></property><property name="text"><string>Choose the training interval and forecast horizon.</string></property></widget>
       </item>
       <item>
         <layout class="QHBoxLayout" name="layout_forecast_buttons">
           <item>
             <widget class="QPushButton" name="btn_generate_forecast">
-              <property name="text">
-                <string>Generate and use forecast</string>
-              </property>
               <property name="toolTip">
                 <string>Save load/PV forecast CSVs to the current session and activate them.</string>
               </property>
-            </widget>
+            <property name="text"><string>Generate forecast</string></property><property name="role" stdset="0"><string>primary</string></property></widget>
           </item>
           <item>
             <widget class="QPushButton" name="btn_cancel_forecast">
-              <property name="text">
-                <string>Cancel</string>
-              </property>
               <property name="toolTip">
                 <string>Close the forecasting dialog.</string>
               </property>
-            </widget>
+            <property name="text"><string>Close</string></property></widget>
           </item>
         </layout>
       </item>
-    </layout>
-  </widget>
+    <property name="leftMargin"><number>22</number></property><property name="topMargin"><number>22</number></property><property name="rightMargin"><number>22</number></property><property name="bottomMargin"><number>22</number></property><property name="spacing"><number>14</number></property></layout>
+  <property name="windowTitle"><string>Forecast — approved calendar winners</string></property><property name="minimumSize"><size><width>620</width><height>540</height></size></property></widget>
   <resources/>
   <connections/>
 </ui>

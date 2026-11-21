@@ -35,8 +35,15 @@ class StageReporter:
         self.last_sent = 0.0
 
     def __call__(self, message):
+        self.flush()
         self.events.clear()
         self.stage_callback(message)
+
+    def flush(self):
+        """Retain the latest timestep even when work finishes between UI ticks."""
+        if self.events:
+            self.progress_callback((dict(self.events),True))
+            self.last_sent = perf_counter()
 
     def progress(self, event):
         if event.phase in ("Forecast", "GWO", "GA") and event.phase not in self.events:

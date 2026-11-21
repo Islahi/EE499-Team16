@@ -15,7 +15,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 try:
-    from PySide6.QtCore import QPoint, QPointF, QThread, Qt
+    from PySide6.QtCore import QEventLoop, QPoint, QPointF, QThread, QTimer, Qt
     from PySide6.QtGui import QWheelEvent
     from PySide6.QtTest import QTest
     from PySide6.QtWidgets import QApplication, QDialog, QDialogButtonBox, QGraphicsItem, QWidget
@@ -52,11 +52,21 @@ class UITests(unittest.TestCase):
         self.assertEqual(self.source_hashes, {file: sha256(file.read_bytes()).hexdigest() for file in ASSETS.glob("*.ui")})
 
     def wait_job(self, runner, timeout=20):
-        deadline = time.monotonic() + timeout
-        while runner.busy and time.monotonic() < deadline:
-            self.app.processEvents()
-            QTest.qWait(5)
         self.app.processEvents()
+        if runner.busy:
+            loop = QEventLoop()
+            timer = QTimer()
+            timer.setSingleShot(True)
+            timer.timeout.connect(loop.quit)
+            runner.succeeded.connect(loop.quit)
+            runner.failed.connect(loop.quit)
+            try:
+                timer.start(round(timeout * 1000))
+                loop.exec()
+            finally:
+                timer.stop()
+                runner.succeeded.disconnect(loop.quit)
+                runner.failed.disconnect(loop.quit)
         self.assertFalse(runner.busy, "Worker did not finish in the test budget")
 
     def configure_optimization(self):

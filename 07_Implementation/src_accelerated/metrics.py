@@ -9,19 +9,26 @@ from .simulation import TimeSeriesSimulationResult
 
 @dataclass
 class EconomicConfig:
-    cost_per_kwh: float | None = None
-    cost_per_kw: float | None = None
+    cost_per_kwh: float | None = 385.0
+    cost_per_kw: float | None = 770.0
     currency: str = "USD"
     discount_rate: float = 0.06
     lifetime_years: int = 10
     annual_om_fraction: float = 0.02
     curtailment_penalty_per_kwh: float = 0.07
     shedding_penalty_per_kwh: float = 12.0
-    grid_import_tariff_per_kwh: float = 0.0
-    grid_export_tariff_per_kwh: float = 0.0
+    grid_import_tariff_per_kwh: float | None = None
+    grid_export_tariff_per_kwh: float | None = None
     fixed_installation_cost: float = 0.0
     terminal_energy_price_per_kwh: float | None = None
     annual_hours: float = 8760.0
+    scenario: str = "Ali2022 battery + Cordova2022 sensitivity; discount is project assumption"
+    annual_day_weights: tuple[float, ...] = ()
+    annualization_basis: str = ""
+    terminal_policy: str = "equal_soc"
+    terminal_soc_tolerance: float = 1e-6
+    provenance: str = "CAPEX/lifetime/O&M: Ali2022; penalties: Cordova2022 distinct penalties; discount 6%: project assumption; tariffs: user supplied"
+
 
     def __post_init__(self):
         for name in ("cost_per_kwh", "cost_per_kw"):
@@ -29,17 +36,27 @@ class EconomicConfig:
             if value is not None:
                 _check_nonnegative(value, name)
         for name in ("discount_rate", "annual_om_fraction", "curtailment_penalty_per_kwh",
-                     "shedding_penalty_per_kwh", "grid_import_tariff_per_kwh",
-                     "grid_export_tariff_per_kwh", "fixed_installation_cost", "annual_hours"):
+                     "shedding_penalty_per_kwh", "fixed_installation_cost", "annual_hours", "terminal_soc_tolerance"):
             _check_nonnegative(getattr(self, name), name)
-        if not isinstance(self.lifetime_years, int) or self.lifetime_years < 1:
+        if isinstance(self.lifetime_years,bool) or not isinstance(self.lifetime_years, int) or self.lifetime_years < 1:
             raise ValueError("Battery lifetime must be a positive integer")
         if self.terminal_energy_price_per_kwh is not None:
             _check_nonnegative(self.terminal_energy_price_per_kwh, "terminal_energy_price_per_kwh")
         if self.annual_hours <= 0:
             raise ValueError("annual_hours must be positive")
-        if not isinstance(self.currency, str) or not self.currency.strip():
-            raise ValueError("currency must be a nonempty label")
+        if self.currency != "USD":
+            raise ValueError("This economic scenario requires all monetary inputs in USD")
+        for name in ("grid_import_tariff_per_kwh", "grid_export_tariff_per_kwh"):
+            if getattr(self, name) is not None:
+                _check_nonnegative(getattr(self, name), name)
+        if self.terminal_policy not in ("equal_soc", "priced_energy"):
+            raise ValueError("Choose equal_soc or explicitly priced_energy terminal policy")
+        if self.terminal_policy == "priced_energy" and not self.terminal_energy_price_per_kwh:
+            raise ValueError("Priced terminal policy requires an explicit positive replacement energy price")
+        for w in self.annual_day_weights:
+            _check_nonnegative(w, "annual day weight")
+        if self.annual_hours not in (8760, 8784):
+            raise ValueError("Annual coverage must be 365 or 366 days")
 
 
 @dataclass
@@ -75,6 +92,12 @@ class PerformanceMetrics:
     annual_terminal_energy_cost: float | None = None
     annual_total_cost: float | None = None
     final_soc_deviation: float | None = None
+    annual_capital_recovery: float | None = None
+    annual_fixed_om: float | None = None
+    annual_grid_purchases: float | None = None
+    annual_export_credit: float | None = None
+    annualization_basis: str | None = None
+
 
 
 def _check_nonnegative(value, name):
@@ -203,50 +226,51 @@ def evaluate_results(simulation_result: TimeSeriesSimulationResult,
                 + economic_config.cost_per_kw * bess_config.power_rating_kw
                 + economic_config.fixed_installation_cost
             )
-    # Every operating term is converted to a consistent annual basis. 24-hour
-    # tests assume that the observed hours represent the year; use measured
-    # annual data for a defensible planning estimate.
-    annual_factor = economic_config.annual_hours / metrics.duration_hours
-    capex = metrics.bess_cost
-    if capex is not None:
-        rate, life = economic_config.discount_rate, economic_config.lifetime_years
-        crf = (rate * (1 + rate) ** life / ((1 + rate) ** life - 1)) if rate else 1 / life
-        metrics.annualized_bess_cost = capex * (crf + economic_config.annual_om_fraction)
-        metrics.annual_grid_cost = (
-            economic_config.grid_import_tariff_per_kwh * metrics.grid_import_energy_kwh
-            - economic_config.grid_export_tariff_per_kwh * metrics.grid_export_energy_kwh
-        ) * annual_factor
-        if metrics.curtailment_energy_kwh is not None:
-            metrics.annual_curtailment_cost = (economic_config.curtailment_penalty_per_kwh
-                                               * metrics.curtailment_energy_kwh * annual_factor)
-        if metrics.load_shedding_energy_kwh is not None:
-            metrics.annual_shedding_cost = (economic_config.shedding_penalty_per_kwh
-                                             * metrics.load_shedding_energy_kwh * annual_factor)
+    try:
+        weights = validate_annual_inputs([step.timestamp for step in steps], economic_config, dt_hours)
+    except ValueError as error:
+        metrics.notes.append(f"Annual economics unavailable: {error}")
+        weights = None
+    if weights is not None and metrics.bess_cost is not None:
+        capex = metrics.bess_cost
+        metrics.annualization_basis = economic_config.annualization_basis or "Complete calendar year; each hour counted once"
+        metrics.annual_capital_recovery = capex * capital_recovery_factor(economic_config.discount_rate, economic_config.lifetime_years)
+        metrics.annual_fixed_om = capex * economic_config.annual_om_fraction
+        metrics.annualized_bess_cost = metrics.annual_capital_recovery + metrics.annual_fixed_om
+        metrics.annual_grid_purchases = sum(w * max(step.power_flow.slack_p_kw, 0) * dt_hours
+            * economic_config.grid_import_tariff_per_kwh for w, step in zip(weights, steps))
+        metrics.annual_export_credit = sum(w * max(-step.power_flow.slack_p_kw, 0) * dt_hours
+            * economic_config.grid_export_tariff_per_kwh for w, step in zip(weights, steps))
+        metrics.annual_grid_cost = metrics.annual_grid_purchases - metrics.annual_export_credit
+        if curtailment_kw is not None:
+            metrics.annual_curtailment_cost = sum(w*p*dt_hours for w,p in zip(weights,curtailment_kw)) * economic_config.curtailment_penalty_per_kwh
+        if shedding_kw is not None:
+            metrics.annual_shedding_cost = sum(w*p*dt_hours for w,p in zip(weights,shedding_kw)) * economic_config.shedding_penalty_per_kwh
+        metrics.annual_terminal_energy_cost = 0.
         if has_bess:
             start = bess_config.energy_capacity_kwh * bess_config.soc_initial
             end = simulation_result.final_bess_state.energy_kwh
-            metrics.final_soc_deviation = (end - start) / bess_config.energy_capacity_kwh
-            # Avoid getting an unearned benefit from draining the initially
-            # charged battery; credit excess energy conservatively at export price.
-            import_price = (economic_config.terminal_energy_price_per_kwh
-                            if economic_config.terminal_energy_price_per_kwh is not None
-                            else economic_config.grid_import_tariff_per_kwh)
-            shortfall = max(0.0, start - end) / bess_config.eta_charge
-            surplus = max(0.0, end - start) * bess_config.eta_discharge
-            metrics.annual_terminal_energy_cost = (shortfall * import_price
-                - surplus * economic_config.grid_export_tariff_per_kwh) * annual_factor
-        else:
-            metrics.annual_terminal_energy_cost = 0.0
-            metrics.final_soc_deviation = None
+            metrics.final_soc_deviation = (end-start)/bess_config.energy_capacity_kwh
+            if economic_config.annual_day_weights:
+                terminal_ok = all(abs(steps[i].bess_step.soc_before-bess_config.soc_initial) <= economic_config.terminal_soc_tolerance
+                    and abs(steps[i+23].bess_state.soc-bess_config.soc_initial) <= economic_config.terminal_soc_tolerance
+                    for i in range(0, len(steps), 24) if weights[i] > 0)
+            else:
+                terminal_ok = abs(metrics.final_soc_deviation) <= economic_config.terminal_soc_tolerance
+            if economic_config.terminal_policy == "equal_soc" or economic_config.annual_day_weights:
+                if not terminal_ok:
+                    metrics.feasible = False
+                    metrics.notes.append("Economic terminal SOC equality failed; no free initial energy is permitted")
+            else:
+                price = economic_config.terminal_energy_price_per_kwh
+                if price is None:
+                    raise ValueError("Priced terminal policy requires an explicit terminal energy price")
+                metrics.annual_terminal_energy_cost = (max(0.,start-end)/bess_config.eta_charge*price
+                    - max(0.,end-start)*bess_config.eta_discharge*economic_config.grid_export_tariff_per_kwh)
         components = (metrics.annualized_bess_cost, metrics.annual_grid_cost,
-                      metrics.annual_curtailment_cost, metrics.annual_shedding_cost,
-                      metrics.annual_terminal_energy_cost)
+                      metrics.annual_curtailment_cost, metrics.annual_shedding_cost, metrics.annual_terminal_energy_cost)
         if all(v is not None for v in components):
             metrics.annual_total_cost = sum(components)
-    if economic_config.grid_import_tariff_per_kwh == 0:
-        metrics.notes.append("Grid import tariff is 0: explicitly verify this study assumption before economic conclusions.")
-    if metrics.duration_hours < economic_config.annual_hours:
-        metrics.notes.append("Short profile extrapolated to annual operating cost; representativeness not established.")
     if curtailment_kw is None:
         metrics.notes.append("Curtailment unavailable: this run has no complete action records.")
     if shedding_kw is None:
@@ -271,3 +295,54 @@ def percentage_reduction(baseline: float | None, candidate: float | None) -> flo
             return 0.0
         return None
     return 100.0 * (baseline - candidate) / baseline
+
+
+def capital_recovery_factor(rate, life):
+    _check_nonnegative(rate, "discount_rate")
+    if isinstance(life, bool) or not isinstance(life, (int, float)) or not isfinite(life) or life <= 0:
+        raise ValueError("Lifetime must be positive")
+    # Stable for rates close to zero.
+    from math import expm1, log1p
+    return rate / (-expm1(-life*log1p(rate))) if rate else 1/life
+
+
+def validate_annual_inputs(timestamps, config, dt_hours=1.):
+    """Return annual occurrence weights or block unsupported annual claims."""
+    import numpy as np
+    import pandas as pd
+    config.__post_init__()
+    if config.grid_import_tariff_per_kwh is None or config.grid_export_tariff_per_kwh is None:
+        raise ValueError("Supply import purchase price and export compensation (explicit 0 is allowed)")
+    times = pd.DatetimeIndex(timestamps)
+    if len(times) == 0 or dt_hours != 1 or not times.is_unique or not times.is_monotonic_increasing:
+        raise ValueError("Annual evaluation requires unique increasing hourly timestamps")
+    if len(times)>1 and (np.diff(times.as_unit("ns").asi8) != 3600_000_000_000).any():
+        raise ValueError("Annual evaluation requires continuous hourly data")
+    begin = pd.Timestamp(year=times[0].year, month=1, day=1)
+    end = pd.Timestamp(year=times[0].year+1, month=1, day=1)
+    if not config.annual_day_weights:
+        if times[0] != begin or times[-1]+pd.Timedelta(hours=1) != end:
+            raise ValueError("Use a complete calendar year or justified seasonal representative-day weights")
+        return np.ones(len(times))
+    if not config.annualization_basis.strip():
+        raise ValueError("Representative-day weights require a stated seasonal basis")
+    days = np.asarray(config.annual_day_weights, dtype=float)
+    if times[0].hour != 0 or len(times) % 24 or len(days)*24 != len(times):
+        raise ValueError("Provide one annual occurrence weight per complete midnight-to-midnight day")
+    if not np.isfinite(days).all() or (days<0).any() or not np.isclose(days.sum()*24, config.annual_hours):
+        raise ValueError("Representative-day weights must cover exactly 365/366 annual days")
+    selected = times[::24][days>0]
+    if len(set((selected.month-1)//3)) < 4:
+        raise ValueError("Representative days must include all four seasonal quarters")
+    if config.terminal_policy != "equal_soc":
+        raise ValueError("Representative-day economics requires equal initial/terminal SOC per selected day")
+    return np.repeat(days, 24)
+
+
+def with_terminal_policy(simulation, economics):
+    """Apply the same terminal policy to physical and economic evaluation."""
+    from dataclasses import replace
+    equal = economics.terminal_policy == "equal_soc"
+    return replace(simulation,
+                   terminal_soc_tolerance=economics.terminal_soc_tolerance if equal else None,
+                   terminal_cycle_hours=24 if equal and economics.annual_day_weights else None)

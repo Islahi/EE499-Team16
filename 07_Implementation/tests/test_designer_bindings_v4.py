@@ -27,13 +27,14 @@ class FakeCombo:
 
 def test_settings_backend_and_algorithm_designer_keys():
     declared = read_designer_combo_data(BASE / 'settings_dialog.ui')
-    assert [key for _, key in declared['combo_compute_backend']] == ['python', 'numpy', 'numba']
+    assert 'combo_compute_backend' not in declared
+    assert [key for _, key in declared['combo_terminal_policy']] == ['equal_soc', 'priced_energy']
     assert [key for _, key in declared['combo_optimizer_algorithm']] == ['GWO', 'GA']
 
 
 def test_forecasting_model_designer_keys():
     declared = read_designer_combo_data(BASE / 'forecast_dialog.ui')
-    assert [key for _, key in declared['combo_forecast_method']] == ['autoarima', 'arima', 'sarima', 'sarimax']
+    assert [key for _, key in declared['combo_forecast_method']] == ['sector_sum']
 
 
 @pytest.mark.parametrize('file', ['settings_dialog.ui', 'forecast_dialog.ui'])
@@ -51,7 +52,7 @@ def test_ui_loader_binding_rejects_unexpected_designer_item_order():
     file = BASE / 'settings_dialog.ui'
     declared = read_designer_combo_data(file)
     fake = {name: FakeCombo([label for label, _ in items]) for name, items in declared.items()}
-    fake['combo_compute_backend'].labels.reverse()
+    fake['combo_terminal_policy'].labels.reverse()
     with pytest.raises(RuntimeError, match='changed'):
         restore_designer_combo_data(file, fake.get)
 
@@ -65,4 +66,4 @@ def test_designer_binding_works_without_any_ui_changes():
     source = (BASE.parent / 'ui.py').read_text(encoding='utf-8')
     assert 'restore_designer_combo_data(ASSETS / filename' in source
     assert 'self.method.currentData()' in source
-    assert 'backend = widget(self, "combo_compute_backend").currentData()' in source
+    assert 'widget(self, "combo_terminal_policy").currentData()' in source

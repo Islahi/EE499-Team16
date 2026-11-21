@@ -2,7 +2,8 @@
 setlocal
 cd /d "%~dp0"
 
-python -m pytest -q tests
+set QT_QPA_PLATFORM=offscreen
+python -m pytest -q -ra tests
 set test_exit=%errorlevel%
 if not "%test_exit%"=="0" pause
 

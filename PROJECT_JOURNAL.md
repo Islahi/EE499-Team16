@@ -1,5 +1,17 @@
 # Project Journal
 
+## 2026-11-20 - Integrated desktop v3 repairs
+
+- Integrated the v3 desktop application in `07_Implementation/src_accelerated`.
+  Historical simulation now defaults to the first 24 hours, with separate
+  forecast training and complete-calendar-year annual optimization.
+- Annual candidate evaluation and simulation now use consistent terminal SOC
+  accounting. The application supports scheduled SOC closure or an explicitly
+  priced and efficiency-adjusted terminal energy difference.
+- Added solar source controls and protected workbook and edited PV ratings
+  during GoiEner folder selection. Added archived C1/C2 regression checks and
+  a [desktop user guide](07_Implementation/BESS_Planning_Tool_User_Guide.md).
+
 ## 2026-10-10 - Member 1 FBS contribution reviewed and preserved
 
 - The user supplied two PDFs, network/FBS/driver Python files and an hourly results CSV, identified as Member 1's work. Archived all six unchanged under `07_Implementation/Contributions/Member_1/2026-10-10_FBS/Original/`, with checksums and an evidence-based review in the contribution README.

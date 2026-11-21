@@ -4,11 +4,12 @@ from copy import copy
 from dataclasses import dataclass, field, replace
 from math import isfinite
 
-from .fbs import FBSConfig, OperatingPoint, PowerFlowResult, run_fbs
+from .fbs import FBSConfig, OperatingPoint, PowerFlowResult, run_fbs, validate_config
 from .bess import BESSConfig, BESSState, BESSStepResult, step_bess
 from .network_model import NetworkModel
 from .data_loader import ProfileSlice, ProfileData, profile_at
 from .progress import ProgressEvent
+from .dispatch import terminal_request
 
 
 @dataclass(frozen=True)
@@ -52,10 +53,14 @@ class SimulationConfig:
     grid_export_limit_kw: float | None = None
     enforce_line_ampacity: bool = True
     terminal_soc_tolerance: float | None = None
+    terminal_cycle_hours: int | None = None
     control_max_iterations: int = 30
     control_tolerance_kw: float = 1e-6
 
     def __post_init__(self):
+        if self.terminal_cycle_hours is not None and (type(self.terminal_cycle_hours) is not int or self.terminal_cycle_hours < 1):
+            raise ValueError("terminal_cycle_hours must be a positive integer")
+        validate_config(self.fbs_config)
         _check_number(self.voltage_min_pu, "voltage_min_pu", positive=True)
         _check_number(self.voltage_max_pu, "voltage_max_pu", positive=True)
         if self.voltage_min_pu >= self.voltage_max_pu:
@@ -430,6 +435,11 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
         request_kw = 0.0
         if dispatch_policy is not None:
             request_kw = dispatch_policy(index, profile_slice, copy(state))
+        if bess_config is not None and simulation_config.terminal_soc_tolerance is not None:
+            cycle = simulation_config.terminal_cycle_hours or count
+            remaining = min(cycle - index % cycle - 1, count - index - 1)
+            request_kw = terminal_request(request_kw, state, bess_config, remaining,
+                                          simulation_config.reserve_fraction * peak_load_kw)
         step = simulate_step(
             network=network, profile_slice=profile_slice,
             fbs_config=simulation_config.fbs_config,
@@ -438,6 +448,11 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
         )
         steps.append(step)
         state = copy(step.bess_state)
+        if (bess_config is not None and simulation_config.terminal_soc_tolerance is not None
+                and ((index + 1) % (simulation_config.terminal_cycle_hours or count) == 0 or index == count - 1)
+                and abs(state.soc - bess_config.soc_initial) > simulation_config.terminal_soc_tolerance):
+            step.feasible = False
+            step.messages.append("Terminal SOC closure infeasible under the battery/network constraints")
         if progress is not None:
             progress(ProgressEvent("Simulation", index + 1, count,
                                    f"hour completed; source time {step.timestamp}; FBS converged={step.power_flow.converged}"))
@@ -447,14 +462,12 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
     completed = len(steps) == count
     converged = all(step.power_flow.converged for step in steps)
     feasible = all(step.feasible for step in steps)
-    if bess_config is not None and simulation_config.terminal_soc_tolerance is not None and state is not None:
-        deviation = abs(state.soc - bess_config.soc_initial)
-        if deviation > simulation_config.terminal_soc_tolerance + 1e-9:
-            feasible = False
-            steps[-1].feasible = False
-            steps[-1].messages.append(f"Terminal SOC deviation {deviation:.4f} exceeds allowed tolerance")
+    terminal_failed = any("Terminal SOC closure infeasible under the battery/network constraints"
+                          in step.messages for step in steps)
     if not converged:
         message = "Power-flow failure; inspect step messages."
+    elif terminal_failed:
+        message = "Terminal SOC closure failed under the configured dispatch and battery/network constraints."
     elif not feasible:
         message = "Completed with voltage, grid-limit or reserve violations."
     else:

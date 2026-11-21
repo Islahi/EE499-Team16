@@ -8,65 +8,65 @@ import pandas as pd
 class ProfileData:
     def __init__(self, csv_load: Path, csv_pv: Path):
                 
-        df_load = pd.read_csv(csv_load)
-        df_pv = pd.read_csv(csv_pv)
-        
-        required_load_columns = {"timestamp", "bus_id", "p_kw", "q_kvar"}
-        required_pv_columns = {"timestamp", "bus_id", "p_kw", "q_kvar"}
+        self._from_frames(pd.read_csv(csv_load), pd.read_csv(csv_pv))
 
-        if not required_load_columns.issubset(df_load.columns):
-            raise ValueError("Load CSV is missing required columns.")
-
-        if not required_pv_columns.issubset(df_pv.columns):
-            raise ValueError("PV CSV is missing required columns.")
-        
-        if df_load.duplicated(subset=["timestamp", "bus_id"]).any():
-            raise ValueError("Duplicate load rows found.")
-
-        if df_pv.duplicated(subset=["timestamp", "bus_id"]).any():
-            raise ValueError("Duplicate PV rows found.")
-        
-        df_load = df_load.sort_values(["timestamp", "bus_id"])
-        df_pv = df_pv.sort_values(["timestamp", "bus_id"])
-        
-        load_timestamps = set(df_load["timestamp"].unique())
-        pv_timestamps = set(df_pv["timestamp"].unique())
-
-        if load_timestamps != pv_timestamps:
-            raise ValueError("Load and PV timestamps do not match.")
-
-        # Convert timestamp strings into datetime objects
-        df_load["timestamp"] = pd.to_datetime(df_load["timestamp"])
-        df_pv["timestamp"] = pd.to_datetime(df_pv["timestamp"])
-
-        # Unique simulation timestamps
-        self.timestamps = sorted(df_load["timestamp"].unique())
-
-        # Dictionaries: bus_id -> values over time
-        self.load_p_kw = {}
-        self.load_q_kvar = {}
-        self.pv_p_kw = {}
-        self.pv_q_kvar = {}
-
-        for bus_id, group in df_load.groupby("bus_id"):
-            self.load_p_kw[int(bus_id)] = group["p_kw"].tolist()
-            self.load_q_kvar[int(bus_id)] = group["q_kvar"].tolist()
-
-        for bus_id, group in df_pv.groupby("bus_id"):
-            self.pv_p_kw[int(bus_id)] = group["p_kw"].tolist()
-            self.pv_q_kvar[int(bus_id)] = group["q_kvar"].tolist()
-
-        if len(self.timestamps) < 2:
-            raise ValueError("Profile must contain at least two timestamps.")
-                
-        for i in range(1, len(self.timestamps)):
-            difference = self.timestamps[i] - self.timestamps[i - 1]
-            hours = difference.total_seconds() / 3600
-
-            if hours != 1.0:
-                raise ValueError("Profile timestamps must be hourly.")
-            
+    def _from_frames(self, df_load, df_pv):
+        import numpy as np
+        frames = []
+        for label, frame in (("Load", df_load), ("PV", df_pv)):
+            if not {"timestamp", "bus_id", "p_kw", "q_kvar"}.issubset(frame.columns):
+                raise ValueError(f"{label} CSV is missing required columns")
+            frame = frame.copy()
+            frame["timestamp"] = pd.to_datetime(frame.timestamp, format="ISO8601", errors="raise")
+            if frame.timestamp.isna().any() or frame.timestamp.dt.tz is not None:
+                raise ValueError("Use one explicit timezone-naive source clock")
+            for name in ("bus_id", "p_kw", "q_kvar"):
+                frame[name] = pd.to_numeric(frame[name], errors="raise")
+                if not np.isfinite(frame[name]).all():
+                    raise ValueError(f"{label} {name} must be finite")
+            if (frame.bus_id % 1 != 0).any() or (frame.p_kw < 0).any():
+                raise ValueError(f"{label} bus IDs must be integers and active power nonnegative")
+            if frame.duplicated(["timestamp", "bus_id"]).any():
+                raise ValueError(f"Duplicate {label} timestamp/bus rows")
+            frame = frame.sort_values(["timestamp", "bus_id"])
+            times = pd.DatetimeIndex(frame.timestamp.unique()).sort_values()
+            if len(times) < 1 or (np.diff(times.as_unit("ns").asi8) != 3600_000_000_000).any():
+                raise ValueError("Profile timestamps must be continuous and hourly")
+            if not frame.groupby("bus_id").size().eq(len(times)).all():
+                raise ValueError(f"{label} series must cover every timestamp for every included bus")
+            frames.append((frame, times))
+        if not frames[0][1].equals(frames[1][1]):
+            raise ValueError("Load and PV timestamps do not match")
+        self.timestamps = list(frames[0][1])
+        for (frame, _), prefix in zip(frames, ("load", "pv")):
+            for column, suffix in (("p_kw", "p_kw"), ("q_kvar", "q_kvar")):
+                setattr(self, prefix+"_"+suffix, {int(bus): group[column].tolist()
+                        for bus, group in frame.groupby("bus_id", sort=True)})
         self.dt_hours = 1.0
+
+    @classmethod
+    def from_arrays(cls, timestamps, load_p_kw, load_q_kvar, pv_p_kw, pv_q_kvar):
+        obj = cls.__new__(cls)
+        obj.timestamps = list(pd.DatetimeIndex(timestamps))
+        obj.dt_hours = 1.0
+        for name, values in zip(("load_p_kw", "load_q_kvar", "pv_p_kw", "pv_q_kvar"),
+                                (load_p_kw, load_q_kvar, pv_p_kw, pv_q_kvar)):
+            setattr(obj, name, {int(bus): list(array) for bus, array in values.items()})
+        return obj
+
+    def slice(self, start=None, end=None):
+        """Inclusive start, exclusive end; never mutate complete raw history."""
+        times = pd.DatetimeIndex(self.timestamps)
+        if start is not None and pd.Timestamp(start) not in times:
+            raise ValueError("Start must match an available hourly observation")
+        if end is not None and pd.Timestamp(end) not in times and pd.Timestamp(end) != times[-1]+pd.Timedelta(hours=1):
+            raise ValueError("End must match an available hour or the exclusive end of coverage")
+        a = 0 if start is None else times.searchsorted(pd.Timestamp(start))
+        b = len(times) if end is None else times.searchsorted(pd.Timestamp(end))
+        if a >= b:
+            raise ValueError("Selected interval contains no observations")
+        return self.from_arrays(times[a:b], *[{bus: values[a:b] for bus, values in getattr(self, field).items()}
+                for field in ("load_p_kw", "load_q_kvar", "pv_p_kw", "pv_q_kvar")])
 
 class ProfileSlice:
     def __init__(self, profile_data: ProfileData, index: int):
@@ -98,27 +98,3 @@ class ProfileSlice:
 
 def profile_at(profile_data: ProfileData, index: int) -> ProfileSlice:
     return ProfileSlice(profile_data, index)
-
-if __name__ == "__main__":
-    # Example usage
-    csv_load_path = Path("C:\\Users\\ISLAHI\\Downloads\\load_profile.csv")
-    csv_pv_path = Path("C:\\Users\\ISLAHI\\Downloads\\pv_profile.csv")
-    profile_data = ProfileData(csv_load_path, csv_pv_path)
-    '''
-    print(type(profile_data.load_p_kw[0]))
-    
-    for i in range(len(profile_data.timestamp)):
-        print(i, profile_data.timestamp[i], profile_data.load_p_kw[i], profile_data.load_q_kvar[i], profile_data.pv_p_kw[i], profile_data.pv_q_kvar[i])
-    
-    print(profile_data.timestamps)
-    print(profile_data.load_p_kw)
-    print(profile_data.pv_p_kw)
-    '''
-    print(pd.read_csv(csv_load_path))  
-    print(profile_data.load_p_kw[2])
-    print(profile_data.pv_p_kw[3])
-    
-    slice_0 = profile_at(profile_data, 0)
-    print(slice_0.timestamp)
-    print(slice_0.p_load_kw)
-    print(slice_0.p_pv_kw)

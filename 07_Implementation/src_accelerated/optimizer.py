@@ -13,8 +13,9 @@ from math import floor, isfinite
 from random import Random
 
 from .bess import BESSConfig
+from .fbs import warm_numba
 from .data_loader import ProfileData
-from .metrics import EconomicConfig, PerformanceMetrics, evaluate_results
+from .metrics import EconomicConfig, PerformanceMetrics, evaluate_results, validate_annual_inputs, with_terminal_policy
 from .network_model import NetworkModel
 from .simulation import DispatchPolicy, SimulationConfig, simulate_timeseries
 from .progress import ProgressEvent
@@ -72,8 +73,8 @@ class OptimizationBounds:
 class BESSParameters:
     eta_charge: float
     eta_discharge: float
-    soc_min: float = 0.1
-    soc_max: float = 0.9
+    soc_min: float = 0.2
+    soc_max: float = 1.0
     soc_initial: float = 0.5
 
     def __post_init__(self):
@@ -116,6 +117,7 @@ class CandidateEvaluation:
     feasible: bool
     metrics: PerformanceMetrics | None = None
     message: str = ""
+    execution_metadata: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -127,6 +129,7 @@ class SimulationEvaluator:
     progress: Callable | None = None
 
     def __post_init__(self):
+        self.simulation_config.__post_init__()
         for name in ("cost_per_kwh", "cost_per_kw"):
             value = getattr(self.economic_config, name)
             if value is None:
@@ -138,9 +141,12 @@ class SimulationEvaluator:
     def __call__(self, network, profiles, candidate):
         if not isinstance(profiles, ProfileData):
             raise TypeError("SimulationEvaluator expects an hourly ProfileData object")
+        self.simulation_config.__post_init__()
+        validate_annual_inputs(profiles.timestamps, self.economic_config, profiles.dt_hours)
         bess_config = self.battery_parameters.build_config(candidate)
         result = simulate_timeseries(
-            network=network, profiles=profiles, simulation_config=self.simulation_config,
+            network=network, profiles=profiles,
+            simulation_config=with_terminal_policy(self.simulation_config, self.economic_config),
             bess_config=bess_config, dispatch_policy=self.dispatch_policy,
             progress=self.progress,
         )
@@ -222,7 +228,8 @@ def _evaluate(network, profiles, bounds, evaluator, candidate):
     if not isinstance(evaluation, CandidateEvaluation) or evaluation.candidate != candidate:
         raise ValueError("Evaluator must return CandidateEvaluation for the requested candidate")
     if evaluation.feasible:
-        _check_number(evaluation.objective, "candidate objective")
+        if not isinstance(evaluation.objective,(int,float)) or not isfinite(evaluation.objective):
+            raise ValueError("Candidate annual objective must be finite (net export revenue may make it negative)")
         if evaluation.metrics is not None and not evaluation.metrics.feasible:
             raise ValueError("Evaluator marked infeasible metrics as a feasible candidate")
     else:
@@ -241,11 +248,24 @@ def _without_progress(evaluator):
     return worker_evaluator
 
 
+_WORKER_READINESS = None
+
+
+def _initialize_numba_worker():
+    global _WORKER_READINESS
+    _WORKER_READINESS = warm_numba()
+
+
 def _evaluate_process(arguments):
-    return _evaluate(*arguments)
+    result = _evaluate(*arguments)
+    result.execution_metadata = {"backend":"numba", "worker_pid":__import__("os").getpid(), "worker_readiness":_WORKER_READINESS}
+    return result
 
 
 def _make_result(evaluations, history, iterations, metadata):
+    metadata = dict(metadata)
+    metadata["worker_readiness"] = {str(e.execution_metadata["worker_pid"]):e.execution_metadata
+        for e in evaluations if e.execution_metadata.get("worker_pid") is not None}
     feasible = [evaluation for evaluation in evaluations if evaluation.feasible]
     best = min(feasible, key=lambda item: (item.objective, item.candidate)) if feasible else None
     return OptimizationResult(
@@ -295,7 +315,7 @@ def optimize(network: NetworkModel, profiles, bounds: OptimizationBounds,
     best_by_candidate = {}
     history = []
     worker_evaluator = _without_progress(evaluator) if optimizer_config.workers > 1 else evaluator
-    executor = (ProcessPoolExecutor(max_workers=optimizer_config.workers)
+    executor = (ProcessPoolExecutor(max_workers=optimizer_config.workers, initializer=_initialize_numba_worker)
                 if optimizer_config.workers > 1 else None)
     try:
         for iteration in range(optimizer_config.max_iterations):
@@ -359,7 +379,7 @@ def optimize(network: NetworkModel, profiles, bounds: OptimizationBounds,
                 except Exception as error:
                     raise RuntimeError(
                         "Parallel optimization failed. The evaluator and its inputs must be "
-                        "picklable on Windows; retry with one CPU worker for diagnosis."
+                        f"picklable on Windows and Numba must compile in every worker. Cause: {error}"
                     ) from error
                 for candidate_index, candidate in pending:
                     evaluation = completed_results[candidate_index]

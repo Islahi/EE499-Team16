@@ -11,10 +11,10 @@ def test_real_qt_loader_restores_combo_ids(monkeypatch):
     app = QApplication.instance() or QApplication([])
     settings = QDialog()
     load_form(settings, 'settings_dialog.ui')
-    compute = widget(settings, 'combo_compute_backend')
-    compute.setCurrentIndex(2)
-    assert compute.currentText() == 'Numba compiled (CPU)'
-    assert compute.currentData() == 'numba'
+    terminal = widget(settings, 'combo_terminal_policy')
+    assert terminal.currentData() == 'equal_soc'
+    terminal.setCurrentIndex(1)
+    assert terminal.currentData() == 'priced_energy'
     algo = widget(settings, 'combo_optimizer_algorithm')
     algo.setCurrentIndex(1)
     assert algo.currentData() == 'GA'
@@ -22,9 +22,7 @@ def test_real_qt_loader_restores_combo_ids(monkeypatch):
     forecast = QDialog()
     load_form(forecast, 'forecast_dialog.ui')
     chooser = widget(forecast, 'combo_forecast_method')
-    assert chooser.currentData() == 'autoarima'
-    chooser.setCurrentIndex(3)
-    assert chooser.currentData() == 'sarimax'
+    assert chooser.currentData() == 'sector_sum'
 
     settings.deleteLater()
     forecast.deleteLater()
