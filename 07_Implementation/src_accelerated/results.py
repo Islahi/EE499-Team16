@@ -214,7 +214,7 @@ def _bus_rows(result):
                    bus_id in step.voltage_violations if served else None,
                    requested_p, requested_q,
                    requested_q - point.q_load_kvar[bus_id] if served and requested else None,
-                   point.p_load_kw[bus_id] / requested_p if served and requested_p else None,
+                   fraction,
                    requested.p_pv_kw[bus_id] if requested else None,
                    (step.pre_control_voltage_pu or {}).get(bus_id),
                    (1. - fraction) * 100. if fraction is not None else None, disconnected]

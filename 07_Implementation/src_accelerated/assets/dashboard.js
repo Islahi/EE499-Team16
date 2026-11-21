@@ -2,7 +2,7 @@
 
 const $ = id => document.getElementById(id);
 const tabs = ["Overview", "Network", "Charts", "Analysis"];
-const analysisTabs = ["BESS", "Economics", "Optimization", "Diagnostics"];
+const analysisTabs = ["Economics", "Optimization", "Diagnostics"];
 const colors = ["#087c80", "#b84c37", "#275fa5", "#79568c", "#806509", "#257647"];
 const state = {runs: [], run: 0, scenario: "", tab: "Overview", analysis: "", hour: 0,
   equipment: ["Bus", ""], zoom: 1, offsetX: 0, offsetY: 0, redraw: null};
@@ -350,7 +350,6 @@ function setHour(timestamp) {
 
 function availableAnalysis(run, scenario) {
   return analysisTabs.filter(name => ({
-    BESS: scenario.has_bess ?? scenario.hours.some(row => number(row.bess_accepted_soc)),
     Economics: run.economic_comparison?.length || number(metricsOf(scenario.metrics).annual_total_cost),
     Optimization: run.candidate_count || run.evaluations?.length || run.metadata.optimizer,
     Diagnostics: hourCount(scenario) && !staticCase(scenario)
@@ -422,7 +421,7 @@ async function render() {
   state.redraw = null;
   state.hourChanged = null;
   const view = state.tab === "Analysis" ? state.analysis : state.tab;
-  const timeView = ["Network", "Charts", "BESS", "Diagnostics"].includes(view);
+  const timeView = ["Network", "Charts", "Diagnostics"].includes(view);
   $("hour-controls").hidden = !timeView || staticCase(scenario) || hourCount(scenario) < 2;
   try {
     if (timeView && !scenario.hours.length) {
@@ -434,7 +433,7 @@ async function render() {
       body.replaceChildren();
     }
     updateHour();
-    await ({Overview: overview, Network: network, Charts: simulation, BESS: bess,
+    await ({Overview: overview, Network: network, Charts: simulation,
       Economics: economics, Optimization: optimization, Diagnostics: diagnostics})[view](body);
   } catch (error) {
     if (request === viewRequest) note(body, "Unable to read saved results. " + error.message);
@@ -790,6 +789,9 @@ function network(root) {
         details(body, "Saved values and attributes", {equipment, data, comparison: alternative ? peer : undefined});
       });
       if (data.diagnostic_only || scenario.hours[index]?.converged === false) note(pane, "Nonconverged. Values are diagnostic only.");
+      const correction = scenario.hours[index]?.correction_status;
+      if (correction && !["not_needed", "verified", "legacy_proportional_validation"].includes(correction))
+        note(pane, "Network correction remains unresolved. Served-load percentages are unavailable for this hour.");
     } catch (error) { if (request === inspected) note(detail, error.message); }
   }
 
@@ -1321,7 +1323,10 @@ async function bess(root) {
   hourPanel = advanced(root, "Hourly battery limits and 24-hour schedule", body => body.append(hourly));
   hourPanel.addEventListener("toggle", showHour);
   choose.addEventListener("change", plotBattery);
-  state.hourChanged = showHour;
+  if (root.isConnected) {
+    const diagnosticsHourChanged = state.hourChanged;
+    state.hourChanged = () => { diagnosticsHourChanged?.(); showHour(); };
+  }
   plotBattery();
 }
 
@@ -1509,7 +1514,7 @@ function candidateExplorer(list, run, evaluations) {
       ["Curtailment (kWh)", row.curtailment_energy_kwh], ["Reserve violation hours", row.reserve_violation_hours]]);
     details(info, "Complete candidate record", row);
     if (isBest(row) && hourCount(run.scenarios.best_bess)) info.append(button("Inspect saved battery replay", () => {
-      state.tab = "Analysis"; state.analysis = "BESS"; pickScenario("best_bess");
+      state.tab = "Analysis"; state.analysis = "Diagnostics"; state.openBatteryDetails = true; pickScenario("best_bess");
     }));
   }
 
@@ -1600,6 +1605,12 @@ async function diagnostics(root) {
     ["Battery limiter hours", digest.battery_limiter_hours ??
       (hourly.some(row => typeof row.bess_limited === "boolean") ? hourly.filter(row => row.bess_limited === true).length : null)]]);
   if (infeasible) summary.append(el("p", "Saved results contain unresolved constraints, nonconvergence, or a failed feasibility check.", "warning"));
+
+  if (scenario.has_bess ?? hourly.some(row => number(row.bess_accepted_soc))) {
+    const batteryDetails = advanced(root, "Battery dispatch and state of charge", bess);
+    if (state.openBatteryDetails) batteryDetails.open = true;
+  }
+  state.openBatteryDetails = false;
 
   advanced(root, "Load service and solver timings", body => {
     const quality = metricsOf(scenario.metrics);
@@ -1784,7 +1795,8 @@ async function start() {
   $("analysis-tabs").addEventListener("keydown", tabKey);
   const link = location.hash.slice(1).toLowerCase();
   const linkedAnalysis = analysisTabs.find(name => name.toLowerCase() === link);
-  if (linkedAnalysis) { state.tab = "Analysis"; state.analysis = linkedAnalysis; }
+  if (link === "bess") { state.tab = "Analysis"; state.analysis = "Diagnostics"; state.openBatteryDetails = true; }
+  else if (linkedAnalysis) { state.tab = "Analysis"; state.analysis = linkedAnalysis; }
   else state.tab = link === "simulation" ? "Charts" : tabs.find(name => name.toLowerCase() === link) || "Overview";
   $("workspace").hidden = false;
   $("report-actions").hidden = false;
