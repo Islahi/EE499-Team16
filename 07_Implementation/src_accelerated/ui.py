@@ -39,7 +39,7 @@ from .distributed_dataset import discover_cases, summary_pv_ratings
 from .pv_model import read_nasa_csv
 from .ui_workflow import (
     BaseCaseReport, DataRequest, RunSettings, prepare_study, run_and_export,
-    run_base_case_and_export, size_catalog,
+    first_calendar_year, run_base_case_and_export, size_catalog,
 )
 
 
@@ -105,20 +105,24 @@ class Worker(QObject):
     succeeded = Signal(object)
     failed = Signal(str, str)
     finished = Signal()
+    hourly_log = Signal(object)
 
-    def __init__(self, task):
+    def __init__(self, task, log_hours=False):
         super().__init__()
         self.task = task
+        self.log_hours = log_hours
 
     @Slot()
     def run(self):
+        reporter = StageReporter(self.stage.emit, self.progress.emit,
+                                 hourly_log=self.hourly_log.emit if self.log_hours else None)
         try:
-            reporter = StageReporter(self.stage.emit, self.progress.emit)
             result = self.task(reporter)
             reporter.flush()
             self.succeeded.emit(result)
         except Exception as error:
             # Boundary catch: restore UI state and retain unexpected error details.
+            reporter.flush()
             self.failed.emit(str(error), traceback.format_exc())
         finally:
             self.finished.emit()
@@ -130,6 +134,7 @@ class JobRunner(QObject):
     succeeded = Signal(object)
     failed = Signal(str, str)
     busy_changed = Signal(bool)
+    hourly_log = Signal(object)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -142,16 +147,17 @@ class JobRunner(QObject):
     def busy(self):
         return self.thread is not None
 
-    def start(self, task):
+    def start(self, task, *, log_hours=False):
         if self.busy:
             raise RuntimeError("A job is already running")
         self.result, self.failure = None, None
         self.thread = QThread(self)
-        self.worker = Worker(task)
+        self.worker = Worker(task, log_hours)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.worker.stage.connect(self.stage)
         self.worker.progress.connect(self.progress)
+        self.worker.hourly_log.connect(self.hourly_log)
         self.worker.succeeded.connect(self.store_result)
         self.worker.failed.connect(self.store_failure)
         self.worker.finished.connect(self.thread.quit)
@@ -703,8 +709,13 @@ class SettingsDialog(QDialog):
                 raise ValueError("Enter import/export tariffs and confirm the explicit values before economic optimization")
             if not values["allowed_buses"]:
                 raise ValueError("Select allowed battery buses")
-            size_catalog(values["spin_opt_power_min_kw"], values["spin_opt_power_max_kw"], values["spin_opt_power_step_kw"])
-            size_catalog(values["spin_opt_energy_min_kwh"], values["spin_opt_energy_max_kwh"], values["spin_opt_energy_step_kwh"])
+            for quantity, unit in (("power", "kw"), ("energy", "kwh")):
+                try:
+                    size_catalog(*(values[f"spin_opt_{quantity}_{field}_{unit}"]
+                                   for field in ("min", "max", "step")))
+                except ValueError as error:
+                    label = "power (kW)" if quantity == "power" else "energy capacity (kWh)"
+                    raise ValueError(f"Set a valid battery {label} minimum, maximum and step in Settings. {error}") from error
         return RunSettings(simulation, economics, battery, values, dispatch)
 
     def apply_settings(self):
@@ -977,10 +988,10 @@ class MainWindow(QMainWindow):
         # Match the preset to the applied range when reopening the dialog.
         start = pd.Timestamp(self.study.profiles.timestamps[0])
         end = pd.Timestamp(self.study.profiles.timestamps[-1])+pd.Timedelta(hours=1)
-        raw = self.study.historical_profiles
+        raw = self.study.historical_profiles if self.study.input_mode == "historical" else self.study.forecast_profiles
         preset = "-1"
-        if self.study.input_mode == "historical" and raw is not None:
-            if start == pd.Timestamp(year=start.year,month=1,day=1) and end == pd.Timestamp(year=start.year+1,month=1,day=1):
+        if raw is not None:
+            if (start, end) == first_calendar_year(raw.timestamps):
                 preset = "8760"
             elif start == pd.Timestamp(raw.timestamps[0]):
                 hours = len(self.study.profiles.timestamps)
@@ -999,21 +1010,20 @@ class MainWindow(QMainWindow):
         if raw is None:
             widget(self,"lbl_active_source").setText("Generate forecast before selecting this source; active source unchanged")
             return
-        preset = int(widget(self,"combo_history_window").currentData() or 0) if mode=="historical" else 0
+        preset = int(widget(self,"combo_history_window").currentData() or 0)
         if preset<0:
             self.update_interval_state()
             return
         a = pd.Timestamp(raw.timestamps[0])
         b = pd.Timestamp(raw.timestamps[-1])+pd.Timedelta(hours=1)
         if preset == 8760:
-            candidate = pd.Timestamp(year=a.year,month=1,day=1)
-            if candidate < a: candidate = pd.Timestamp(year=a.year+1,month=1,day=1)
-            annual_end = pd.Timestamp(year=candidate.year+1,month=1,day=1)
-            if annual_end > b:
+            window = first_calendar_year(raw.timestamps)
+            if window is None:
                 widget(self,"btn_apply_simulation_window").setEnabled(False)
-                widget(self,"lbl_active_source").setText("The selected source does not contain a complete calendar year. Choose a technical interval or import more history.")
+                widget(self,"lbl_active_source").setText(
+                    "This source has no complete January-to-January year. Select a different source, extend the forecast, or choose a shorter simulation interval.")
                 return
-            a,b = candidate,annual_end
+            a,b = window
         elif preset: b = min(b,a+pd.Timedelta(hours=preset))
         widget(self,"date_simulation_start").setDateTime(QDateTime(a.to_pydatetime()))
         widget(self,"date_simulation_end").setDateTime(QDateTime(b.to_pydatetime()))
@@ -1025,7 +1035,7 @@ class MainWindow(QMainWindow):
         mode = widget(self,"combo_simulation_source").currentData()
         for name in ("combo_simulation_source","date_simulation_start","date_simulation_end"):
             widget(self,name).setEnabled(available)
-        widget(self,"combo_history_window").setEnabled(available and mode=="historical")
+        widget(self,"combo_history_window").setEnabled(available)
         model = widget(self,"combo_simulation_source").model()
         model.item(1).setEnabled(has_study and self.study.forecast_profiles is not None)
         button = widget(self,"btn_apply_simulation_window")
@@ -1105,6 +1115,7 @@ class MainWindow(QMainWindow):
         self.resize_fit_timer.setInterval(80)
         self.resize_fit_timer.timeout.connect(self.fit_network)
         widget(self, "chk_show_log").toggled.connect(self.schedule_network_fit)
+        widget(self, "chk_show_log").toggled.connect(self.scroll_log_to_latest)
         widget(self, "tabs_workspace").currentChanged.connect(self.schedule_network_fit)
         widget(self, "btn_result_details").clicked.connect(self.toggle_result_details)
 
@@ -1262,6 +1273,7 @@ class MainWindow(QMainWindow):
         self.runner.busy_changed.connect(self.set_busy)
         self.runner.stage.connect(self.show_stage)
         self.runner.progress.connect(self.show_progress)
+        self.runner.hourly_log.connect(self.append_log_lines)
         self.runner.succeeded.connect(self.job_succeeded)
         self.runner.failed.connect(self.show_failure)
         self.scene.bus_selected.connect(self.show_bus)
@@ -1340,6 +1352,20 @@ class MainWindow(QMainWindow):
     def run_optimization(self):
         self.start_run(True)
 
+    def optimization_settings(self):
+        times = self.study.profiles.timestamps
+        start = pd.Timestamp(times[0])
+        end = pd.Timestamp(times[-1]) + pd.Timedelta(hours=1)
+        if (start, end) != first_calendar_year(times):
+            raise ValueError(
+                f"Active interval: {start:%d %b %Y %H:%M} to {end:%d %b %Y %H:%M} (end excluded). "
+                "Choose Study interval → Full calendar year → Apply interval. "
+                "If the forecast lacks a full January-to-January year, use historical data or extend the forecast."
+            )
+        settings = self.settings_dialog.read_settings(optimization=True)
+        validate_annual_inputs(times, settings.economics, self.study.profiles.dt_hours)
+        return settings
+
     def run_base_case(self):
         if self.study is None or self.runner.busy:
             return
@@ -1368,9 +1394,7 @@ class MainWindow(QMainWindow):
         self.pending_base_case = False
         try:
             self.settings_dialog.restore_values()
-            settings = self.settings_dialog.read_settings(optimization=optimization)
-            if optimization:
-                validate_annual_inputs(self.study.profiles.timestamps,settings.economics,self.study.profiles.dt_hours)
+            settings = self.optimization_settings() if optimization else self.settings_dialog.read_settings()
             self.pending_action = "run"
             self.statusBar().clearMessage()
             self.last_progress = 0
@@ -1390,7 +1414,7 @@ class MainWindow(QMainWindow):
             self.runner.start(partial(
                 run_and_export, self.study, deepcopy(settings), optimization,
                 self.pending_run_output,
-            ))
+            ), log_hours=not optimization)
         except ValueError as error:
             self.show_failure(str(error), "")
 
@@ -1421,14 +1445,14 @@ class MainWindow(QMainWindow):
         annual_ready = False
         if self.study is not None and ready:
             try:
-                settings = self.settings_dialog.read_settings(optimization=True)
-                validate_annual_inputs(self.study.profiles.timestamps,settings.economics,self.study.profiles.dt_hours)
+                self.optimization_settings()
                 annual_ready = True
                 economic_reason = "Compare battery options and the no-storage baseline using annual cost."
             except ValueError as error:
                 economic_reason = "Annual optimization: "+str(error)
         widget(self,"btn_run_optimization").setEnabled(annual_ready and not busy)
         widget(self,"btn_run_optimization").setToolTip(economic_reason)
+        widget(self,"btn_run_optimization").setStatusTip(economic_reason)
         widget(self,"btn_empty_import").setEnabled(not busy)
         widget(self,"panel_empty_state").setVisible(self.study is None)
         widget(self,"network_view").setVisible(self.study is not None and not widget(self,"chk_hide_diagram").isChecked())
@@ -1450,10 +1474,18 @@ class MainWindow(QMainWindow):
         self.append_log(message)
 
     def append_log(self, message):
+        self.append_log_lines((message,))
+
+    def append_log_lines(self, messages):
         stamp = datetime.now().astimezone().isoformat(timespec="seconds")
-        widget(self, "run_log").appendPlainText(f"[{stamp}] {message}")
+        widget(self, "run_log").appendPlainText("\n".join(f"[{stamp}] {message}" for message in messages))
+        self.scroll_log_to_latest()
         if self.session is not None:
-            self.session.append_log(message)
+            self.session.append_log_lines(messages)
+
+    def scroll_log_to_latest(self):
+        scroll = widget(self, "run_log").verticalScrollBar()
+        scroll.setValue(scroll.maximum())
 
     def update_run_clock(self):
         now = perf_counter()
@@ -1472,7 +1504,7 @@ class MainWindow(QMainWindow):
     def show_progress(self, snapshot):
         events, boundary = snapshot
         self.last_worker_update = perf_counter()
-        primary = next((events[name] for name in ("GWO", "GA", "Simulation") if name in events), None)
+        primary = next((events[name] for name in ("GWO", "GA", "Simulation", "Base case") if name in events), None)
         if primary is not None:
             bar = widget(self, "progress_run")
             bar.setRange(0, 100)

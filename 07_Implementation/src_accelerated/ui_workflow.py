@@ -25,7 +25,7 @@ import numpy as np
 import json
 from .results import export_results, format_summary
 from .simulation import GridAwareDispatchPolicy, SimulationConfig, simulate_timeseries
-from .progress import format_duration
+from .progress import ProgressEvent, format_duration
 
 
 @dataclass
@@ -97,6 +97,17 @@ def select_default_history(study):
     start,end = times[0],times[-1]+pd.Timedelta(hours=1)
     end = min(end,start+pd.Timedelta(hours=24))
     study.select_source("historical",start,end)
+
+
+def first_calendar_year(timestamps):
+    """Return the first January-to-January window in a continuous hourly source."""
+    start = pd.Timestamp(timestamps[0])
+    end = pd.Timestamp(timestamps[-1]) + pd.Timedelta(hours=1)
+    january = pd.Timestamp(year=start.year, month=1, day=1)
+    if january < start:
+        january = pd.Timestamp(year=start.year + 1, month=1, day=1)
+    following = pd.Timestamp(year=january.year + 1, month=1, day=1)
+    return (january, following) if following <= end else None
 
 
 @dataclass
@@ -516,7 +527,9 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
 
 def run_base_case(study: PreparedStudy, settings: RunSettings, stage=lambda message: None, progress=None):
     """Run one static FBS snapshot with original load/PV and inactive BESS."""
-    stage("Running static base-case FBS")
+    stage("Running static base-case FBS (one snapshot; no hourly time steps)")
+    if progress is None:
+        progress = getattr(stage, "progress", None)
     ids = [bus.bus_id for bus in study.network.buses]
     loads = {bus_id: [load for load in study.network.loads if load.bus_id == bus_id] for bus_id in ids}
     pvs = {bus_id: [unit for unit in study.network.pv_units if unit.bus_id == bus_id] for bus_id in ids}
@@ -527,6 +540,10 @@ def run_base_case(study: PreparedStudy, settings: RunSettings, stage=lambda mess
         {bus_id: 0.0 for bus_id in ids}, {bus_id: 0.0 for bus_id in ids}, {bus_id: 0.0 for bus_id in ids},
     )
     result = run_fbs(study.network, point, settings.simulation.fbs_config, progress=progress)
+    if progress is not None:
+        progress(ProgressEvent("Base case", 1, 1,
+                               f"Static snapshot | FBS iterations: {result.iterations} | converged={result.converged}",
+                               log=True))
     context = {"Network": study.context["Network"], "Case definition": "Static base loads + installed PV ratings; BESS inactive (0 kW)", "Compute backend": settings.simulation.fbs_config.backend,
                "PV installations": study.context["PV ratings (kW)"]}
     from .study_session import runtime_provenance

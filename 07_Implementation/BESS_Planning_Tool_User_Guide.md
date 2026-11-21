@@ -41,7 +41,7 @@ For irradiance conversion, the reference nameplate defaults to the sum of instal
 
 ## Select the interval or generate a forecast
 
-- Open **Study interval** to choose historical data or a generated forecast. Use **First 24 hours**, **7 days**, **30 days**, **Full calendar year**, **Full history**, or a custom historical window. The start is included and the end is excluded. Click **Apply interval** to use the new selection.
+- Open **Study interval** to choose historical data or a generated forecast. Use **First 24 hours**, **7 days**, **30 days**, **Full calendar year**, **Full source**, or a custom window. The start is included and the end is excluded. Click **Apply interval** to use the new selection.
 - Open **Forecast** to choose a training start, training end, and horizon. Keep at least 8,760 consecutive training hours and place the origin one hour after the training end. A short active simulation interval can coexist with several years of training history.
 - Demand models fit residential, commercial, and manufacturing sector sums and distribute the forecasts back to their buses. PV uses a separate XGBoost fit on historical modeled electrical power. The future PV prediction uses calendar features and applies the physical night mask.
 - Check the active source and dates before running the simulation. Select a forecast window explicitly if the study is currently using history.
@@ -49,7 +49,7 @@ For irradiance conversion, the reference nameplate defaults to the sum of instal
 ## Simulate and optimize BESS
 
 1. **Technical comparison.** Run the selected interval with **Manual BESS** unchecked for the no-storage case. Enable **Manual BESS**, select the bus, and enter kW, kWh, SOC and efficiency settings. Keep the same profile window and limits for a comparable second run.
-2. **Annual optimization.** Select one complete January-to-January period. A normal year has 8,760 hours and a leap year has 8,784 hours. Enter and confirm import and export tariffs in USD/kWh, including an explicit zero if export earns nothing. Review BESS costs, ownership assumptions, grid limits, curtailment and unserved-energy penalties.
+2. **Annual optimization.** Select **Full calendar year** and click **Apply interval**. The active window must span January 1 at 00:00 to the next January 1 at 00:00. A June-to-June forecast with 8,760 hours can be simulated. To optimize from a forecast, generate enough coverage for a complete January-to-January period, then select that period. Enter and confirm import and export tariffs in USD/kWh, including an explicit zero if export earns nothing. Review BESS costs, ownership assumptions, grid limits, curtailment and unserved-energy penalties.
 3. In economic settings choose **Return to initial SOC** or **Price terminal energy difference**. Equal SOC schedules actual charge or discharge near the end and respects the configured limits. If the rule cannot restore SOC under those limits, the candidate is infeasible. Priced energy requires a positive replacement price. It charges an energy deficit at that rate after charging losses and credits surplus at the configured export rate after discharge losses.
 4. Select GWO or GA, eligible non-slack buses, and minimum, maximum and step for kW and kWh. Save settings and run optimization. The app compares the best feasible battery candidate with a no-BESS run over the same hours and tariffs and can select no BESS.
 
@@ -58,6 +58,7 @@ A short technical simulation reports energy and electrical performance over its 
 ## Review and reopen a study
 
 - Check run completion, FBS convergence, feasibility, voltage limits, load shedding and PV curtailment. A converged result can still have violations or unserved demand.
+- Enable **Show run log** to see each completed simulation time step with its source timestamp and FBS status. The log follows the latest entry. The session's `session.log` retains all hourly entries, including entries beyond the display limit. **Base case** reports one static snapshot and its FBS iterations.
 - Review the Network and Results views. After a simulation, use the timestamp and network result controls to inspect individual hours. Session folders under `src_accelerated/Results/Sessions` contain input snapshots and numbered run exports.
 - Open **Study interval** and browse to a saved session folder containing `session.json`. It opens read-only. Choose **Migrate compatible inputs to a new study ID** to create a fresh study, then configure the interval, tariffs and optimizer again.
 

@@ -18,10 +18,11 @@ from src_accelerated.metrics import EconomicConfig, validate_annual_inputs
 from src_accelerated.network_loader import load_network
 from src_accelerated.optimizer import (BESSCandidate, BESSParameters, OptimizationBounds,
     OptimizerConfig, SimulationEvaluator, exhaustive_search, genetic_optimize, optimize)
+from src_accelerated.progress import ProgressEvent, StageReporter
 from src_accelerated.simulation import GridAwareDispatchPolicy, SimulationConfig, simulate_timeseries
 from src_accelerated.solar_source import PVReference, SolarSite, daylight
 from src_accelerated.study_session import StudySession, migrate_inputs
-from src_accelerated.ui_workflow import DataRequest, prepare_study
+from src_accelerated.ui_workflow import DataRequest, PreparedStudy, prepare_study, select_default_history
 from test_integrated_upgrade import simple_network, source_data
 
 
@@ -280,3 +281,114 @@ def test_old_study_migration_preserves_history(tmp_path):
     study, new = migrate_inputs(StudySession.open_read_only(old), tmp_path / "new")
     assert manifest.read_bytes() == original and new.root != old
     assert len(study.profiles.timestamps) == 24 and len(study.historical_profiles.timestamps) == 40
+
+
+def test_hourly_log_batches_keep_all_time_steps():
+    batches, snapshots = [], []
+    reporter = StageReporter(lambda message: None, snapshots.append, interval=60,
+                             hourly_log=batches.append)
+    for i in range(257):
+        reporter.progress(ProgressEvent("Simulation", i, 257, "processing"))
+        reporter.progress(ProgressEvent("Simulation", i + 1, 257, f"hour {i + 1}", hour_finished=True))
+    reporter("Saving")
+    assert [len(batch) for batch in batches] == [128, 128, 1]
+    assert [line for batch in batches for line in batch] == [
+        f"Time step {i}/257 | hour {i}" for i in range(1, 258)
+    ]
+    assert len(snapshots) == 2
+
+
+def test_qt_hourly_run_log_and_optimize_readiness(tmp_path, monkeypatch):
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+    pytest.importorskip("PySide6")
+    from PySide6.QtCore import QEventLoop, QTimer
+    from PySide6.QtWidgets import QApplication
+    from src_accelerated.ui import MainWindow, widget
+
+    app = QApplication.instance() or QApplication([])
+    window = MainWindow()
+    window.show()
+
+    def wait_for(runner):
+        app.processEvents()
+        if runner.busy:
+            loop = QEventLoop()
+            runner.succeeded.connect(loop.quit)
+            runner.failed.connect(loop.quit)
+            timer = QTimer()
+            timer.setSingleShot(True)
+            timer.timeout.connect(loop.quit)
+            timer.start(30000)
+            loop.exec()
+            runner.succeeded.disconnect(loop.quit)
+            runner.failed.disconnect(loop.quit)
+        assert not runner.busy and runner.failure is None
+
+    wait_for(window.settings_dialog.jit_runner)
+    history = source_data(hours=8760, start="2021-01-01")
+    study = PreparedStudy(simple_network(), history, None, {"Network": "2-bus", "PV ratings (kW)": "{}"})
+    select_default_history(study)
+    window.study = study
+    window.session = StudySession(tmp_path, {"simulation_runs": [], "base_case_runs": [], "optimization_runs": []})
+    window.settings_dialog.set_network(study.network)
+    window.sync_time_controls()
+    window.set_busy(False)
+    optimize_button = widget(window, "btn_run_optimization")
+    assert not optimize_button.isEnabled() and "Full calendar year" in optimize_button.toolTip()
+
+    window.run_base_case()
+    wait_for(window.runner)
+    log = widget(window, "run_log")
+    assert "Base case 1/1: Static snapshot | FBS iterations:" in log.toPlainText()
+    assert "Time step " not in log.toPlainText()
+    window.run_simulation()
+    wait_for(window.runner)
+    displayed = [line for line in log.toPlainText().splitlines() if "Time step " in line]
+    saved = [line for line in (tmp_path / "session.log").read_text().splitlines() if "Time step " in line]
+    assert len(displayed) == len(saved) == 24
+    for i, line in enumerate(saved, 1):
+        assert f"Time step {i}/24 | {history.timestamps[i-1]}" in line
+    assert log.verticalScrollBar().value() == log.verticalScrollBar().maximum()
+
+    study.forecast_profiles = source_data(hours=8760, start="2022-06-05 01:00")
+    study.select_source("forecast")
+    window.sync_time_controls()
+    window.set_busy(False)
+    assert not optimize_button.isEnabled() and "05 Jun 2022 01:00" in optimize_button.toolTip()
+    preset = widget(window, "combo_history_window")
+    preset.setCurrentIndex(preset.findData("8760"))
+    assert not widget(window, "btn_apply_simulation_window").isEnabled()
+    assert "no complete January-to-January year" in widget(window, "lbl_active_source").text()
+
+    source = widget(window, "combo_simulation_source")
+    source.setCurrentIndex(source.findData("historical"))
+    window.apply_source_window()
+    assert len(study.profiles.timestamps) == 8760
+    assert not optimize_button.isEnabled() and "tariffs" in optimize_button.toolTip()
+    settings = window.settings_dialog
+    widget(settings, "chk_tariffs_confirmed").setChecked(True)
+    assert settings.apply_settings()
+    assert not optimize_button.isEnabled() and "power (kW)" in optimize_button.toolTip()
+    for control, value in {
+        "spin_opt_power_min_kw": 50, "spin_opt_power_max_kw": 50, "spin_opt_power_step_kw": 10,
+        "spin_opt_energy_min_kwh": 100, "spin_opt_energy_max_kwh": 100, "spin_opt_energy_step_kwh": 10,
+        "spin_ga_population": 3, "spin_ga_generations": 1,
+    }.items():
+        widget(settings, control).setValue(value)
+    algorithm = widget(settings, "combo_optimizer_algorithm")
+    algorithm.setCurrentIndex(algorithm.findData("GA"))
+    assert settings.apply_settings()
+    assert optimize_button.isEnabled(), optimize_button.toolTip()
+    window.run_optimization()
+    wait_for(window.runner)
+    assert window.report.result.success
+    assert window.session.manifest["optimization_runs"][0]["status"] == "success"
+
+    study.forecast_profiles = source_data(hours=13799, start="2022-06-05 01:00")
+    source.setCurrentIndex(source.findData("forecast"))
+    window.apply_source_window()
+    assert study.input_mode == "forecast"
+    assert study.profiles.timestamps[0] == pd.Timestamp("2023-01-01")
+    assert study.profiles.timestamps[-1] == pd.Timestamp("2023-12-31 23:00")
+    assert optimize_button.isEnabled(), optimize_button.toolTip()
+    window.close()

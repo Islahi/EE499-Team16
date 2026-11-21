@@ -143,10 +143,13 @@ class StudySession:
         path.write_text(json.dumps(_json_value(self.manifest), indent=2), encoding="utf-8")
 
     def append_log(self, message):
+        self.append_log_lines((message,))
+
+    def append_log_lines(self, messages):
         self._writable()
         stamp = datetime.now().astimezone().isoformat(timespec="seconds")
         with (self.root / "session.log").open("a", encoding="utf-8") as stream:
-            stream.write(f"[{stamp}] {message}\n")
+            stream.writelines(f"[{stamp}] {message}\n" for message in messages)
 
     def next_path(self, category, prefix):
         self._writable()

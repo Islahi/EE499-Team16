@@ -1,5 +1,14 @@
 # Project Journal
 
+## 2026-11-21 - Hourly log and annual optimization guidance
+
+- Simulate now records every completed timestep with its source timestamp in
+  the run log and session log. Base case identifies its single static snapshot
+  and records the solver iterations.
+- The saved 15-bus forecast starts in June, so its 8,760 hours do not form a
+  calendar year. Optimize now explains the active interval and points to the
+  full-calendar-year preset. The preset works for historical and forecast data.
+
 ## 2026-11-20 - Integrated desktop v3 repairs
 
 - Integrated the v3 desktop application in `07_Implementation/src_accelerated`.

@@ -455,7 +455,8 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
             step.messages.append("Terminal SOC closure infeasible under the battery/network constraints")
         if progress is not None:
             progress(ProgressEvent("Simulation", index + 1, count,
-                                   f"hour completed; source time {step.timestamp}; FBS converged={step.power_flow.converged}"))
+                                   f"{step.timestamp} | FBS converged={step.power_flow.converged}",
+                                   hour_finished=True))
         if not step.power_flow.converged and simulation_config.stop_on_power_flow_failure:
             break
 
