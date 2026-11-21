@@ -13,7 +13,7 @@ from math import floor, isfinite
 from multiprocessing import get_context
 from queue import Empty, Full
 from random import Random
-from time import perf_counter
+from time import perf_counter, process_time
 
 from .bess import BESSConfig
 from .fbs import warm_numba
@@ -243,6 +243,7 @@ def _position_from_candidate(candidate, bounds):
 
 def _evaluate(network, profiles, bounds, evaluator, candidate):
     _position_from_candidate(candidate, bounds)
+    started, cpu_started = perf_counter(), process_time()
     evaluation = evaluator(network, profiles, candidate)
     if not isinstance(evaluation, CandidateEvaluation) or evaluation.candidate != candidate:
         raise ValueError("Evaluator must return CandidateEvaluation for the requested candidate")
@@ -253,6 +254,8 @@ def _evaluate(network, profiles, bounds, evaluator, candidate):
             raise ValueError("Evaluator marked infeasible metrics as a feasible candidate")
     else:
         evaluation = replace(evaluation, objective=float("inf"))
+    evaluation.execution_metadata.update(candidate_elapsed_seconds=perf_counter() - started,
+                                         candidate_cpu_seconds=process_time() - cpu_started)
     return evaluation
 
 
@@ -269,19 +272,22 @@ def _without_progress(evaluator):
 
 _WORKER_READINESS = None
 _WORKER_PROGRESS = None
+_WORKER_STUDY = None
 
 
-def _initialize_numba_worker(progress_queue=None):
-    global _WORKER_READINESS, _WORKER_PROGRESS
+def _initialize_numba_worker(progress_queue=None, study=None):
+    global _WORKER_READINESS, _WORKER_PROGRESS, _WORKER_STUDY
+    start = perf_counter()
     _WORKER_PROGRESS = progress_queue
+    _WORKER_STUDY = study
     if progress_queue is not None:
         # A worker may exit while the parent is no longer reading updates.
         progress_queue.cancel_join_thread()
-    _WORKER_READINESS = warm_numba()
+    _WORKER_READINESS = {**warm_numba(), "initializer_seconds": perf_counter() - start}
 
 
-def _evaluate_process(arguments):
-    network, profiles, bounds, evaluator, candidate = arguments
+def _evaluate_process(candidate):
+    network, profiles, bounds, evaluator = _WORKER_STUDY
     if _WORKER_PROGRESS is not None and isinstance(evaluator, SimulationEvaluator):
         last_sent = float("-inf")
 
@@ -298,23 +304,28 @@ def _evaluate_process(arguments):
                 last_sent = now
 
         evaluator = replace(evaluator, progress=report, hourly_progress_only=True)
-        arguments = network, profiles, bounds, evaluator, candidate
-    result = _evaluate(*arguments)
+    started = perf_counter()
+    result = _evaluate(network, profiles, bounds, evaluator, candidate)
     result.execution_metadata.update(backend="numba", worker_pid=__import__("os").getpid(),
-                                     worker_readiness=_WORKER_READINESS)
+                                     worker_readiness=_WORKER_READINESS,
+                                     worker_elapsed_seconds=perf_counter() - started)
     return result
 
 
 def _drain_worker_progress(progress_queue, progress):
     if progress_queue is None:
         return
-    latest = None
+    first_hour = latest = None
     while True:
         try:
             latest = progress_queue.get_nowait()
         except Empty:
             break
-    if latest is not None:
+        if latest.completed == 0 and first_hour is None:
+            first_hour = latest
+    if first_hour is not None:
+        progress(first_hour)
+    if latest is not None and latest is not first_hour:
         progress(latest)
 
 
@@ -354,6 +365,7 @@ def _move_wolves(positions, leaders, bounds, a, rng):
 def optimize(network: NetworkModel, profiles, bounds: OptimizationBounds,
              evaluator: Evaluator, optimizer_config: OptimizerConfig, *, progress=None) -> OptimizationResult:
     """Search B/P/E catalogs with seeded GWO and per-call evaluation caching."""
+    started = perf_counter()
     bounds.validate_network(network)
     if not callable(evaluator):
         raise ValueError("evaluator must be callable")
@@ -375,11 +387,12 @@ def optimize(network: NetworkModel, profiles, bounds: OptimizationBounds,
     progress_queue = context.Queue(maxsize=128) if workers > 1 and progress is not None and isinstance(evaluator, SimulationEvaluator) else None
     worker_evaluator = _without_progress(evaluator) if workers > 1 else evaluator
     executor = None
+    worker_wait_seconds = 0.
     try:
         if workers > 1:
             executor = ProcessPoolExecutor(max_workers=workers, mp_context=context,
                                            initializer=_initialize_numba_worker,
-                                           initargs=(progress_queue,))
+                                           initargs=(progress_queue, (network, profiles, bounds, worker_evaluator)))
         for iteration in range(optimizer_config.max_iterations):
             if progress is not None:
                 progress(ProgressEvent(
@@ -420,17 +433,17 @@ def optimize(network: NetworkModel, profiles, bounds: OptimizationBounds,
                         ))
             elif pending:
                 futures = {
-                    executor.submit(_evaluate_process, (
-                        network, profiles, bounds, worker_evaluator, candidate,
-                    )): (candidate_index, candidate)
+                    executor.submit(_evaluate_process, candidate): (candidate_index, candidate)
                     for candidate_index, candidate in pending
                 }
                 completed_results = {}
                 try:
                     running = set(futures)
                     while running:
+                        waiting_since = perf_counter()
                         ready, running = wait(running, timeout=0.25 if progress_queue is not None else None,
                                               return_when=FIRST_COMPLETED)
+                        worker_wait_seconds += perf_counter() - waiting_since
                         _drain_worker_progress(progress_queue, progress)
                         for future in ready:
                             candidate_index, candidate = futures[future]
@@ -500,8 +513,30 @@ def optimize(network: NetworkModel, profiles, bounds: OptimizationBounds,
         "evaluations": len(evaluations), "unique_candidates": len(cache),
         "cache_evaluations": optimizer_config.cache_evaluations,
         "workers": workers,
+        "search_elapsed_seconds": perf_counter() - started,
+        "parent_wait_seconds": worker_wait_seconds,
+        "cached_or_coalesced_candidates": len(history) * optimizer_config.population_size - len(evaluations),
         "catalog_size": len(bounds.allowed_bus_ids) * len(bounds.power_ratings_kw) * len(bounds.energy_capacities_kwh),
     })
+
+
+def evaluate_finalists(network, profiles, bounds, evaluator, candidates, workers, *, progress=None):
+    """Evaluate exact finalist tuples on the original chronology, in a stable order."""
+    candidates = tuple(candidates)
+    workers = min(workers, len(candidates))
+    if workers <= 1:
+        return [_evaluate(network, profiles, bounds, evaluator, candidate) for candidate in candidates]
+    context = get_context()
+    study = network, profiles, bounds, _without_progress(evaluator)
+    with ProcessPoolExecutor(max_workers=workers, mp_context=context, initializer=_initialize_numba_worker,
+                             initargs=(None, study)) as pool:
+        results = []
+        for index, result in enumerate(pool.map(_evaluate_process, candidates), 1):
+            results.append(result)
+            if progress is not None:
+                progress(ProgressEvent("Annual finalists", index, len(candidates),
+                                       f"Verified annual evaluation at bus {result.candidate.bus_id}", True))
+    return results
 
 
 def exhaustive_search(network: NetworkModel, profiles,

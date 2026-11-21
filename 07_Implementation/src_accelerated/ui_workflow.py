@@ -27,6 +27,7 @@ import numpy as np
 import json
 from .results import export_results, format_summary
 from .simulation import ConstraintAwareDispatch, SimulationConfig, simulate_timeseries
+from .single_bess_search import optimize_fast_verified
 from .progress import ProgressEvent, format_duration
 
 
@@ -521,13 +522,20 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
                         if algorithm == "GA" else values["spin_gwo_iterations"]),
         seed=values["spin_gwo_seed"], workers=values["spin_cpu_workers"] if algorithm == "GWO" else 1)
     stage(f"Running {algorithm}")
+    baseline_result = None
     if algorithm == "GA":
         result = genetic_optimize(study.network, profiles, bounds, evaluator, config,
                                   progress=progress,
                                   crossover_rate=values.get("spin_ga_crossover", 0.8),
                                   mutation_rate=values.get("spin_ga_mutation", 0.12))
+    elif values.get("search_mode") in ("quick", "standard"):
+        result, baseline_result = optimize_fast_verified(
+            study.network, profiles, bounds, evaluator, config, mode=values["search_mode"],
+            clock=study.context.get("Clock") or getattr(study.request, "clock", None),
+            settings=values, stage=stage, progress=progress)
     else:
         result = optimize(study.network, profiles, bounds, evaluator, config, progress=progress)
+        result.metadata["search_mode"] = "thorough full-year"
     result.metadata["best_bess_feasible"] = result.success
     result.metadata["best_bess_annual_cost"] = result.best_objective if result.success else None
     result.metadata["best_bess_candidate"] = asdict(result.best_candidate) if result.best_candidate else None
@@ -537,24 +545,39 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
         for item in result.evaluations
     )
     # A feasible no-storage system is an explicit economic alternative.
-    stage("Evaluating no-BESS annual baseline")
-    baseline_result = simulate_timeseries(study.network, profiles, settings.simulation,
-                                         bess_config=None, dispatch_policy=None, progress=progress)
+    if baseline_result is None:
+        stage("Evaluating no-BESS annual baseline")
+        baseline_started = perf_counter()
+        baseline_result = simulate_timeseries(study.network, profiles,
+                                             with_terminal_policy(settings.simulation, settings.economics),
+                                             bess_config=None, dispatch_policy=None, progress=progress)
+        result.metadata.setdefault("stage_wall_seconds", {})["baseline_seconds"] = perf_counter() - baseline_started
     baseline = None
     best_result = best_metrics = None
     if result.success and result.best_candidate:
         battery = parameters.build_config(result.best_candidate)
         stage("Replaying best evaluated feasible battery for hourly export")
+        replay_started = perf_counter()
         best_result = simulate_timeseries(
             study.network, profiles, with_terminal_policy(settings.simulation, settings.economics),
             battery, dispatch, progress=progress, hourly_progress_only=True)
         if best_result.completed and best_result.converged:
             best_metrics = evaluate_results(best_result, settings.economics, battery)
+        result.metadata.setdefault("stage_wall_seconds", {})["best_replay_seconds"] = perf_counter() - replay_started
         if (best_metrics is None or not best_metrics.feasible or best_metrics.annual_total_cost is None
                 or not isclose(best_metrics.annual_total_cost, result.best_objective, rel_tol=1e-9, abs_tol=1e-6)):
             result.metadata["best_bess_replay_mismatch"] = (
                 "Replay feasibility or annual cost differs from the optimizer evaluation")
             stage(result.metadata["best_bess_replay_mismatch"])
+            result.success = False
+            result.best_candidate = None
+            result.best_objective = float("inf")
+            result.metrics = None
+            result.message = result.metadata["best_bess_replay_mismatch"]
+            result.metadata["best_bess_feasible"] = False
+            result.metadata["best_bess_annual_cost"] = None
+        else:
+            result.metrics = best_metrics
         context["Best BESS replay dispatch timing"] = best_result.dispatch_timing
     if baseline_result.completed and baseline_result.converged:
         baseline = evaluate_results(baseline_result, settings.economics, None)
@@ -585,7 +608,9 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
     result.metadata["decision_message"] = result.message
     timing = {key: sum(item.execution_metadata.get(key, 0) for item in result.evaluations)
               for key in ("planning_seconds", "dispatch_fbs_seconds", "dispatch_fbs_trials", "correction_seconds",
-                          "correction_fbs_trials", "correction_hours", "correction_unresolved_hours")}
+                          "correction_fbs_trials", "correction_hours", "correction_unresolved_hours",
+                          "fbs_calls", "lp_calls", "lp_seconds", "sensitivity_calls", "sensitivity_seconds",
+                          "verified_linear_shortcuts", "candidate_elapsed_seconds", "candidate_cpu_seconds")}
     context["Candidate dispatch timing (summed across workers)"] = timing
     if timing["dispatch_fbs_trials"]:
         stage(f"Candidate scheduling {timing['planning_seconds']:.3f}s; trial FBS "
