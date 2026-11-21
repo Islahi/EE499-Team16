@@ -335,10 +335,15 @@ def _make_result(evaluations, history, iterations, metadata):
 
 
 def _move_wolves(positions, leaders, bounds, a, rng):
+    return move_catalog_wolves(positions, leaders, [len(catalog) for catalog in _catalogs(bounds)], a, rng)
+
+
+def move_catalog_wolves(positions, leaders, sizes, a, rng):
+    """Apply the same seeded GWO movement to an arbitrary catalog vector."""
     new_positions = []
     for position in positions:
         next_position = []
-        for dimension, catalog in enumerate(_catalogs(bounds)):
+        for dimension, size in enumerate(sizes):
             estimates = []
             for leader in leaders:
                 coefficient_a = 2.0 * a * rng.random() - a
@@ -346,7 +351,7 @@ def _move_wolves(positions, leaders, bounds, a, rng):
                 distance = abs(coefficient_c * leader[dimension] - position[dimension])
                 estimates.append(leader[dimension] - coefficient_a * distance)
             coordinate = sum(estimates) / 3.0
-            next_position.append(max(1.0, min(len(catalog), coordinate)))
+            next_position.append(max(1.0, min(size, coordinate)))
         new_positions.append(next_position)
     return new_positions
 

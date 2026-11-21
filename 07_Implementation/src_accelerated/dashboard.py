@@ -8,6 +8,7 @@ from hashlib import file_digest, sha256
 import json
 from math import isfinite
 from pathlib import Path
+import re
 from tempfile import NamedTemporaryFile
 from uuid import uuid4
 from zipfile import ZIP_DEFLATED, ZIP_STORED, ZipFile
@@ -164,7 +165,9 @@ def _scenario(folder, label, static):
         with (folder / "dispatch_events.jsonl").open(encoding="utf-8") as stream:
             events = [json.loads(line) for line in stream if line.strip()]
     return {"label": label, "hours": hourly, "buses": buses, "branches": branches,
-            "metrics": list(_rows(folder / "metrics.csv")), "events": events}
+            "metrics": list(_rows(folder / "metrics.csv")), "events": events,
+            "fleet_units": list(_rows(folder / "bess_units.csv")),
+            "fleet_unit_hours": _entity_columns(folder / "bess_units_hourly.csv", "unit_id", indices)}
 
 
 def _source_files(folder, scenarios):
@@ -184,7 +187,8 @@ def _source_files(folder, scenarios):
 
 def _scenario_folder(folder, name):
     directory = (folder / name).resolve()
-    if name not in (".", "no_bess", "best_bess") or not directory.is_relative_to(folder):
+    allowed = name in (".", "no_bess", "best_bess") or re.fullmatch(r"fleet_[123]_(?:reliability|economics)", name)
+    if not allowed or not directory.is_relative_to(folder):
         raise ValueError("Unexpected report scenario path")
     return directory
 
@@ -198,7 +202,7 @@ def _scenario_blocks(scenario, metadata, add):
     """Keep the summary small and store exact traces behind independent blocks."""
     hours, events, buses = (scenario[name] for name in ("hours", "events", "buses"))
     hour_count = len(hours)
-    has_bess = any(row.get("bess_accepted_soc") is not None for row in hours)
+    has_bess = bool(scenario["fleet_units"]) or any(row.get("bess_accepted_soc") is not None for row in hours)
     minimum_hour = min((row for row in hours if row.get("converged") is not False
                         and row.get("voltage_min_pu") is not None), key=lambda row: row["voltage_min_pu"], default={})
     index = {row["timestamp"]: i for i, row in enumerate(hours)}
@@ -275,6 +279,8 @@ def _scenario_blocks(scenario, metadata, add):
 
     return {
         "label": scenario["label"], "metrics": scenario["metrics"], "hour_count": hour_count,
+        "fleet_units": scenario["fleet_units"],
+        "fleet_unit_blocks": {key: add(value) for key, value in scenario["fleet_unit_hours"].items()},
         "first": hours[0] if hours else None, "has_bess": has_bess, "diagnostic": diagnostic,
         "shedding_ranking": shedding_ranking,
         "hours_block": add(hours) if hours else None,
@@ -355,7 +361,9 @@ def regenerate_dashboard(run_folder):
                "infeasible_count": sum(item.get("feasible") is False for item in evaluations),
                "evaluation_block": add(evaluations) if evaluations else None,
                "convergence": list(_rows(folder / "convergence.csv")),
-               "economic_comparison": list(_rows(folder / "economic_comparison.csv"))}
+               "economic_comparison": list(_rows(folder / "economic_comparison.csv")),
+               "fleet_comparison": list(_rows(folder / "fleet_comparison.csv")),
+               "fleet_locations": list(_rows(folder / "location_screening.csv"))}
     raw_size, packed = _pack(payload)
     template = (ASSETS / "dashboard.html").read_text(encoding="utf-8")
     replacements = {

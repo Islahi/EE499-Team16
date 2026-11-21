@@ -6,7 +6,7 @@ from pathlib import Path
 from collections.abc import Mapping
 import json
 
-from .metrics import PerformanceMetrics, percentage_reduction
+from .metrics import PerformanceMetrics, capital_recovery_factor, percentage_reduction
 from .optimizer import OptimizationResult
 from .simulation import TimeSeriesSimulationResult
 
@@ -176,11 +176,12 @@ def _hourly_rows(result):
             sum(point.p_load_kw.values()), sum(point.p_pv_kw.values()),
             flow.slack_p_kw, flow.slack_q_kvar, flow.total_loss_p_kw,
             min(flow.voltage_mag_pu.values(), default=None), max(flow.voltage_mag_pu.values(), default=None),
-            step.bess_request_kw, battery.actual_power_kw if battery is not None else None,
+            step.bess_request_kw, battery.actual_power_kw if battery is not None else (
+                sum(record.battery.actual_power_kw for record in step.fleet_units) if step.fleet_units else None),
             battery.soc_before if battery is not None else None,
             step.bess_state.soc if step.bess_state is not None else None,
             step.bess_state.energy_kwh if step.bess_state is not None else None,
-            battery.limited if battery is not None else None,
+            battery.limited if battery is not None else (any(record.battery.limited for record in step.fleet_units) if step.fleet_units else None),
             battery.limit_reason if battery is not None else None,
             step.curtailment_kw, step.shedding_kw, step.reserve_power_kw,
             step.reserve_power_shortfall_kw, step.reserve_energy_shortfall_kwh,
@@ -219,7 +220,41 @@ def _branch_rows(result):
             yield [index, str(step.timestamp), line_id, flow.converged, step.feasible,
                    not flow.converged, flow.branch_current_a[line_id],
                    flow.branch_p_kw.get(line_id), flow.branch_q_kvar.get(line_id),
-                   flow.line_loss_p_kw.get(line_id), flow.line_loss_q_kvar.get(line_id)]
+                   flow.line_loss_p_kw.get(line_id), flow.line_loss_q_kvar.get(line_id),
+                   (step.pre_control_branch_current_a or {}).get(line_id),
+                   (step.pre_control_branch_p_kw or {}).get(line_id), (step.pre_control_branch_q_kvar or {}).get(line_id)]
+
+
+def _unit_rows(result):
+    for index, step in enumerate(result.steps):
+        for record in step.fleet_units:
+            battery = record.battery
+            accepted = step.power_flow.converged
+            yield [index, str(step.timestamp), record.unit_id, record.bus_id, record.requested_kw,
+                   battery.actual_power_kw if accepted else None, record.reactive_kvar if accepted else None,
+                   battery.soc_before, battery.soc_after if accepted else None, battery.energy_before_kwh,
+                   battery.energy_after_kwh if accepted else None, record.reserve_kw, record.reserve_energy_kwh,
+                   record.dispatchable_kw, record.dispatchable_kwh, record.terminal_target_soc,
+                   battery.limited, battery.limit_reason, step.feasible]
+
+
+def _unit_summary(result, economics):
+    dt = result.dt_hours
+    for unit in result.fleet_configuration.units:
+        config = unit.config
+        records = [record for step in result.steps if step.power_flow.converged
+                   for record in step.fleet_units if record.unit_id == unit.unit_id]
+        charge = sum(max(0., -record.battery.actual_power_kw) * dt for record in records)
+        discharge = sum(max(0., record.battery.actual_power_kw) * dt for record in records)
+        capex = (economics["cost_per_kwh"] * config.energy_capacity_kwh + economics["cost_per_kw"] * config.power_rating_kw +
+                 economics.get("fixed_installation_cost", 0.) if economics.get("cost_per_kwh") is not None and
+                 economics.get("cost_per_kw") is not None else None)
+        annual = (capex * (capital_recovery_factor(economics["discount_rate"], economics["lifetime_years"]) +
+                           economics["annual_om_fraction"]) if capex is not None else None)
+        end = result.final_fleet_states.get(unit.unit_id)
+        yield [unit.unit_id, config.bus_id, config.power_rating_kw, config.energy_capacity_kwh, config.eta_charge,
+               config.eta_discharge, config.soc_min, config.soc_max, config.soc_initial, unit.target_soc,
+               end.soc if end else None, charge, discharge, charge + discharge, capex, annual]
 
 
 EVALUATION_HEADER = [
@@ -268,6 +303,13 @@ def _dispatch_rows(result, baseline, context):
             continue
         matched = baseline.steps[index] if baseline is not None else None
         row = asdict(event)
+        if step.fleet_units:
+            row["fleet_units"] = [{"unit_id": record.unit_id, "bus_id": record.bus_id, "requested_kw": record.requested_kw,
+                                   "accepted_kw": record.battery.actual_power_kw if step.power_flow.converged else None,
+                                   "accepted_kvar": record.reactive_kvar if step.power_flow.converged else None,
+                                   "soc": record.battery.soc_after if step.power_flow.converged else None,
+                                   "reserve_kw": record.reserve_kw, "limit_reason": record.battery.limit_reason}
+                                  for record in step.fleet_units]
         row.update(step_index=index, timestamp=str(step.timestamp), run_id=context.get("Run ID"),
                    scenario=context.get("Alternative", "Simulation"),
                    source=event.source or context.get("Active input source"),
@@ -346,8 +388,17 @@ def export_results(result: Result, output_path: str | Path, *,
         ], _bus_rows(result))
         write_table("branches.csv", [
             "step_index", "timestamp", "line_id", "converged", "step_feasible", "diagnostic_only",
-            "current_a", "sending_p_kw", "sending_q_kvar", "loss_p_kw", "loss_q_kvar",
+            "current_a", "sending_p_kw", "sending_q_kvar", "loss_p_kw", "loss_q_kvar", "pre_control_current_a",
+            "pre_control_sending_p_kw", "pre_control_sending_q_kvar",
         ], _branch_rows(result))
+        if result.fleet_configuration is not None:
+            write_table("bess_units_hourly.csv", ["step_index", "timestamp", "unit_id", "bus_id", "requested_kw",
+                "accepted_kw", "accepted_kvar", "soc_before", "soc_after", "energy_before_kwh", "energy_after_kwh",
+                "reserve_kw", "reserve_energy_kwh", "dispatchable_kw", "dispatchable_kwh", "terminal_target_soc",
+                "limited", "limit_reason", "feasible"], _unit_rows(result))
+            write_table("bess_units.csv", ["unit_id", "bus_id", "power_kw", "energy_kwh", "eta_charge", "eta_discharge",
+                "soc_min", "soc_max", "soc_initial", "terminal_target_soc", "final_soc", "charge_kwh", "discharge_kwh",
+                "throughput_kwh", "capex_usd", "annualized_cost_usd"], _unit_summary(result, (context or {}).get("Economic inputs", {})))
     if isinstance(result, OptimizationResult):
         write_table("evaluations.csv", EVALUATION_HEADER,
                     (_evaluation_row(index, item) for index, item in enumerate(result.evaluations)))

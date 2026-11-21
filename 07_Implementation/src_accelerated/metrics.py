@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from math import isfinite
 
-from .bess import BESSConfig
+from .bess import BESSConfig, BESSFleet
 from .simulation import TimeSeriesSimulationResult
 
 
@@ -137,7 +137,7 @@ def _control_values(steps, supplied_values, name):
 
 def evaluate_results(simulation_result: TimeSeriesSimulationResult,
                      economic_config: EconomicConfig,
-                     bess_config: BESSConfig | None = None,
+                     bess_config: BESSConfig | BESSFleet | None = None,
                      *, curtailment_kw: Sequence[float] | None = None,
                      shedding_kw: Sequence[float] | None = None) -> PerformanceMetrics:
     """Summarize a completed, converged run without changing engineering state.
@@ -159,10 +159,13 @@ def evaluate_results(simulation_result: TimeSeriesSimulationResult,
     if dt_hours == 0:
         raise ValueError("dt_hours must be greater than zero")
 
-    has_bess = any(step.bess_step is not None for step in steps)
-    if has_bess and bess_config is None:
+    fleet = bess_config if isinstance(bess_config, BESSFleet) else None
+    units = [(unit.unit_id, unit.config, unit.target_soc) for unit in fleet.units] if fleet is not None else (
+        [(None, bess_config, bess_config.soc_initial)] if bess_config is not None else [])
+    has_bess = any(step.bess_step is not None or step.fleet_units for step in steps)
+    if has_bess and not units:
         raise ValueError("Supply the BESS configuration used for this simulation")
-    if not has_bess and bess_config is not None:
+    if not has_bess and units:
         raise ValueError("BESS configuration supplied for a simulation without a BESS")
     curtailment_kw = _control_values(steps, curtailment_kw, "curtailment_kw")
     shedding_kw = _control_values(steps, shedding_kw, "shedding_kw")
@@ -203,12 +206,14 @@ def evaluate_results(simulation_result: TimeSeriesSimulationResult,
             metrics.voltage_violation_bus_hours += len(step.voltage_violations) * dt_hours
         if step.reserve_power_shortfall_kw > 1e-9 or step.reserve_energy_shortfall_kwh > 1e-9:
             metrics.reserve_violation_hours += dt_hours
-        if step.bess_step is not None:
-            actual_kw = step.bess_step.actual_power_kw
+        batteries = (record.battery for record in step.fleet_units) if fleet is not None else (
+            (step.bess_step,) if step.bess_step is not None else ())
+        for battery in batteries:
+            actual_kw = battery.actual_power_kw
             metrics.bess_charge_energy_kwh += max(-actual_kw, 0.0) * dt_hours
             metrics.bess_discharge_energy_kwh += max(actual_kw, 0.0) * dt_hours
-            hour_soc_min = min(step.bess_step.soc_before, step.bess_state.soc)
-            hour_soc_max = max(step.bess_step.soc_before, step.bess_state.soc)
+            hour_soc_min = min(battery.soc_before, battery.soc_after)
+            hour_soc_max = max(battery.soc_before, battery.soc_after)
             if metrics.bess_soc_min is None:
                 metrics.bess_soc_min = hour_soc_min
                 metrics.bess_soc_max = hour_soc_max
@@ -221,11 +226,9 @@ def evaluate_results(simulation_result: TimeSeriesSimulationResult,
             metrics.bess_cost = None
             metrics.notes.append("BESS cost unavailable: supply both economic coefficients.")
         else:
-            metrics.bess_cost = (
-                economic_config.cost_per_kwh * bess_config.energy_capacity_kwh
-                + economic_config.cost_per_kw * bess_config.power_rating_kw
-                + economic_config.fixed_installation_cost
-            )
+            metrics.bess_cost = sum(economic_config.cost_per_kwh * battery.energy_capacity_kwh
+                + economic_config.cost_per_kw * battery.power_rating_kw + economic_config.fixed_installation_cost
+                for _, battery, _ in units)
     try:
         weights = validate_annual_inputs([step.timestamp for step in steps], economic_config, dt_hours)
     except ValueError as error:
@@ -248,13 +251,17 @@ def evaluate_results(simulation_result: TimeSeriesSimulationResult,
             metrics.annual_shedding_cost = sum(w*p*dt_hours for w,p in zip(weights,shedding_kw)) * economic_config.shedding_penalty_per_kwh
         metrics.annual_terminal_energy_cost = 0.
         if has_bess:
-            start = bess_config.energy_capacity_kwh * bess_config.soc_initial
-            end = simulation_result.final_bess_state.energy_kwh
-            metrics.final_soc_deviation = (end-start)/bess_config.energy_capacity_kwh
+            endpoints = [(battery, target, (simulation_result.final_fleet_states[unit_id] if unit_id is not None
+                         else simulation_result.final_bess_state)) for unit_id, battery, target in units]
+            deviations = [state.soc - target for _, target, state in endpoints]
+            metrics.final_soc_deviation = max(deviations, key=abs)
             if economic_config.annual_day_weights:
-                terminal_ok = all(abs(steps[i].bess_step.soc_before-bess_config.soc_initial) <= economic_config.terminal_soc_tolerance
-                    and abs(steps[i+23].bess_state.soc-bess_config.soc_initial) <= economic_config.terminal_soc_tolerance
-                    for i in range(0, len(steps), 24) if weights[i] > 0)
+                terminal_ok = all(abs(first.soc_before - battery.soc_initial) <= economic_config.terminal_soc_tolerance
+                    and abs(last.soc_after - target) <= economic_config.terminal_soc_tolerance
+                    for i in range(0, len(steps), 24) if weights[i] > 0
+                    for j, (_, battery, target) in enumerate(units)
+                    for first, last in [(steps[i].fleet_units[j].battery, steps[i+23].fleet_units[j].battery)
+                                        if fleet is not None else (steps[i].bess_step, steps[i+23].bess_step)])
             else:
                 terminal_ok = abs(metrics.final_soc_deviation) <= economic_config.terminal_soc_tolerance
             if economic_config.terminal_policy == "equal_soc" or economic_config.annual_day_weights:
@@ -265,8 +272,10 @@ def evaluate_results(simulation_result: TimeSeriesSimulationResult,
                 price = economic_config.terminal_energy_price_per_kwh
                 if price is None:
                     raise ValueError("Priced terminal policy requires an explicit terminal energy price")
-                metrics.annual_terminal_energy_cost = (max(0.,start-end)/bess_config.eta_charge*price
-                    - max(0.,end-start)*bess_config.eta_discharge*economic_config.grid_export_tariff_per_kwh)
+                metrics.annual_terminal_energy_cost = sum(
+                    max(0., battery.energy_capacity_kwh * battery.soc_initial - state.energy_kwh) / battery.eta_charge * price
+                    - max(0., state.energy_kwh - battery.energy_capacity_kwh * battery.soc_initial) * battery.eta_discharge
+                        * economic_config.grid_export_tariff_per_kwh for battery, _, state in endpoints)
         components = (metrics.annualized_bess_cost, metrics.annual_grid_cost,
                       metrics.annual_curtailment_cost, metrics.annual_shedding_cost, metrics.annual_terminal_energy_cost)
         if all(v is not None for v in components):

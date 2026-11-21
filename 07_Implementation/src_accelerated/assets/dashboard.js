@@ -244,12 +244,13 @@ function payloadFromHtml(source) {
     if (!blocks) {
       blocks = new Map();
       const headers = /<script id="report-block-(\d+)" type="application\/octet-stream"[^>]*>/g;
+      const closingTag = "<" + "/script>"; // Keep the surrounding inline script open.
       let header;
       while ((header = headers.exec(source))) {
-        const end = source.indexOf("</script>", headers.lastIndex);
+        const end = source.indexOf(closingTag, headers.lastIndex);
         if (end < 0) break;
         blocks.set(Number(header[1]), [headers.lastIndex, end]);
-        headers.lastIndex = end + 9;
+        headers.lastIndex = end + closingTag.length;
       }
     }
     if (!blocks.has(id)) throw Error("The saved report is missing data block " + id);
@@ -304,8 +305,8 @@ function pickRun(index) {
   state.run = index;
   $("run").value = String(index);
   const keys = Object.keys(current().scenarios);
-  const requested = current().metadata.optimizer?.no_bess_selected ? "no_bess" :
-    (keys.includes("best_bess") && current().metadata.optimizer?.best_bess_feasible ? "best_bess" : keys[0]);
+  const requested = current().metadata.optimizer?.selected_scenario || (current().metadata.optimizer?.no_bess_selected ? "no_bess" :
+    (keys.includes("best_bess") && current().metadata.optimizer?.best_bess_feasible ? "best_bess" : keys[0]));
   const choice = $("scenario");
   choice.replaceChildren(...keys.map(key => new Option(current().scenarios[key].label, key)));
   state.hour = 0;
@@ -456,7 +457,7 @@ function currency(value) {
 
 function selectedOutcome(run) {
   const optimizer = run.metadata.optimizer;
-  if (!optimizer) return active().label;
+  if (!optimizer) return (active().fleet_units?.length ?? 0) > 1 ? `${active().fleet_units.length} installed batteries` : active().label;
   if (optimizer.no_bess_selected) return "No BESS";
   return optimizer.best_bess_feasible ? batteryName(optimizer.best_bess_candidate) : "No feasible design";
 }
@@ -711,7 +712,8 @@ function network(root) {
       const valid = validHour && !values.diagnostic_only;
       const band = !valid ? "?" : series?.[0]?.[offset] ?? (!number(voltage) || !number(low) || !number(high) ? "?" :
         voltage < low ? "L" : voltage > high ? "H" : "N");
-      const pv = run.metadata.pv_buses?.includes(bus.bus_id), bess = installed?.bus_id === bus.bus_id;
+      const pv = run.metadata.pv_buses?.includes(bus.bus_id), bess = installed?.bus_id === bus.bus_id ||
+        scenario.fleet_units?.some(unit => unit.bus_id === bus.bus_id);
       ctx.fillStyle = overlay.value === "resources" ? (bess ? "#79568c" : pv ? "#087c80" : "#879aa2") :
         overlay.value === "shedding" ? (shed > 0 && valid ? "#79568c" : "#879aa2") :
         band === "L" ? "#b56a05" : band === "H" ? "#b84c37" :
@@ -1218,6 +1220,7 @@ function simulation(root) {
 
 async function bess(root) {
   const scenario = active();
+  if (scenario.fleet_units?.length) return fleetBattery(root, scenario);
   const run = current();
   const metrics = metricsOf(scenario.metrics);
   const candidate = state.scenario === "best_bess" ? run.metadata.optimizer?.best_bess_candidate :
@@ -1299,6 +1302,51 @@ async function bess(root) {
   choose.addEventListener("change", plotBattery);
   state.hourChanged = showHour;
   plotBattery();
+}
+
+function fleetBattery(root, scenario) {
+  const units = scenario.fleet_units;
+  const summary = section(root, "Installed fleet");
+  cards(summary, [["Battery sites", units.length], ["Fleet power (kW)", units.reduce((sum, unit) => sum + unit.power_kw, 0)],
+    ["Fleet capacity (kWh)", units.reduce((sum, unit) => sum + unit.energy_kwh, 0)]]);
+  table(summary, ["Unit", "Bus", "Rated kW", "Rated kWh", "Final SOC (%)", "Throughput (kWh)", "CAPEX (USD)"],
+    units.map(unit => [unit.unit_id, unit.bus_id, unit.power_kw, unit.energy_kwh,
+      number(unit.final_soc) ? unit.final_soc * 100 : null, unit.throughput_kwh, unit.capex_usd]));
+  const controls = el("div", undefined, "chart-controls");
+  const choice = select(units.map(unit => [unit.unit_id, unit.unit_id + " · bus " + unit.bus_id]));
+  const metric = select([["soc", "State of charge (%)"], ["power", "Dispatch (kW)"], ["reserve", "Reserve (kW)"]]);
+  controls.append(label("Unit", choice), label("Series", metric));
+  root.append(controls);
+  const plotBox = el("div"), hourBox = el("div");
+  root.append(plotBox, hourBox);
+  let request = 0;
+  async function draw() {
+    const token = ++request;
+    const columns = await block(scenario.run, scenario.fleet_unit_blocks[choice.value]);
+    if (!columns || !root.isConnected || token !== request) return;
+    const unit = units.find(item => item.unit_id === choice.value);
+    plotBox.replaceChildren();
+    const fields = metric.value === "soc" ? [["End SOC", "soc_after"]] : metric.value === "power" ?
+      [["Requested", "requested_kw"], ["Accepted", "accepted_kw"]] : [["Retained reserve", "reserve_kw"], ["Dispatchable", "dispatchable_kw"]];
+    plot(plotBox, fields.map(([name, key]) => ({label: name, points: scenario.hours.map((row, index) => ({
+      label: row.timestamp, timestamp: row.timestamp, value: number(columns[key]?.[index]) ?
+        columns[key][index] * (metric.value === "soc" ? 100 : 1) : null}))})), metric.selectedOptions[0].textContent, true);
+    function inspect() {
+      hourBox.replaceChildren();
+      const record = entityValues(columns, state.hour);
+      kv(hourBox, [["Requested / accepted (kW)", fmt(record.requested_kw) + " / " + fmt(record.accepted_kw)],
+        ["Accepted reactive power (kvar)", record.accepted_kvar], ["Reserve (kW)", record.reserve_kw],
+        ["Reserve energy (kWh)", record.reserve_energy_kwh], ["Dispatchable energy (kWh)", record.dispatchable_kwh],
+        ["Annualized ownership (USD/year)", unit.annualized_cost_usd], ["Final SOC target (%)", unit.terminal_target_soc * 100],
+        ["Hour limit", record.limit_reason]]);
+      state.redraw?.();
+    }
+    state.hourChanged = inspect;
+    inspect();
+  }
+  function update() { draw().catch(error => note(plotBox, error.message)); }
+  [choice, metric].forEach(control => control.addEventListener("change", update));
+  update();
 }
 
 function economicAlternatives(root) {
@@ -1410,6 +1458,7 @@ function economics(root, printable = false) {
 function optimization(root) {
   const run = current();
   const meta = run.metadata.optimizer;
+  if (meta?.fleet) fleetComparison(root, run);
   const count = run.candidate_count ?? run.evaluations?.length ?? null;
   const feasible = run.feasible_count ?? run.evaluations?.filter(candidate => candidate.feasible === true).length ?? null;
   const infeasible = run.infeasible_count ?? run.evaluations?.filter(candidate => candidate.feasible === false).length ?? null;
@@ -1433,6 +1482,33 @@ function optimization(root) {
   if (count) advanced(root, "Explore all candidates", async body => {
     const evaluations = run.evaluations || await block(run, run.evaluation_block);
     if (body.isConnected) candidateExplorer(body, run, evaluations);
+  });
+}
+
+function fleetComparison(root, run) {
+  const saved = run.metadata.optimizer.fleet;
+  const pane = section(root, "Verified fleet comparison");
+  note(pane, (saved.annual_verified ? "Full calendar year" : "Reduced-horizon comparison") + " · " +
+    saved.search.capacity_mode + " capacity · " + fmt(saved.global_reserve_kw) + " kW global reserve");
+  table(pane, ["Ranking", "Units", "Feasible", "Buses", "Fleet kW", "Fleet kWh", "Shedding (MWh)", "Reduction (%)", "Modeled cost (USD)"],
+    (run.fleet_comparison || []).map(row => [nameOf(row.objective), row.unit_count, row.verified_feasible, row.buses,
+      row.total_kw, row.total_kwh, row.shedding_mwh, row.shedding_reduction_percent, row.cost_usd]));
+  advanced(pane, "Search stages, scope and exact comparison metrics", body => {
+    kv(body, [["Worker count", saved.workers], ["Candidate sites", saved.candidate_sites.join(", ")],
+      ["Candidate-hours screened", saved.stage_a_candidate_hours], ["Candidate-hours verified", saved.stage_b_candidate_hours],
+      ["Stage A seconds", saved.stage_a_wall_seconds], ["Stage B seconds", saved.stage_b_wall_seconds]]);
+    if (saved.windows?.length) table(body, ["First hour", "Last hour", "Hours", "Clock", "Selection", "SOC"],
+      saved.windows.map(window => [window.start, window.last_hour, window.hours, window.clock, window.rule, window.SOC]));
+    details(body, "All verification metrics", run.fleet_comparison);
+    details(body, "Network location scores", run.fleet_locations);
+    for (const objective of ["reliability", "economics"]) {
+      const histories = Object.entries(saved.gwo_history || {}).filter(([key]) => key.endsWith(":" + objective));
+      if (!histories.length) continue;
+      const title = (saved.search.screened ? "Stage A screening · " : "Full-horizon search · ") +
+        (objective === "reliability" ? "Unserved energy (kWh)" : "Cost (USD)");
+      plot(body, histories.map(([key, history]) => ({label: key.split(":")[0] + " BESS", points: history.map((value, index) =>
+        ({label: String(index + 1), timestamp: "", value}))})), title);
+    }
   });
 }
 

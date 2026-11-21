@@ -203,15 +203,18 @@ class NetworkScene(QGraphicsScene):
             self.add_label(node, name, -175 if left else 145, port - 8)
 
     def draw_network(self, network, voltages=None, bounds=(0.95, 1.05), bess_bus=None,
-                     show_properties=False, step=None, bess_ratings=None):
+                     show_properties=False, step=None, bess_ratings=None, bess_sites=None):
         selected = next(((item.data(1), item.data(0) if item.data(1) == "bus" else item.data(2))
                          for item in self.selectedItems()), None)
         self.clear()
         self.bus_items.clear()
         self.line_items.clear()
+        ratings = dict(bess_sites or {})
+        if bess_bus is not None:
+            ratings[bess_bus] = bess_ratings
         self.layout = build_layout(network, self.branch_sides,
                                    show_properties=show_properties, show_results=step is not None,
-                                   bess_bus=bess_bus)
+                                   bess_buses=ratings)
         good_result = step is not None and step.power_flow.converged
         if good_result:
             voltages = step.power_flow.voltage_mag_pu
@@ -313,8 +316,9 @@ class NetworkScene(QGraphicsScene):
             if show_properties:
                 inputs = [f"B{bus_id}: Load {sum(l.p_base_kw for l in loads):g} kW / {sum(l.q_base_kvar for l in loads):g} kvar",
                           f"PV rating {sum(u.p_rated_kw for u in units):g} kW"]
-                if bus_id == bess_bus and bess_ratings is not None:
-                    inputs.append(f"BESS {bess_ratings[0]:g} kW / {bess_ratings[1]:g} kWh")
+                if ratings.get(bus_id) is not None:
+                    power, energy = ratings[bus_id]
+                    inputs.append(f"BESS {power:g} kW / {energy:g} kWh")
             if step is not None:
                 if good_result:
                     op = step.operating_point

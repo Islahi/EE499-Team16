@@ -22,12 +22,13 @@ from PySide6.QtWidgets import (
     QPushButton, QSizePolicy, QSpinBox, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
-from .bess import BESSConfig
+from .bess import BESSConfig, BESSFleet, FleetUnit
 from .fbs import FBSConfig, warm_numba
 from .metrics import EconomicConfig, validate_annual_inputs
 from .network_diagram import NetworkScene, NetworkView
 from .network_loader import load_network
 from .optimizer import BESSParameters, OptimizationResult
+from .fleet_optimizer import FleetSearchConfig
 from .simulation import ConstraintAwareDispatch, SimulationConfig, TimeSeriesSimulationResult
 from .forecasting import ForecastConfig
 from .progress import StageReporter, format_duration
@@ -43,7 +44,9 @@ from .ui_workflow import (
 
 
 ASSETS = Path(__file__).resolve().parent / "assets"
-REPO = Path(__file__).resolve().parents[2]
+FROZEN = getattr(sys, "frozen", False)
+REPO = Path(sys.executable).resolve().parent if FROZEN else Path(__file__).resolve().parents[2]
+RESULTS_ROOT = (REPO if FROZEN else Path(__file__).resolve().parent) / "Results"
 
 
 class FormLoader(QUiLoader):
@@ -625,6 +628,9 @@ class SettingsDialog(QDialog):
         values["chk_tariffs_confirmed"] = widget(self,"chk_tariffs_confirmed").isChecked()
         values["optimizer_algorithm"] = widget(self, "combo_optimizer_algorithm").currentData()
         values["terminal_policy"] = widget(self, "combo_terminal_policy").currentData()
+        values["manual_fleet"] = widget(self, "edit_manual_fleet").text().strip()
+        for key in ("count", "capacity", "objective", "speed"):
+            values[f"fleet_{key}_index"] = widget(self, f"combo_fleet_{key}").currentIndex()
         return values
 
     def restore_values(self):
@@ -649,6 +655,9 @@ class SettingsDialog(QDialog):
         widget(self,"chk_tariffs_confirmed").setChecked(self.committed.get("chk_tariffs_confirmed",False))
         terminal = widget(self, "combo_terminal_policy")
         terminal.setCurrentIndex(max(0, terminal.findData(self.committed.get("terminal_policy", "equal_soc"))))
+        widget(self, "edit_manual_fleet").setText(self.committed.get("manual_fleet", ""))
+        for key in ("count", "capacity", "objective", "speed"):
+            widget(self, f"combo_fleet_{key}").setCurrentIndex(self.committed.get(f"fleet_{key}_index", 0))
         self.update_optional_controls()
         self.update_dispatch()
         self.update_compute_status()
@@ -712,13 +721,28 @@ class SettingsDialog(QDialog):
                                         values["spin_soc_min_percent"] / 100, values["spin_soc_max_percent"] / 100,
                                         values["spin_soc_initial_percent"] / 100)
             if values["group_manual_bess"] and not optimization:
-                if self.network is None or values["bess_bus"] not in {bus.bus_id for bus in self.network.buses}:
+                if values["manual_fleet"]:
+                    if self.network is None:
+                        raise ValueError("Load a network before specifying fleet installation buses")
+                    units = []
+                    for entry in values["manual_fleet"].split(";"):
+                        parts = entry.split(",")
+                        if len(parts) != 3:
+                            raise ValueError("Enter each fleet unit as bus, kW, kWh, with semicolons between units")
+                        bus, power, energy = int(parts[0]), float(parts[1]), float(parts[2])
+                        if bus not in {item.bus_id for item in self.network.buses if not item.is_slack}:
+                            raise ValueError(f"Bus {bus} is not an eligible fleet installation site")
+                        units.append(FleetUnit(f"B{bus}", BESSConfig(bus, energy, power, parameters.soc_min,
+                            parameters.soc_max, parameters.soc_initial, parameters.eta_charge, parameters.eta_discharge)))
+                    battery = BESSFleet(tuple(units))
+                elif self.network is None or values["bess_bus"] not in {bus.bus_id for bus in self.network.buses}:
                     raise ValueError("Choose an installation bus from the loaded network")
-                if values["spin_bess_power_kw"] <= 0 or values["spin_bess_energy_kwh"] <= 0:
+                elif values["spin_bess_power_kw"] <= 0 or values["spin_bess_energy_kwh"] <= 0:
                     raise ValueError("Manual battery kW and kWh must be positive")
-                battery = BESSConfig(values["bess_bus"], values["spin_bess_energy_kwh"], values["spin_bess_power_kw"],
-                                     parameters.soc_min, parameters.soc_max, parameters.soc_initial,
-                                     parameters.eta_charge, parameters.eta_discharge)
+                else:
+                    battery = BESSConfig(values["bess_bus"], values["spin_bess_energy_kwh"], values["spin_bess_power_kw"],
+                                         parameters.soc_min, parameters.soc_max, parameters.soc_initial,
+                                         parameters.eta_charge, parameters.eta_discharge)
         if optimization:
             if dispatch is None or economics.cost_per_kw is None or economics.cost_per_kwh is None:
                 raise ValueError("Optimization requires active dispatch and both economic cost coefficients")
@@ -726,6 +750,18 @@ class SettingsDialog(QDialog):
                 raise ValueError("Enter import/export tariffs and confirm the explicit values before economic optimization")
             if not values["allowed_buses"]:
                 raise ValueError("Select allowed battery buses")
+            if values["group_fleet_study"]:
+                count = values["fleet_count_index"]
+                values["fleet_search"] = asdict(FleetSearchConfig(
+                    counts=(1, 2, 3) if not count else (count,),
+                    capacity_mode="flexible" if values["fleet_capacity_index"] else "equal",
+                    objective="economics" if values["fleet_objective_index"] else "reliability",
+                    total_kw=values["spin_fleet_total_kw"], total_kwh=values["spin_fleet_total_kwh"],
+                    capital_budget=values["spin_fleet_capex"] or None, annual_cost_budget=values["spin_fleet_annual"] or None,
+                    screened=not values["fleet_speed_index"], top_k=values["spin_fleet_sites"], exploration=values["spin_fleet_explore"],
+                    window_count=values["spin_fleet_windows"], window_days=values["spin_fleet_window_days"],
+                    finalists=values["spin_fleet_finalists"]))
+                values["optimizer_algorithm"] = "GWO"
             for quantity, unit in (("power", "kw"), ("energy", "kwh")):
                 try:
                     size_catalog(*(values[f"spin_opt_{quantity}_{field}_{unit}"]
@@ -1140,7 +1176,7 @@ class MainWindow(QMainWindow):
             def create_new():
                 if QMessageBox.question(dialog,"Create new study","Copy compatible inputs to a new study with Numba and approved forecasts? Historical outputs remain read-only.") != QMessageBox.StandardButton.Yes: return
                 try:
-                    self.study,self.session = migrate_inputs(historical,Path(__file__).resolve().parent/"Results")
+                    self.study,self.session = migrate_inputs(historical,RESULTS_ROOT)
                     self.settings_dialog.set_network(self.study.network)
                     self.sync_time_controls();self.invalidate_results("Inputs migrated to new study ID; configure economics anew")
                     self.arrange_network_view();self.set_busy(False);dialog.accept()
@@ -1190,6 +1226,9 @@ class MainWindow(QMainWindow):
             return self.report.result.steps
         if isinstance(self.report, BaseCaseReport):
             return [self.report.step]
+        if self.report and isinstance(self.report.result, OptimizationResult) and self.report.result.metadata.get("fleet"):
+            key = self.report.result.metadata["selected_scenario"]
+            return self.report.alternatives[key][0].steps
         return []
 
     def selected_step(self):
@@ -1205,15 +1244,25 @@ class MainWindow(QMainWindow):
         values = self.settings_dialog.committed
         bess_bus = values["bess_bus"] if values["group_manual_bess"] else None
         bess_ratings = (values["spin_bess_power_kw"], values["spin_bess_energy_kwh"]) if bess_bus is not None else None
+        bess_sites = {}
+        if self.report and isinstance(self.report.result, TimeSeriesSimulationResult) and self.report.result.fleet_configuration:
+            bess_sites = {unit.config.bus_id: (unit.config.power_rating_kw, unit.config.energy_capacity_kwh)
+                          for unit in self.report.result.fleet_configuration.units}
+            bess_bus = None
+        if self.report and isinstance(self.report.result, OptimizationResult) and self.report.result.metadata.get("fleet"):
+            bess_bus = None
         if self.report and isinstance(self.report.result, OptimizationResult) and self.report.result.best_candidate:
             candidate = self.report.result.best_candidate
-            bess_bus = candidate.bus_id
-            bess_ratings = candidate.power_rating_kw, candidate.energy_capacity_kwh
+            if hasattr(candidate, "units"):
+                bess_sites = {unit.bus_id: (unit.power_rating_kw, unit.energy_capacity_kwh) for unit in candidate.units}
+            else:
+                bess_bus = candidate.bus_id
+                bess_ratings = candidate.power_rating_kw, candidate.energy_capacity_kwh
         step = self.selected_step() if widget(self, "chk_network_results").isChecked() else None
         self.scene.draw_network(
             self.study.network, bounds=(values["spin_voltage_min_pu"], values["spin_voltage_max_pu"]),
             bess_bus=bess_bus, show_properties=widget(self, "chk_network_properties").isChecked(),
-            step=step, bess_ratings=bess_ratings)
+            step=step, bess_ratings=bess_ratings, bess_sites=bess_sites)
         if step is None:
             self.diagram_status.setText("Result labels hidden" if self.simulation_steps() else "No retained network results")
         else:
@@ -1341,7 +1390,7 @@ class MainWindow(QMainWindow):
                            or study_fingerprint(next_study) != self.session.manifest["fingerprint"])
             if new_session:
                 self.session = StudySession.create(
-                    next_study, Path(__file__).resolve().parent / "Results",
+                    next_study, RESULTS_ROOT,
                 )
 
             self.study = next_study
@@ -1714,6 +1763,7 @@ class MainWindow(QMainWindow):
 
 def main():
     app = QApplication.instance() or QApplication(sys.argv)
+    app.setWindowIcon(QIcon(str(ASSETS / "icons" / "bess.ico")))
     window = MainWindow()
     window.show()
     return app.exec()

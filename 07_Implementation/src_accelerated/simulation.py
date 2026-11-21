@@ -5,13 +5,14 @@ from dataclasses import asdict, dataclass, field, replace
 from math import isfinite
 
 from .fbs import FBSConfig, OperatingPoint, PowerFlowResult, prepare_fbs, validate_config
-from .bess import BESSConfig, BESSState, BESSStepResult, step_bess
+from .bess import BESSConfig, BESSFleet, BESSState, BESSStepResult, FleetUnitStep, step_bess
 from .network_model import NetworkModel
 from .data_loader import ProfileSlice, ProfileData, profile_at
 from .progress import ProgressEvent
 from .dispatch import terminal_request
 from .constraint_dispatch import ConstraintAwareDispatch, DispatchEvent, RollingDispatch, admissible, check_flow
 from .network_control import Correction, NetworkCorrector
+from .fleet_dispatch import FleetDispatch
 
 
 @dataclass(frozen=True)
@@ -125,6 +126,10 @@ class SimulationStepResult:
     dispatch: DispatchEvent | None = None
     requested_point: OperatingPoint | None = None
     pre_control_voltage_pu: dict[int, float] | None = None
+    fleet_units: tuple[FleetUnitStep, ...] = ()
+    pre_control_branch_current_a: dict[str, float] | None = None
+    pre_control_branch_p_kw: dict[str, float] | None = None
+    pre_control_branch_q_kvar: dict[str, float] | None = None
 
 
 @dataclass
@@ -137,6 +142,8 @@ class TimeSeriesSimulationResult:
     final_bess_state: BESSState | None
     message: str
     dispatch_timing: dict = field(default_factory=dict)
+    final_fleet_states: dict[str, BESSState] = field(default_factory=dict)
+    fleet_configuration: BESSFleet | None = None
 
 
 DispatchPolicy = Callable[[int, ProfileSlice, BESSState], float]
@@ -280,7 +287,7 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
                   *, simulation_config: SimulationConfig | None = None,
                   peak_load_kw: float | None = None, progress=None,
                   planner=None, index=None, event=None, capture_dispatch=False,
-                  solve_fbs=None, corrector=None) -> SimulationStepResult:
+                  solve_fbs=None, corrector=None, fleet_hour=None) -> SimulationStepResult:
     """Run one hour. bess_state is accepted only when the power flow converges.
 
     bess_step retains the attempted energy update for diagnosis on failure.
@@ -291,7 +298,9 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
     if solve_fbs is None:
         network.validate()
         solve_fbs = prepare_fbs(network, fbs_config)
-    if planner is None:
+    if fleet_hour is not None:
+        operating_point, raw_flow, raw_check = fleet_hour.original, fleet_hour.raw, fleet_hour.raw_check
+    elif planner is None:
         operating_point = _operating_point(network, profile_slice)
     else:
         operating_point, raw_flow, raw_check = planner.uncontrolled(index)
@@ -319,7 +328,12 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
             config=bess_config, state=bess_state, request_kw=bess_request_kw,
             reserve_kw=reserve_kw, reserve_hours=settings.reserve_duration_hours,
         )
-    if planner is not None:
+    if fleet_hour is not None:
+        operating_point, power_flow, event = fleet_hour.operating_point, fleet_hour.flow, fleet_hour.event
+        reserve_kw = fleet_hour.reserve_kw
+        power_shortfall, energy_shortfall = fleet_hour.power_shortfall, fleet_hour.energy_shortfall
+        bess_request_kw = sum(record.requested_kw for record in fleet_hour.records)
+    elif planner is not None:
         power_flow = raw_flow
         after = raw_check
         if capture_dispatch:
@@ -386,13 +400,18 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
     voltage_violations = {}
     messages = []
     curtailment = shedding = None
-    after_bess_check = (event.after_bess if event is not None and event.after_bess is not None
-                        else raw_check if power_flow is raw_flow else check_flow(power_flow, network, settings))
+    after_bess_check = (fleet_hour.check if fleet_hour is not None else
+                        event.after_bess if event is not None and event.after_bess is not None else
+                        raw_check if power_flow is raw_flow else check_flow(power_flow, network, settings))
     if capture_dispatch and event is not None:
         event.after_bess = after_bess_check
-        event.after_bess_kw = bess_result.actual_power_kw if bess_result is not None and power_flow.converged else None
+        if power_flow.converged:
+            event.after_bess_kw = (sum(record.battery.actual_power_kw for record in fleet_hour.records) if fleet_hour is not None
+                                   else bess_result.actual_power_kw if bess_result is not None else None)
     correction = Correction(status="legacy_proportional_validation")
-    if not settings.legacy_proportional_validation:
+    if fleet_hour is not None:
+        operating_point, power_flow, correction = fleet_hour.corrected_point, fleet_hour.final_flow, fleet_hour.correction
+    elif not settings.legacy_proportional_validation:
         if after_bess_check.violations or not power_flow.converged:
             if corrector is None:
                 corrector = NetworkCorrector(network, settings, solve_fbs)
@@ -450,11 +469,18 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
         if excess_generation or excess_demand:
             feasible = False
             messages.append("Network voltage/import/export limits remain violated after controls")
+        if fleet_hour is not None:
+            p_load, q_load = sum(operating_point.p_load_kw.values()), sum(operating_point.q_load_kvar.values())
+            p_src = power_flow.slack_p_kw + sum(operating_point.p_pv_kw.values()) + sum(operating_point.p_bess_kw.values())
+            q_src = power_flow.slack_q_kvar + sum(operating_point.q_pv_kvar.values()) + sum(operating_point.q_bess_kvar.values())
+            tolerance = 10 * settings.fbs_config.voltage_tolerance_pu * max(1., p_load, abs(q_load), abs(p_src), abs(q_src))
+            if max(abs(p_src - p_load - power_flow.total_loss_p_kw), abs(q_src - q_load - power_flow.total_loss_q_kvar)) > tolerance:
+                feasible = False
+                messages.append("Fleet active/reactive power balance exceeds the FBS tolerance allowance")
     if capture_dispatch and event is not None:
         event.final = check_flow(power_flow, network, settings)
         event.correction = asdict(correction)
-        event.accepted_kw = (bess_result.actual_power_kw if bess_result is not None and power_flow.converged
-                             else None)
+        event.accepted_kw = event.after_bess_kw if power_flow.converged else None
         if not power_flow.converged and "nonconvergence" not in event.reason_codes:
             event.reason_codes.append("nonconvergence")
         if (power_shortfall > 1e-9 or energy_shortfall > 1e-9) and "reserve" not in event.reason_codes:
@@ -487,6 +513,10 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
         dispatch=event if capture_dispatch else None,
         requested_point=requested_point if capture_dispatch else None,
         pre_control_voltage_pu=raw_flow.voltage_mag_pu if capture_dispatch and raw_flow.converged else None,
+        pre_control_branch_current_a=raw_flow.branch_current_a if capture_dispatch and raw_flow.converged else None,
+        pre_control_branch_p_kw=raw_flow.branch_p_kw if capture_dispatch and raw_flow.converged else None,
+        pre_control_branch_q_kvar=raw_flow.branch_q_kvar if capture_dispatch and raw_flow.converged else None,
+        fleet_units=fleet_hour.records if fleet_hour is not None else (),
     )
 
 
@@ -495,9 +525,10 @@ _DEFAULT_DISPATCH = ConstraintAwareDispatch()
 
 def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
                         simulation_config: SimulationConfig,
-                        bess_config: BESSConfig | None = None,
+                        bess_config: BESSConfig | BESSFleet | None = None,
                         dispatch_policy: DispatchPolicy | ConstraintAwareDispatch | None = _DEFAULT_DISPATCH,
-                        *, progress=None, hourly_progress_only=False, capture_dispatch=True) -> TimeSeriesSimulationResult:
+                        *, progress=None, hourly_progress_only=False, capture_dispatch=True,
+                        reserve_peak_kw=None, _prepared_fbs=None) -> TimeSeriesSimulationResult:
     """Run all supplied hourly profiles, starting from config.soc_initial.
 
     An explicit None requests idle diagnostic dispatch. A callable is supported
@@ -509,9 +540,23 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
         raise ValueError("The simulation requires at least one timestamp")
     if profiles.dt_hours != 1.0:
         raise ValueError("The simulation currently requires hourly profiles")
-    if bess_config is None and dispatch_policy is _DEFAULT_DISPATCH:
+    declared_fleet = bess_config if isinstance(bess_config, BESSFleet) else None
+    fleet = None
+    single_unit = None
+    if declared_fleet is not None:
+        units = declared_fleet.units
+        eligible = {bus.bus_id for bus in network.buses if not bus.is_slack}
+        if any(unit.config.bus_id not in eligible for unit in units):
+            raise ValueError("Fleet batteries must be installed at eligible non-slack buses")
+        if len(units) == 1 and units[0].terminal_soc is None and not units[0].reactive_kvar and not callable(dispatch_policy):
+            single_unit = units[0]
+            bess_config = single_unit.config
+        else:
+            fleet = declared_fleet if units else None
+            bess_config = None
+    if bess_config is None and fleet is None and dispatch_policy is _DEFAULT_DISPATCH:
         dispatch_policy = None
-    if dispatch_policy is not None and bess_config is None:
+    if dispatch_policy is not None and bess_config is None and fleet is None:
         raise ValueError("A dispatch policy requires a BESS configuration")
     if dispatch_policy is not None and not (callable(dispatch_policy) or isinstance(dispatch_policy, ConstraintAwareDispatch)):
         raise ValueError("dispatch_policy must be callable")
@@ -542,15 +587,34 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
             energy_kwh=bess_config.energy_capacity_kwh * bess_config.soc_initial,
             soc=bess_config.soc_initial,
         )
+    if reserve_peak_kw is not None:
+        _check_number(reserve_peak_kw, "reserve_peak_kw")
+        if reserve_peak_kw + 1e-9 < peak_load_kw:
+            raise ValueError("Global reserve reference peak is lower than the selected window peak")
+        peak_load_kw = reserve_peak_kw
     reserve_kw = simulation_config.reserve_fraction * peak_load_kw
-    solve_fbs = prepare_fbs(network, simulation_config.fbs_config)
+    prepared = _prepared_fbs if _prepared_fbs is not None else prepare_fbs(network, simulation_config.fbs_config)
+    fbs_calls = 0
+
+    def solve_fbs(point, progress=None):
+        nonlocal fbs_calls
+        fbs_calls += 1
+        return prepared(point, progress=progress)
+
+    def point_at(index):
+        return _operating_point(network, profile_at(profiles, index))
+
     corrector = NetworkCorrector(network, simulation_config, solve_fbs)
     planner = None
-    if isinstance(dispatch_policy, ConstraintAwareDispatch):
+    coordinated = None
+    if fleet is not None:
+        if simulation_config.legacy_proportional_validation:
+            raise ValueError("Fleet dispatch requires the joint corrective controller")
+        coordinated = FleetDispatch(network, simulation_config, fleet, dispatch_policy, profiles.timestamps,
+                                    point_at, reserve_kw, solve_fbs, corrector, _run_bess)
+    elif isinstance(dispatch_policy, ConstraintAwareDispatch):
         planner = RollingDispatch(network, simulation_config, bess_config, dispatch_policy,
-                                  profiles.timestamps,
-                                  lambda index: _operating_point(network, profile_at(profiles, index)),
-                                  reserve_kw, solve_fbs)
+                                  profiles.timestamps, point_at, reserve_kw, solve_fbs)
     steps = []
     for index in range(count):
         if progress is not None:
@@ -559,9 +623,10 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
         profile_slice = profile_at(profiles, index)
         request_kw = 0.0
         event = None
+        fleet_hour = coordinated.plan(index, profile_slice, capture_dispatch) if coordinated else None
         if planner is not None:
             request_kw, event = planner.plan(index, state, capture=capture_dispatch)
-        elif dispatch_policy is not None:
+        elif dispatch_policy is not None and not coordinated:
             request_kw = dispatch_policy(index, profile_slice, copy(state))
         if bess_config is not None and simulation_config.terminal_soc_tolerance is not None:
             cycle = simulation_config.terminal_cycle_hours or count
@@ -583,8 +648,21 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
             simulation_config=simulation_config, peak_load_kw=peak_load_kw,
             progress=None if hourly_progress_only else progress,
             planner=planner, index=index, event=event, capture_dispatch=capture_dispatch, solve_fbs=solve_fbs,
-            corrector=corrector,
+            corrector=corrector, fleet_hour=fleet_hour,
         )
+        if coordinated:
+            incomplete = coordinated.commit(fleet_hour, step.power_flow.converged)
+            if incomplete:
+                step.feasible = False
+                step.messages.append("Terminal SOC closure failed for fleet units: " + ", ".join(incomplete))
+                if step.dispatch and "terminal_soc" not in step.dispatch.reason_codes:
+                    step.dispatch.reason_codes.append("terminal_soc")
+        elif single_unit and step.bess_step is not None:
+            reserve_energy = reserve_kw * simulation_config.reserve_duration_hours / bess_config.eta_discharge
+            step.fleet_units = (FleetUnitStep(single_unit.unit_id, bess_config.bus_id, request_kw, step.bess_step, 0.,
+                reserve_kw, reserve_energy, max(0., min(bess_config.power_rating_kw, bess_config.max_discharge_kw) - reserve_kw),
+                max(0., step.bess_step.energy_before_kwh - bess_config.soc_min * bess_config.energy_capacity_kwh - reserve_energy),
+                single_unit.target_soc),)
         steps.append(step)
         state = copy(step.bess_state)
         if (bess_config is not None and simulation_config.terminal_soc_tolerance is not None
@@ -604,8 +682,7 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
     completed = len(steps) == count
     converged = all(step.power_flow.converged for step in steps)
     feasible = all(step.feasible for step in steps)
-    terminal_failed = any("Terminal SOC closure infeasible under the battery/network constraints"
-                          in step.messages for step in steps)
+    terminal_failed = any(message.startswith("Terminal SOC closure") for step in steps for message in step.messages)
     if not converged:
         message = "Power-flow failure; inspect step messages."
     elif terminal_failed:
@@ -621,5 +698,8 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
                          "dispatch_fbs_seconds": planner.flow_seconds if planner else 0.,
                          "dispatch_fbs_trials": planner.flow_trials if planner else 0,
                          "correction_seconds": corrector.seconds, "correction_fbs_trials": corrector.trials,
-                         "correction_hours": corrector.evaluations, "correction_unresolved_hours": corrector.unresolved},
+                         "correction_hours": corrector.evaluations, "correction_unresolved_hours": corrector.unresolved,
+                         "fbs_calls": fbs_calls},
+        final_fleet_states=(coordinated.states if coordinated else {single_unit.unit_id: copy(state)} if single_unit else {}),
+        fleet_configuration=declared_fleet if declared_fleet is not None and declared_fleet.units else None,
     )

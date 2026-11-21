@@ -11,7 +11,7 @@ from uuid import uuid4
 
 import pandas as pd
 
-from .bess import BESSConfig
+from .bess import BESSConfig, BESSFleet
 from .data_loader import ProfileData
 from .fbs import OperatingPoint, run_fbs
 from .forecasting import generate_forecast
@@ -19,7 +19,10 @@ from .load_generator import LoadGenerationConfig, generate_load_profile
 from .metrics import EconomicConfig, evaluate_results, validate_annual_inputs, with_terminal_policy
 from .network_loader import load_network
 from .network_model import NetworkModel, PVUnit
-from .optimizer import BESSParameters, OptimizationBounds, OptimizerConfig, SimulationEvaluator, optimize, genetic_optimize
+from .optimizer import (BESSParameters, CandidateEvaluation, OptimizationBounds, OptimizationResult, OptimizerConfig,
+                        SimulationEvaluator, optimize, genetic_optimize)
+from .fleet_optimizer import FleetSearchConfig, rank, run_fleet_experiment
+from .fleet_reports import describe, write_experiment
 from .pv_model import PVModelConfig, make_pv_profile, read_irradiance, irradiance_to_power, read_nasa_csv
 from .distributed_dataset import load_distributed
 from .solar_source import SolarSite, PVReference, reference_from_file, fetch_irradiance
@@ -86,7 +89,7 @@ class PreparedStudy:
 class RunSettings:
     simulation: SimulationConfig
     economics: EconomicConfig
-    manual_bess: BESSConfig | None
+    manual_bess: BESSConfig | BESSFleet | None
     values: dict
     dispatch: object | None = field(default_factory=ConstraintAwareDispatch)
 
@@ -119,6 +122,7 @@ class RunReport:
     context: dict[str, str]
     alternatives: dict = field(default_factory=dict)
     dashboard_path: Path | None = None
+    fleet_experiment: object | None = None
 
     def summary(self, detailed=False):
         context = self.context if detailed else {
@@ -481,7 +485,10 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
                                      settings.manual_bess, dispatch, progress=progress)
         metrics = evaluate_results(result, settings.economics, settings.manual_bess) if result.completed and result.converged else None
         if settings.manual_bess:
-            context["Manual BESS"] = vars(settings.manual_bess)
+            if isinstance(settings.manual_bess, BESSFleet):
+                context["Manual fleet"] = [{"unit_id": unit.unit_id, **vars(unit.config)} for unit in settings.manual_bess.units]
+            else:
+                context["Manual BESS"] = vars(settings.manual_bess)
         context["Dispatch timing"] = result.dispatch_timing
         if result.dispatch_timing:
             timing = result.dispatch_timing
@@ -490,7 +497,6 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
             stage(f"Network correction {timing['correction_seconds']:.3f}s across {timing['correction_hours']} hours; "
                   f"{timing['correction_fbs_trials']} FBS calls, {timing['correction_unresolved_hours']} unresolved hours")
         return finish_report(result, metrics, context, started, started_clock)
-    validate_annual_inputs(study.profiles.timestamps, settings.economics, study.profiles.dt_hours)
     values = settings.values
     context["Optimization settings"] = str(values)
     if dispatch is None:
@@ -504,6 +510,11 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
                                 size_catalog(values["spin_opt_power_min_kw"], values["spin_opt_power_max_kw"], values["spin_opt_power_step_kw"]),
                                 size_catalog(values["spin_opt_energy_min_kwh"], values["spin_opt_energy_max_kwh"], values["spin_opt_energy_step_kwh"]))
     bounds.validate_network(study.network)
+    fleet_search = values.get("fleet_search")
+    if fleet_search is not None:
+        return _fleet_study(study, settings, dispatch, parameters, bounds, FleetSearchConfig(**fleet_search),
+                            context, started, started_clock, stage, progress)
+    validate_annual_inputs(study.profiles.timestamps, settings.economics, study.profiles.dt_hours)
     evaluator = SimulationEvaluator(settings.economics, parameters, dispatch, settings.simulation)
     context["Simulation settings"] = asdict(with_terminal_policy(settings.simulation, settings.economics))
     evaluator.progress = progress
@@ -597,6 +608,66 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
     report.alternatives["no_bess"] = (baseline_result, baseline)
     if best_result is not None:
         report.alternatives["best_bess"] = (best_result, best_metrics)
+    return report
+
+
+def _fleet_study(study, settings, dispatch, parameters, bounds, search, context, started, started_clock, stage, progress):
+    values = settings.values
+    optimizer = OptimizerConfig(values["spin_gwo_population"], values["spin_gwo_iterations"],
+                                values["spin_gwo_seed"], workers=values["spin_cpu_workers"])
+    stage("Evaluating the shared no-BESS baseline and fleet candidates")
+    experiment = run_fleet_experiment(study.network, study.profiles, settings.simulation, settings.economics,
+                                      dispatch, parameters, bounds, optimizer, search,
+                                      clock=study.context.get("Clock"), progress=progress)
+    details = experiment.metadata
+    simulation = with_terminal_policy(settings.simulation, settings.economics) if details["annual_verified"] else settings.simulation
+    primary = experiment.winners[search.objective]
+    best = min((item for item in primary.values() if item), key=lambda item: rank(item, search.objective, search), default=None)
+    alternative = min((item for count, item in primary.items() if count and item),
+                      key=lambda item: rank(item, search.objective, search), default=None)
+    baseline = experiment.baseline
+    baseline_metrics = evaluate_results(baseline, settings.economics)
+    alternatives = {"no_bess": (baseline, baseline_metrics)}
+    labels, installed = {"no_bess": "No BESS"}, {}
+    replays = {}
+    for objective, by_count in experiment.winners.items():
+        for count, item in by_count.items():
+            if not count or item is None or item.candidate in replays:
+                continue
+            key = "best_bess" if item is alternative else f"fleet_{count}_{objective}"
+            stage(f"Saving verified fleet replay at buses {item.candidate.bus_id}")
+            battery = item.candidate.build(parameters)
+            series = simulate_timeseries(study.network, study.profiles, simulation, battery, dispatch,
+                                         reserve_peak_kw=details["reserve_reference_peak_kw"], hourly_progress_only=True, progress=progress)
+            metrics = evaluate_results(series, settings.economics, battery)
+            if not metrics.feasible or not isclose(metrics.load_shedding_energy_kwh, item.shedding_kwh, rel_tol=1e-9, abs_tol=1e-7):
+                raise RuntimeError("Fleet replay differs from the verified candidate")
+            if details["annual_verified"] and not isclose(metrics.annual_total_cost, item.cost, rel_tol=1e-9, abs_tol=1e-7):
+                raise RuntimeError("Fleet replay differs from the verified annual cost")
+            alternatives[key] = (series, metrics)
+            labels[key] = f"{count} BESS · {objective} · {item.candidate.bus_id}"
+            installed[key] = describe(item.candidate)
+            replays[item.candidate] = key
+    selected = replays[best.candidate] if best and best.candidate.units else "no_bess"
+    message = (f"Best evaluated feasible option for {search.objective}: {labels[selected]}." if best else
+               "No verified alternative met all physical and ranking constraints.")
+    context["Simulation settings"] = asdict(simulation)
+    context["Fleet optimization"] = {key: value for key, value in details.items() if key not in ("sections", "bus_severity")}
+    optimizer_meta = {"fleet": context["Fleet optimization"], "fleet_installations": installed, "scenario_labels": labels,
+        "decision_message": message, "selected_scenario": selected, "no_bess_selected": bool(best and not best.candidate.units),
+        "no_bess_feasible": baseline_metrics.feasible, "best_bess_feasible": alternative is not None,
+        "no_bess_annual_cost": baseline_metrics.annual_total_cost,
+        "best_bess_annual_cost": alternative.cost if alternative and details["annual_verified"] else None,
+        "best_bess_candidate": describe(alternative.candidate) if alternative else None,
+        "feasible_bess_candidates": sum(item.feasible for item in experiment.verified)}
+    evaluations = [CandidateEvaluation(item.candidate, item.cost if details["annual_verified"] else None,
+                   item.feasible, message=item.details.get("message", ""), execution_metadata=item.details)
+                   for item in experiment.verified]
+    result = OptimizationResult(best.candidate if best and best.candidate.units else None,
+        best.cost if best and details["annual_verified"] else None, alternatives[selected][1] if best else None,
+        [], optimizer.max_iterations, best is not None, message, evaluations, optimizer_meta)
+    report = finish_report(result, None, context, started, started_clock)
+    report.alternatives, report.fleet_experiment = alternatives, experiment
     return report
 
 
@@ -695,11 +766,14 @@ def run_and_export(study, settings, optimization, output_path,
         scenarios = {}
         baseline_series = report.alternatives["no_bess"][0]
         for name, (series, metrics) in report.alternatives.items():
-            label = ("No BESS" if name == "no_bess" else "Best evaluated feasible BESS")
+            label = report.result.metadata.get("scenario_labels", {}).get(name,
+                "No BESS" if name == "no_bess" else "Best evaluated feasible BESS")
             scenarios[name] = label
             export_results(series, Path(output_path) / name, metrics=metrics,
                            context={**report.context, "Alternative": label},
-                           baseline_series=baseline_series if name == "best_bess" else None)
+                           baseline_series=baseline_series if name != "no_bess" else None)
+    if report.fleet_experiment is not None:
+        write_experiment(Path(output_path), report.fleet_experiment)
     _save_dashboard(output_path, study, settings, report, "optimization" if optimization else "simulation",
                     stage, scenarios=scenarios, optimizer=report.result.metadata if optimization else None)
     return report

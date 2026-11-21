@@ -1,3 +1,7 @@
+from dataclasses import dataclass
+from math import isfinite
+
+
 class BESSConfig:
     def __init__(self, 
                  bus_id: int, 
@@ -25,6 +29,64 @@ class BESSState:
     def __init__(self, energy_kwh: float, soc: float):
         self.energy_kwh = energy_kwh
         self.soc = soc
+
+
+@dataclass(frozen=True)
+class FleetUnit:
+    unit_id: str
+    config: BESSConfig
+    terminal_soc: float | None = None
+    reactive_kvar: float = 0.0
+    reserve_weight: float | None = None
+
+    def __post_init__(self):
+        battery = self.config
+        if not isinstance(self.unit_id, str) or not self.unit_id.strip() or type(battery.bus_id) is not int:
+            raise ValueError("A fleet unit requires a nonempty ID and an integer installation bus")
+        for value in (battery.energy_capacity_kwh, battery.power_rating_kw, battery.max_charge_kw, battery.max_discharge_kw):
+            if not isfinite(value) or value <= 0:
+                raise ValueError("Fleet unit capacity and ratings must be positive and finite")
+        if not 0 <= battery.soc_min < battery.soc_max <= 1 or not battery.soc_min <= battery.soc_initial <= battery.soc_max:
+            raise ValueError("Fleet unit initial SOC must be inside its validated SOC bounds")
+        if not 0 < battery.eta_charge <= 1 or not 0 < battery.eta_discharge <= 1:
+            raise ValueError("Fleet unit efficiencies must be between zero and one")
+        if self.terminal_soc is not None and not battery.soc_min <= self.terminal_soc <= battery.soc_max:
+            raise ValueError("Fleet unit terminal SOC lies outside its SOC bounds")
+        if not isfinite(self.reactive_kvar) or abs(self.reactive_kvar) >= battery.power_rating_kw:
+            raise ValueError("Fleet unit reactive setpoint must fit the inverter rating")
+        if self.reserve_weight is not None and (not isfinite(self.reserve_weight) or self.reserve_weight < 0):
+            raise ValueError("A fleet reserve weight must be finite and nonnegative")
+
+    @property
+    def target_soc(self):
+        return self.config.soc_initial if self.terminal_soc is None else self.terminal_soc
+
+
+@dataclass(frozen=True)
+class BESSFleet:
+    units: tuple[FleetUnit, ...] = ()
+
+    def __post_init__(self):
+        units = tuple(sorted(self.units, key=lambda unit: unit.config.bus_id))
+        if len(units) > 3 or len({unit.unit_id for unit in units}) != len(units):
+            raise ValueError("A fleet supports at most three distinct unit IDs")
+        if len({unit.config.bus_id for unit in units}) != len(units):
+            raise ValueError("Fleet units must use distinct installation buses")
+        object.__setattr__(self, "units", units)
+
+
+@dataclass
+class FleetUnitStep:
+    unit_id: str
+    bus_id: int
+    requested_kw: float
+    battery: "BESSStepResult"
+    reactive_kvar: float
+    reserve_kw: float
+    reserve_energy_kwh: float
+    dispatchable_kw: float
+    dispatchable_kwh: float
+    terminal_target_soc: float
 
 class BESSStepResult:
     def __init__(self, 
