@@ -13,6 +13,7 @@ import pandas as pd
 from .bess import BESSConfig
 from .data_loader import ProfileData
 from .fbs import OperatingPoint, run_fbs
+from .forecasting import generate_forecast
 from .load_generator import LoadGenerationConfig, generate_load_profile
 from .metrics import EconomicConfig, evaluate_results, validate_annual_inputs, with_terminal_policy
 from .network_loader import load_network
@@ -501,10 +502,17 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
                                   mutation_rate=values.get("spin_ga_mutation", 0.12))
     else:
         result = optimize(study.network, profiles, bounds, evaluator, config, progress=progress)
+    result.metadata["best_bess_feasible"] = result.success
+    result.metadata["best_bess_annual_cost"] = result.best_objective if result.success else None
+    result.metadata["feasible_bess_candidates"] = sum(item.feasible for item in result.evaluations)
+    result.metadata["reserve_rejected_bess_candidates"] = sum(
+        not item.feasible and item.metrics is not None and (item.metrics.reserve_violation_hours or 0) > 0
+        for item in result.evaluations
+    )
     # A feasible no-storage system is an explicit economic alternative.
     stage("Evaluating no-BESS annual baseline")
     baseline_result = simulate_timeseries(study.network, profiles, settings.simulation,
-                                         bess_config=None, dispatch_policy=None)
+                                         bess_config=None, dispatch_policy=None, progress=progress)
     if baseline_result.completed and baseline_result.converged:
         baseline = evaluate_results(baseline_result, settings.economics, None)
         result.metadata["no_bess_feasible"] = baseline.feasible
@@ -517,7 +525,14 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
             result.best_objective = baseline.annual_total_cost
             result.metrics = baseline
             result.success = True
-            result.message = "No-BESS baseline is the least-cost feasible option."
+            if result.metadata["best_bess_feasible"]:
+                result.message = "No BESS costs less than or the same as the best feasible battery."
+            else:
+                count = len(result.evaluations)
+                reserve = result.metadata["reserve_rejected_bess_candidates"]
+                result.message = f"No BESS selected because none of the {count} evaluated batteries was feasible."
+                if reserve:
+                    result.message += f" {reserve} had reserve violations."
             result.metadata["no_bess_selected"] = True
             result.metadata["delta_annual_cost"] = 0.
     else:
@@ -566,19 +581,52 @@ def export_report(report: RunReport, path, stage=lambda message: None):
     return export_results(report.result, path, metrics=report.metrics, context=report.context)
 
 
+def forecast_and_export(study, config, output, stage=lambda message: None, *, network_snapshot=None):
+    from .study_session import _write_profile, write_input_snapshot
+
+    history = study.historical_profiles or study.profiles
+    report = generate_forecast(history, config, assignments=study.assignments,
+                               network=study.network, pv_reference=study.pv_reference)
+    stage("Saving forecast and training inputs")
+    output = Path(output)
+    output.mkdir(parents=True, exist_ok=False)
+    end = pd.Timestamp(report.historical_end) + pd.Timedelta(hours=1)
+    training = history.slice(report.model_info["training_start"], end)
+    write_input_snapshot(output, profiles=training, workbook=network_snapshot,
+                         metadata={"source": "Forecast training history", "clock": study.context.get("Clock"),
+                                   "dt_hours": training.dt_hours, "start": str(training.timestamps[0]),
+                                   "end_exclusive": str(end), "hours": len(training.timestamps)})
+    for kind in ("load", "pv"):
+        _write_profile(output / f"{kind}_profile.csv", report.profiles.timestamps,
+                       getattr(report.profiles, f"{kind}_p_kw"), getattr(report.profiles, f"{kind}_q_kvar"))
+    pd.DataFrame({"timestamp": report.profiles.timestamps, **report.sector_predictions}).to_csv(
+        output / "sector_predictions.csv", index=False)
+    pd.DataFrame({"timestamp": report.profiles.timestamps, "capacity_factor": report.pv_capacity_factor}).to_csv(
+        output / "pv_reference_forecast.csv", index=False)
+    return report, output
+
+
 def run_and_export(study, settings, optimization, output_path,
-                   stage=lambda message: None, progress=None):
+                   stage=lambda message: None, progress=None, *, network_snapshot=None):
     """Run once and save the retained result inside the active session."""
     report = run_study(study, settings, optimization, stage=stage, progress=progress)
     stage("Saving run in active session")
-    export_results(report.result, output_path, metrics=report.metrics, context=report.context)
+    export_results(report.result, output_path, metrics=report.metrics, context=report.context,
+                   input_snapshot={"profiles": study.profiles, "workbook": network_snapshot,
+                                   "metadata": {"clock": study.context.get("Clock"),
+                                                "dt_hours": study.profiles.dt_hours,
+                                                "window": study.simulation_window}})
     return report
 
 
-def run_base_case_and_export(study, settings, output_path, stage=lambda message: None, progress=None):
+def run_base_case_and_export(study, settings, output_path, stage=lambda message: None, progress=None,
+                             *, network_snapshot=None):
     report = run_base_case(study, settings, stage=stage, progress=progress)
     output = Path(output_path)
     output.mkdir(parents=True, exist_ok=False)
+    from .study_session import write_input_snapshot
+    write_input_snapshot(output, point=report.step.operating_point, workbook=network_snapshot,
+                         metadata={"source": "Static base case"})
     rows = [{"bus_id": bus_id, "voltage_pu": voltage}
             for bus_id, voltage in sorted(report.result.voltage_mag_pu.items())]
     pd.DataFrame(rows).to_csv(output / "bus_voltages.csv", index=False)

@@ -249,7 +249,7 @@ def _comparison_rows(baseline, candidate):
 def export_results(result: Result, output_path: str | Path, *,
                    metrics: PerformanceMetrics | None = None,
                    baseline_metrics: PerformanceMetrics | None = None,
-                   context: Mapping[str, str] | None = None) -> dict[str, Path]:
+                   context: Mapping[str, str] | None = None, input_snapshot=None) -> dict[str, Path]:
     """Create a new export directory. Existing paths are never overwritten.
 
     Matching duration/currency is necessary, not sufficient, for a fair baseline
@@ -262,6 +262,9 @@ def export_results(result: Result, output_path: str | Path, *,
     output = Path(output_path).resolve()
     output.mkdir(parents=True, exist_ok=False)
     written = {}
+    if input_snapshot is not None:
+        from .study_session import write_input_snapshot
+        written.update(write_input_snapshot(output, **input_snapshot))
 
     def write_table(filename, header, rows):
         path = output / filename
@@ -301,8 +304,9 @@ def export_results(result: Result, output_path: str | Path, *,
         write_table("economic_comparison.csv", ["alternative", "annual_cost", "currency", "feasible", "selected"], [
             ["No BESS", baseline, performance.currency if performance else "", result.metadata.get("no_bess_feasible"),
              bool(result.metadata.get("no_bess_selected"))],
-            ["Best search or selected option", result.best_objective,
-             performance.currency if performance else "", result.success, not result.metadata.get("no_bess_selected", False)],
+            ["Best feasible BESS", result.metadata.get("best_bess_annual_cost"),
+             performance.currency if performance else "", bool(result.metadata.get("best_bess_feasible")),
+             bool(result.success and result.best_candidate is not None)],
         ])
         if baseline is not None and result.success and result.metadata.get("no_bess_feasible"):
             summary += f"\nAnnual savings relative to no BESS: {baseline - result.best_objective:.6g} {performance.currency if performance else ''}/year\n"

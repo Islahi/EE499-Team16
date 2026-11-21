@@ -36,9 +36,36 @@ def _write_profile(path, timestamps, active, reactive):
         for bus_id in sorted(active):
             for index, timestamp in enumerate(timestamps):
                 writer.writerow([
-                    timestamp.isoformat(), bus_id,
+                    timestamp if isinstance(timestamp, str) else timestamp.isoformat(), bus_id,
                     active[bus_id][index], reactive[bus_id][index],
                 ])
+
+
+def write_input_snapshot(output, *, metadata, profiles=None, point=None, workbook=None):
+    """Save the profiles actually used by a run and their alignment metadata."""
+    root = Path(output) / "inputs"
+    root.mkdir(exist_ok=False)
+    paths = {}
+    for kind in ("load", "pv"):
+        if profiles is not None:
+            timestamps = profiles.timestamps
+            active = getattr(profiles, f"{kind}_p_kw")
+            reactive = getattr(profiles, f"{kind}_q_kvar")
+        else:
+            timestamps = ("Static base case",)
+            active = {bus: [value] for bus, value in getattr(point, f"p_{kind}_kw").items()}
+            reactive = {bus: [value] for bus, value in getattr(point, f"q_{kind}_kvar").items()}
+        name = f"{kind}_profile.csv"
+        _write_profile(root / name, timestamps, active, reactive)
+        paths[f"inputs/{name}"] = root / name
+    if workbook is not None:
+        name = "network" + Path(workbook).suffix.lower()
+        shutil.copy2(workbook, root / name)
+        paths[f"inputs/{name}"] = root / name
+    manifest = root / "input_snapshot.json"
+    manifest.write_text(json.dumps(_json_value(metadata), indent=2), encoding="utf-8")
+    paths["inputs/input_snapshot.json"] = manifest
+    return paths
 
 
 def study_fingerprint(study):
@@ -162,6 +189,10 @@ class StudySession:
 
     def next_run_path(self, optimization):
         return self.next_path("optimization" if optimization else "simulation", "run")
+
+    def network_snapshot_path(self):
+        relative = self.manifest.get("network_snapshot")
+        return self.root / relative if relative else None
 
     def record_run(self, path, optimization, report=None):
         key = "optimization_runs" if optimization else "simulation_runs"

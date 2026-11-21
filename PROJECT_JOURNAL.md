@@ -1,5 +1,16 @@
 # Project Journal
 
+## 2026-11-21 - Parallel progress, run input snapshots and reserve diagnosis
+
+- GWO workers now report sampled hourly progress in the desktop log. New
+  exports retain the exact load and PV profiles and the accepted workbook
+  alongside the results. Removed Open-Meteo from the desktop source menu.
+- In the completed 15-bus 2023 forecast run, all 240 candidates violated
+  reserve. The 2,705.43 kW peak required 270.54 kW for one hour. At 50% initial
+  SOC, 20% minimum SOC and 90% discharge efficiency, the minimum initial
+  capacity for that reserve was 1,002.01 kWh, above the 1,000 kWh search cap.
+  The subsequent parallel run failed before producing a decision.
+
 ## 2026-11-21 - Hourly log and annual optimization guidance
 
 - Simulate now records every completed timestep with its source timestamp in

@@ -30,9 +30,8 @@ The app uses verified modeled PV history in the selected case when it is availab
 
 | Source | What to enter |
 | --- | --- |
-| NASA POWER or Open-Meteo automatic history | Actual site latitude and longitude. The app requests hourly historical irradiance in UTC and aligns it to the load clock. |
+| NASA POWER automatic history | Actual site latitude and longitude. The app requests hourly historical irradiance in UTC and aligns it to the load clock. |
 | NASA POWER irradiance CSV | Raw hourly POWER table or processed CSV with `timestamp` and `ghi_wh_m2` or `irradiance_w_m2`. Review coordinates and confirm the file clock. |
-| Open-Meteo irradiance CSV | Hourly `time` and `shortwave_radiation (W/m²)`. Supply the site and file clock if absent from the file. |
 | Prepared irradiance CSV | `timestamp,irradiance_w_m2`, site, and file clock. |
 | Historical modeled PV power CSV | A single common `timestamp,p_kw` series, its positive reference nameplate in kW, site, and file clock. The app scales the reference capacity factor to each installed bus. |
 | No PV study | Bypass solar import and PV forecasting. |
@@ -59,6 +58,8 @@ A short technical simulation reports energy and electrical performance over its 
 
 - Check run completion, FBS convergence, feasibility, voltage limits, load shedding and PV curtailment. A converged result can still have violations or unserved demand.
 - Enable **Show run log** to see each completed simulation time step with its source timestamp and FBS status. The log follows the latest entry. The session's `session.log` retains all hourly entries, including entries beyond the display limit. **Base case** reports one static snapshot and its FBS iterations.
+- During parallel GWO, the log samples active worker progress and identifies the battery candidate and source timestamp. It also shows hourly progress during the no-BESS comparison.
+- Each run's `inputs` folder contains the network workbook and the load and PV values used by that run. For forecasts, the inputs cover the training interval, and the predicted load and PV CSVs are in the forecast folder itself. Hourly profile CSVs share the columns `timestamp,bus_id,p_kw,q_kvar`.
 - Review the Network and Results views. After a simulation, use the timestamp and network result controls to inspect individual hours. Session folders under `src_accelerated/Results/Sessions` contain input snapshots and numbered run exports.
 - Open **Study interval** and browse to a saved session folder containing `session.json`. It opens read-only. Choose **Migrate compatible inputs to a new study ID** to create a fresh study, then configure the interval, tariffs and optimizer again.
 

@@ -29,8 +29,7 @@ from .network_diagram import NetworkScene, NetworkView
 from .network_loader import load_network
 from .optimizer import BESSParameters, OptimizationResult
 from .simulation import GridAwareDispatchPolicy, SimulationConfig, TimeSeriesSimulationResult
-from .forecasting import ForecastConfig, generate_forecast
-from .study_session import _write_profile
+from .forecasting import ForecastConfig
 from .progress import StageReporter, format_duration
 from .ui_presentation import compact_summary
 from .ui_bindings import restore_designer_combo_data
@@ -39,7 +38,7 @@ from .distributed_dataset import discover_cases, summary_pv_ratings
 from .pv_model import read_nasa_csv
 from .ui_workflow import (
     BaseCaseReport, DataRequest, RunSettings, prepare_study, run_and_export,
-    first_calendar_year, run_base_case_and_export, size_catalog,
+    first_calendar_year, forecast_and_export, run_base_case_and_export, size_catalog,
 )
 
 
@@ -191,7 +190,7 @@ class JobRunner(QObject):
 
 
 class LoadDataDialog(QDialog):
-    solar_csv_modes = ("nasa_power", "open_meteo", "prepared", "power")
+    solar_csv_modes = ("nasa_power", "prepared", "power")
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -849,11 +848,11 @@ class ForecastDialog(QDialog):
         except ValueError as error:
             self.forecast_failed(str(error), "")
             return
-        history = self.study.historical_profiles or self.study.profiles
+        output = self.session.root / "forecasts" / datetime.now().strftime("forecast_%Y%m%d_%H%M%S_%f")
         self.generate_button.setEnabled(False)
-        set_status(self.status,"Training the sector models and preparing the common PV forecast, when installed…","busy")
-        self.runner.start(lambda stage: generate_forecast(history, cfg, assignments=self.study.assignments,
-            network=self.study.network,pv_reference=self.study.pv_reference))
+        set_status(self.status, "Training the sector models and preparing the common PV forecast, when installed.", "busy")
+        self.runner.start(partial(forecast_and_export, self.study, cfg, output,
+                                  network_snapshot=self.session.network_snapshot_path()))
 
     def sync_horizon_preset(self, value):
         preset = widget(self,"combo_horizon_preset")
@@ -871,16 +870,9 @@ class ForecastDialog(QDialog):
         self.generate_button.setEnabled(True)
         QMessageBox.warning(self, "Forecast error", message)
 
-    def forecast_ready(self, report):
+    def forecast_ready(self, result):
         try:
-            forecast_root = self.session.root / "forecasts"
-            forecast_root.mkdir(exist_ok=True)
-            output = forecast_root / datetime.now().strftime("forecast_%Y%m%d_%H%M%S_%f")
-            output.mkdir(exist_ok=False)
-            _write_profile(output / "load_profile.csv", report.profiles.timestamps,
-                           report.profiles.load_p_kw, report.profiles.load_q_kvar)
-            _write_profile(output / "pv_profile.csv", report.profiles.timestamps,
-                           report.profiles.pv_p_kw, report.profiles.pv_q_kvar)
+            report, output = result
             history = self.study.historical_profiles or self.study.profiles
             self.study.historical_profiles = history
             self.study.forecast_profiles = report.profiles
@@ -889,8 +881,6 @@ class ForecastDialog(QDialog):
                                         "training_ends": str(report.historical_end),
                                         "forecast_hours": report.horizon_hours,
                                         "output_folder": str(output)}
-            pd.DataFrame({"timestamp":report.profiles.timestamps,**report.sector_predictions}).to_csv(output/"sector_predictions.csv",index=False)
-            pd.DataFrame({"timestamp":report.profiles.timestamps,"capacity_factor":report.pv_capacity_factor}).to_csv(output/"pv_reference_forecast.csv",index=False)
             self.session.manifest.setdefault("forecast_runs", []).append(self.study.forecast_info)
             self.session.save()
             self.accept()
@@ -1403,7 +1393,8 @@ class MainWindow(QMainWindow):
             self.last_heartbeat = self.run_started
             self.run_elapsed_seconds = 0.0
             self.run_clock.start()
-            self.runner.start(partial(run_base_case_and_export, deepcopy(self.study), deepcopy(settings), self.pending_run_output))
+            self.runner.start(partial(run_base_case_and_export, deepcopy(self.study), deepcopy(settings),
+                                      self.pending_run_output, network_snapshot=self.session.network_snapshot_path()))
         except ValueError as error:
             self.show_failure(str(error), "")
 
@@ -1433,7 +1424,7 @@ class MainWindow(QMainWindow):
             self.pending_run_output = self.session.next_run_path(optimization)
             self.runner.start(partial(
                 run_and_export, self.study, deepcopy(settings), optimization,
-                self.pending_run_output,
+                self.pending_run_output, network_snapshot=self.session.network_snapshot_path(),
             ), log_hours=not optimization)
         except ValueError as error:
             self.show_failure(str(error), "")

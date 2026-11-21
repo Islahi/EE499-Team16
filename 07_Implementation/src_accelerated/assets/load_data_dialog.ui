@@ -331,9 +331,7 @@
               <item row="0" column="1">
                <widget class="QComboBox" name="combo_pv_source">
                  <item><property name="text"><string>NASA POWER - automatic history</string></property><property name="userData"><string>auto_nasa_power</string></property></item>
-                 <item><property name="text"><string>Open-Meteo - automatic history</string></property><property name="userData"><string>auto_open_meteo</string></property></item>
                  <item><property name="text"><string>NASA POWER - irradiance CSV</string></property><property name="userData"><string>nasa_power</string></property></item>
-                 <item><property name="text"><string>Open-Meteo - irradiance CSV</string></property><property name="userData"><string>open_meteo</string></property></item>
                  <item><property name="text"><string>Prepared irradiance CSV</string></property><property name="userData"><string>prepared</string></property></item>
                  <item><property name="text"><string>Historical modeled PV power CSV</string></property><property name="userData"><string>power</string></property></item>
                </widget>

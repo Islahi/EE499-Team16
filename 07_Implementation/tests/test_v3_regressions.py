@@ -13,7 +13,7 @@ from src_accelerated.data_loader import ProfileData
 from src_accelerated.distributed_dataset import discover_cases, summary_pv_ratings
 from src_accelerated.fbs import FBSConfig, OperatingPoint, run_fbs
 from src_accelerated.forecast_models import FeatureCache
-from src_accelerated.forecasting import ForecastConfig, _pv_predict, generate_forecast
+from src_accelerated.forecasting import ForecastConfig, _pv_predict
 from src_accelerated.metrics import EconomicConfig, validate_annual_inputs
 from src_accelerated.network_loader import load_network
 from src_accelerated.optimizer import (BESSCandidate, BESSParameters, OptimizationBounds,
@@ -22,7 +22,7 @@ from src_accelerated.progress import ProgressEvent, StageReporter
 from src_accelerated.simulation import GridAwareDispatchPolicy, SimulationConfig, simulate_timeseries
 from src_accelerated.solar_source import PVReference, SolarSite, daylight
 from src_accelerated.study_session import StudySession, migrate_inputs
-from src_accelerated.ui_workflow import DataRequest, PreparedStudy, prepare_study, select_default_history
+from src_accelerated.ui_workflow import DataRequest, PreparedStudy, forecast_and_export, prepare_study, select_default_history
 from test_integrated_upgrade import simple_network, source_data
 
 
@@ -74,7 +74,7 @@ def archived_study():
                                     load_source="distributed", dataset_folder=data, clock="UTC"))
 
 
-def test_c2_archive_and_history_windows(archived_study):
+def test_c2_archive_and_history_windows(archived_study, tmp_path):
     study = archived_study
     history = study.historical_profiles
     assert len(study.profiles.timestamps) == 24
@@ -83,9 +83,14 @@ def test_c2_archive_and_history_windows(archived_study):
     study.select_source("historical", "2020-01-01", "2021-01-01")
     assert len(validate_annual_inputs(study.profiles.timestamps, economics())) == 8784
     assert study.historical_profiles is history
-    forecast = generate_forecast(history, ForecastConfig(horizon_hours=48, forecast_start="2021-01-01"),
-                                 assignments=study.assignments, network=study.network)
+    forecast, output = forecast_and_export(study, ForecastConfig(horizon_hours=48, forecast_start="2021-01-01"),
+                                           tmp_path / "forecast", network_snapshot=study.request.network_path)
     assert forecast.model_info["training_hours"] == 31440
+    assert (output / "inputs/network.xlsx").read_bytes() == study.request.network_path.read_bytes()
+    training = pd.read_csv(output / "inputs/load_profile.csv", usecols=["timestamp"])
+    assert training.timestamp.nunique() == 31440
+    assert training.timestamp.max() == "2020-12-31T23:00:00"
+    assert pd.read_csv(output / "load_profile.csv").timestamp.nunique() == 48
     assert "fit_skipped" in forecast.model_info["pv"]
     for sector, predicted in forecast.sector_predictions.items():
         fixture = C2 / "results" / f"{sector}_hourly.csv"
@@ -160,6 +165,21 @@ def test_window_policy_and_annual_candidate_paths():
         economics(terminal_policy="priced_energy")
 
 
+def test_parallel_gwo_reports_candidate_hours():
+    network = simple_network()
+    profile = source_data(hours=8760, start="2021-01-01")
+    bounds = OptimizationBounds((2,), (20., 30.), (100.,))
+    evaluator = SimulationEvaluator(economics(), BESSParameters(.9, .9),
+                                    GridAwareDispatchPolicy(), SimulationConfig(reserve_fraction=0))
+    events = []
+    output = optimize(network, profile, bounds, evaluator, OptimizerConfig(3, 1, workers=2),
+                      progress=events.append)
+    assert output.success
+    hours = [event for event in events if event.phase == "Simulation"]
+    assert hours and hours[0].total == 8760
+    assert "B2" in hours[0].detail and "2021-01-01" in hours[0].detail
+
+
 def test_qt_solar_modes_and_case_ratings(tmp_path, monkeypatch):
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
     pytest.importorskip("PySide6")
@@ -175,7 +195,7 @@ def test_qt_solar_modes_and_case_ratings(tmp_path, monkeypatch):
     assert widget(dialog, "panel_irradiance_fields").isHidden()
     fallback.setChecked(True)
     assert not widget(dialog, "panel_pv_source_fields").isHidden()
-    modes = ("auto_nasa_power", "auto_open_meteo", "nasa_power", "open_meteo", "prepared", "power")
+    modes = ("auto_nasa_power", "nasa_power", "prepared", "power")
     assert tuple(combo.itemData(i) for i in range(combo.count())) == modes
     for mode in modes:
         combo.setCurrentIndex(combo.findData(mode))
@@ -365,11 +385,18 @@ def test_qt_hourly_run_log_and_optimize_readiness(tmp_path, monkeypatch):
 
     window.run_base_case()
     wait_for(window.runner)
+    static = pd.read_csv(tmp_path / "base_case/run_001/inputs/load_profile.csv")
+    assert static.loc[static.bus_id == 2, "p_kw"].iat[0] == 100
     log = widget(window, "run_log")
     assert "Base case 1/1: Static snapshot | FBS iterations:" in log.toPlainText()
     assert "Time step " not in log.toPlainText()
     window.run_simulation()
     wait_for(window.runner)
+    inputs = tmp_path / "simulation/run_001/inputs"
+    load = pd.read_csv(inputs / "load_profile.csv", parse_dates=["timestamp"])
+    assert list(load.timestamp) == history.timestamps[:24]
+    assert list(load.p_kw) == history.load_p_kw[2][:24]
+    assert json.loads((inputs / "input_snapshot.json").read_text())["window"]["mode"] == "historical"
     displayed = [line for line in log.toPlainText().splitlines() if "Time step " in line]
     saved = [line for line in (tmp_path / "session.log").read_text().splitlines() if "Time step " in line]
     assert len(displayed) == len(saved) == 24
@@ -410,6 +437,11 @@ def test_qt_hourly_run_log_and_optimize_readiness(tmp_path, monkeypatch):
     wait_for(window.runner)
     assert window.report.result.success
     assert window.session.manifest["optimization_runs"][0]["status"] == "success"
+    output = tmp_path / "optimization/run_001"
+    assert len(pd.read_csv(output / "inputs/load_profile.csv")) == 8760
+    comparison = pd.read_csv(output / "economic_comparison.csv")
+    assert comparison.alternative.tolist() == ["No BESS", "Best feasible BESS"]
+    assert comparison.annual_cost.iloc[1] > comparison.annual_cost.iloc[0]
 
     study.forecast_profiles = source_data(hours=13799, start="2022-06-05 01:00")
     source.setCurrentIndex(source.findData("forecast"))

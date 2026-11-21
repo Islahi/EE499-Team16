@@ -5,12 +5,15 @@ Catalog rounding, explicit evaluation and feasible-leader retention are the
 project's adaptations. The search is a heuristic, not a global-optimum proof.
 """
 from collections.abc import Callable
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
 from copy import copy
 from dataclasses import dataclass, field, replace
 from itertools import product
 from math import floor, isfinite
+from multiprocessing import get_context
+from queue import Empty, Full
 from random import Random
+from time import perf_counter
 
 from .bess import BESSConfig
 from .fbs import warm_numba
@@ -127,6 +130,7 @@ class SimulationEvaluator:
     dispatch_policy: DispatchPolicy
     simulation_config: SimulationConfig = field(default_factory=SimulationConfig)
     progress: Callable | None = None
+    hourly_progress_only: bool = False
 
     def __post_init__(self):
         self.simulation_config.__post_init__()
@@ -144,11 +148,19 @@ class SimulationEvaluator:
         self.simulation_config.__post_init__()
         validate_annual_inputs(profiles.timestamps, self.economic_config, profiles.dt_hours)
         bess_config = self.battery_parameters.build_config(candidate)
+        def report(event):
+            if event.phase == "Simulation":
+                event = replace(event, detail=(
+                    f"B{candidate.bus_id} {candidate.power_rating_kw:g} kW / "
+                    f"{candidate.energy_capacity_kwh:g} kWh | {event.detail}"))
+            self.progress(event)
+
         result = simulate_timeseries(
             network=network, profiles=profiles,
             simulation_config=with_terminal_policy(self.simulation_config, self.economic_config),
             bess_config=bess_config, dispatch_policy=self.dispatch_policy,
-            progress=self.progress,
+            progress=report if self.progress is not None else None,
+            hourly_progress_only=self.hourly_progress_only,
         )
         if not result.completed or not result.converged:
             return CandidateEvaluation(candidate, float("inf"), False, message=result.message)
@@ -249,17 +261,53 @@ def _without_progress(evaluator):
 
 
 _WORKER_READINESS = None
+_WORKER_PROGRESS = None
 
 
-def _initialize_numba_worker():
-    global _WORKER_READINESS
+def _initialize_numba_worker(progress_queue=None):
+    global _WORKER_READINESS, _WORKER_PROGRESS
+    _WORKER_PROGRESS = progress_queue
+    if progress_queue is not None:
+        # A worker may exit while the parent is no longer reading updates.
+        progress_queue.cancel_join_thread()
     _WORKER_READINESS = warm_numba()
 
 
 def _evaluate_process(arguments):
+    network, profiles, bounds, evaluator, candidate = arguments
+    if _WORKER_PROGRESS is not None and isinstance(evaluator, SimulationEvaluator):
+        last_sent = float("-inf")
+
+        def report(event):
+            nonlocal last_sent
+            if event.phase != "Simulation":
+                return
+            now = perf_counter()
+            if now - last_sent >= 1.0 or event.completed == event.total:
+                try:
+                    _WORKER_PROGRESS.put_nowait(event)
+                except Full:
+                    pass  # Display updates must never block a solver worker.
+                last_sent = now
+
+        evaluator = replace(evaluator, progress=report, hourly_progress_only=True)
+        arguments = network, profiles, bounds, evaluator, candidate
     result = _evaluate(*arguments)
     result.execution_metadata = {"backend":"numba", "worker_pid":__import__("os").getpid(), "worker_readiness":_WORKER_READINESS}
     return result
+
+
+def _drain_worker_progress(progress_queue, progress):
+    if progress_queue is None:
+        return
+    latest = None
+    while True:
+        try:
+            latest = progress_queue.get_nowait()
+        except Empty:
+            break
+    if latest is not None:
+        progress(latest)
 
 
 def _make_result(evaluations, history, iterations, metadata):
@@ -314,10 +362,16 @@ def optimize(network: NetworkModel, profiles, bounds: OptimizationBounds,
     evaluations = []
     best_by_candidate = {}
     history = []
-    worker_evaluator = _without_progress(evaluator) if optimizer_config.workers > 1 else evaluator
-    executor = (ProcessPoolExecutor(max_workers=optimizer_config.workers, initializer=_initialize_numba_worker)
-                if optimizer_config.workers > 1 else None)
+    workers = min(optimizer_config.workers, optimizer_config.population_size)
+    context = get_context()
+    progress_queue = context.Queue(maxsize=128) if workers > 1 and progress is not None and isinstance(evaluator, SimulationEvaluator) else None
+    worker_evaluator = _without_progress(evaluator) if workers > 1 else evaluator
+    executor = None
     try:
+        if workers > 1:
+            executor = ProcessPoolExecutor(max_workers=workers, mp_context=context,
+                                           initializer=_initialize_numba_worker,
+                                           initargs=(progress_queue,))
         for iteration in range(optimizer_config.max_iterations):
             if progress is not None:
                 progress(ProgressEvent(
@@ -365,21 +419,25 @@ def optimize(network: NetworkModel, profiles, bounds: OptimizationBounds,
                 }
                 completed_results = {}
                 try:
-                    for completed, future in enumerate(as_completed(futures), 1):
-                        candidate_index, candidate = futures[future]
-                        completed_results[candidate_index] = future.result()
-                        if progress is not None:
-                            progress(ProgressEvent(
-                                "Candidate", completed, len(pending),
-                                f"parallel result bus {candidate.bus_id}; "
-                                f"{candidate.power_rating_kw:g} kW / "
-                                f"{candidate.energy_capacity_kwh:g} kWh",
-                                True,
-                            ))
+                    running = set(futures)
+                    while running:
+                        ready, running = wait(running, timeout=0.25 if progress_queue is not None else None,
+                                              return_when=FIRST_COMPLETED)
+                        _drain_worker_progress(progress_queue, progress)
+                        for future in ready:
+                            candidate_index, candidate = futures[future]
+                            completed_results[candidate_index] = future.result()
+                            if progress is not None:
+                                progress(ProgressEvent(
+                                    "Candidate", len(completed_results), len(pending),
+                                    f"parallel result bus {candidate.bus_id}; "
+                                    f"{candidate.power_rating_kw:g} kW / "
+                                    f"{candidate.energy_capacity_kwh:g} kWh", True,
+                                ))
                 except Exception as error:
                     raise RuntimeError(
-                        "Parallel optimization failed. The evaluator and its inputs must be "
-                        f"picklable on Windows and Numba must compile in every worker. Cause: {error}"
+                        "Parallel optimization failed. To retry without worker processes, set "
+                        f"CPU workers to 1. Cause: {error}"
                     ) from error
                 for candidate_index, candidate in pending:
                     evaluation = completed_results[candidate_index]
@@ -425,13 +483,15 @@ def optimize(network: NetworkModel, profiles, bounds: OptimizationBounds,
     finally:
         if executor is not None:
             executor.shutdown(wait=True, cancel_futures=True)
+        if progress_queue is not None:
+            progress_queue.close()
 
     return _make_result(evaluations, history, len(history), {
         "algorithm": "GWO", "history_axis": "generation", "seed": optimizer_config.seed,
         "population_size": optimizer_config.population_size,
         "evaluations": len(evaluations), "unique_candidates": len(cache),
         "cache_evaluations": optimizer_config.cache_evaluations,
-        "workers": optimizer_config.workers,
+        "workers": workers,
         "catalog_size": len(bounds.allowed_bus_ids) * len(bounds.power_ratings_kw) * len(bounds.energy_capacities_kwh),
     })
 

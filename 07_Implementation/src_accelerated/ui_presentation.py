@@ -32,6 +32,8 @@ def compact_summary(report):
             ])
         elif getattr(result, "metadata", {}).get("no_bess_selected"):
             lines.append("Best option            No BESS")
+            if getattr(result, "message", None):
+                lines.append(result.message)
         else:
             lines.append("Best option            No feasible battery selected")
         if getattr(result, "best_objective", None) is not None:

@@ -383,7 +383,8 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
 def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
                         simulation_config: SimulationConfig,
                         bess_config: BESSConfig | None = None,
-                        dispatch_policy: DispatchPolicy | None = None, *, progress=None) -> TimeSeriesSimulationResult:
+                        dispatch_policy: DispatchPolicy | None = None, *, progress=None,
+                        hourly_progress_only=False) -> TimeSeriesSimulationResult:
     """Run all supplied hourly profiles, starting from config.soc_initial.
 
     dispatch_policy(index, profile_slice, state) returns requested kW. With no
@@ -444,7 +445,8 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
             network=network, profile_slice=profile_slice,
             fbs_config=simulation_config.fbs_config,
             bess_config=bess_config, bess_state=state, bess_request_kw=request_kw,
-            simulation_config=simulation_config, peak_load_kw=peak_load_kw, progress=progress,
+            simulation_config=simulation_config, peak_load_kw=peak_load_kw,
+            progress=None if hourly_progress_only else progress,
         )
         steps.append(step)
         state = copy(step.bess_state)
