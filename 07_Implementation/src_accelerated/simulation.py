@@ -3,6 +3,7 @@ from collections.abc import Callable
 from copy import copy
 from dataclasses import asdict, dataclass, field, replace
 from math import isfinite
+from time import perf_counter
 
 from .fbs import FBSConfig, OperatingPoint, PowerFlowResult, prepare_fbs, validate_config
 from .bess import BESSConfig, BESSState, BESSStepResult, step_bess
@@ -61,6 +62,9 @@ class SimulationConfig:
     shedding_penalty_per_kwh: float = 12.0
     curtailment_penalty_per_kwh: float = 0.07
     legacy_proportional_validation: bool = False
+    shedding_policy: str = "progressive"
+    shedding_tier_edges: tuple[float, float] = (0.50, 0.80)
+    shedding_tier_weights: tuple[float, float, float] = (1., 3., 10.)
 
     def __post_init__(self):
         if self.terminal_cycle_hours is not None and (type(self.terminal_cycle_hours) is not int or self.terminal_cycle_hours < 1):
@@ -102,6 +106,18 @@ class SimulationConfig:
                 raise ValueError(f"{name} cannot be negative")
         if not isinstance(self.legacy_proportional_validation, bool):
             raise ValueError("legacy_proportional_validation must be boolean")
+        if self.shedding_policy not in ("progressive", "minimum_energy"):
+            raise ValueError("Select progressive or minimum_energy shedding")
+        edges = tuple(self.shedding_tier_edges)
+        weights = tuple(self.shedding_tier_weights)
+        for value in (*edges, *weights):
+            _check_number(value, "Shedding tier value", positive=True)
+        if len(edges) != 2 or not 0 < edges[0] < edges[1] < 1:
+            raise ValueError("Shedding tier edges must be two increasing fractions below one")
+        if len(weights) != 3 or not weights[0] < weights[1] < weights[2]:
+            raise ValueError("Shedding tier weights must be three increasing positive numbers")
+        self.shedding_tier_edges = edges
+        self.shedding_tier_weights = weights
 
 
 @dataclass
@@ -125,6 +141,7 @@ class SimulationStepResult:
     dispatch: DispatchEvent | None = None
     requested_point: OperatingPoint | None = None
     pre_control_voltage_pu: dict[int, float] | None = None
+    correction: Correction | None = None
 
 
 @dataclass
@@ -487,6 +504,7 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
         dispatch=event if capture_dispatch else None,
         requested_point=requested_point if capture_dispatch else None,
         pre_control_voltage_pu=raw_flow.voltage_mag_pu if capture_dispatch and raw_flow.converged else None,
+        correction=correction,
     )
 
 
@@ -504,6 +522,7 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
     for engineering validation and receives its own copy of the battery state.
     completed describes processing coverage; feasible includes all constraints.
     """
+    started = perf_counter()
     network.validate()
     if not profiles.timestamps:
         raise ValueError("The simulation requires at least one timestamp")
@@ -543,7 +562,18 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
             soc=bess_config.soc_initial,
         )
     reserve_kw = simulation_config.reserve_fraction * peak_load_kw
-    solve_fbs = prepare_fbs(network, simulation_config.fbs_config)
+    prepared_fbs = prepare_fbs(network, simulation_config.fbs_config)
+    fbs_calls = 0
+    fbs_seconds = 0.
+
+    def solve_fbs(point, progress=None):
+        nonlocal fbs_calls, fbs_seconds
+        start = perf_counter()
+        flow = prepared_fbs(point, progress=progress)
+        fbs_calls += 1
+        fbs_seconds += perf_counter() - start
+        return flow
+
     corrector = NetworkCorrector(network, simulation_config, solve_fbs)
     planner = None
     if isinstance(dispatch_policy, ConstraintAwareDispatch):
@@ -551,6 +581,7 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
                                   profiles.timestamps,
                                   lambda index: _operating_point(network, profile_at(profiles, index)),
                                   reserve_kw, solve_fbs)
+    preparation_seconds = perf_counter() - started
     steps = []
     for index in range(count):
         if progress is not None:
@@ -621,5 +652,11 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
                          "dispatch_fbs_seconds": planner.flow_seconds if planner else 0.,
                          "dispatch_fbs_trials": planner.flow_trials if planner else 0,
                          "correction_seconds": corrector.seconds, "correction_fbs_trials": corrector.trials,
-                         "correction_hours": corrector.evaluations, "correction_unresolved_hours": corrector.unresolved},
+                         "correction_hours": corrector.evaluations, "correction_unresolved_hours": corrector.unresolved,
+                         "fbs_calls": fbs_calls, "fbs_seconds": fbs_seconds,
+                         "sensitivity_calls": corrector.sensitivity_calls, "sensitivity_seconds": corrector.sensitivity_seconds,
+                         "lp_calls": corrector.lp_calls, "lp_seconds": corrector.lp_seconds,
+                         "verified_linear_shortcuts": corrector.verified_linear_shortcuts,
+                         "sensitivity_probe_trials": corrector.probe_trials,
+                         "preparation_seconds": preparation_seconds, "elapsed_seconds": perf_counter() - started},
     )

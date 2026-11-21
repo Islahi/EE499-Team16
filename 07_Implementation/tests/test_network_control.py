@@ -7,6 +7,7 @@ import pytest
 
 from src_accelerated.data_loader import ProfileData, profile_at
 from src_accelerated.fbs import FBSConfig, prepare_fbs, run_fbs
+from src_accelerated.metrics import EconomicConfig, evaluate_results, summarize_service
 from src_accelerated.network_control import NetworkCorrector
 from src_accelerated.network_loader import load_network
 from src_accelerated.network_model import Bus, Line, Load, NetworkModel, PVUnit
@@ -74,6 +75,46 @@ def test_ampacity_and_disabled_controls_are_checked_with_voltage_and_grid():
     disabled = replace(settings, allow_load_shedding=False, allow_pv_curtailment=False)
     step = simulate_timeseries(network, data, disabled).steps[0]
     assert not step.feasible and step.dispatch.correction["status"] == "physically_infeasible_no_controls"
+
+
+def test_progressive_shares_shedding_without_substituting_controller_score_for_cost():
+    network = NetworkModel([Bus(i, str(i), 12.66, is_slack=(i == 1)) for i in (1, 2, 3)],
+        [Line("near", 1, 2, .001, .01), Line("far", 1, 3, 3., .01)],
+        [Load("L2", 2, 80., 16.), Load("L3", 3, 120., 24.)], [], 1000., 60.)
+    data = ProfileData.from_arrays(pd.date_range("2021-01-01", periods=2, freq="h"),
+                                  {2: [80.] * 2, 3: [120.] * 2}, {2: [16.] * 2, 3: [24.] * 2}, {}, {})
+    policy = SimulationConfig(grid_import_limit_kw=65.)
+    minimum = simulate_timeseries(network, data, replace(policy, shedding_policy="minimum_energy"))
+    balanced = simulate_timeseries(network, data, policy)
+    assert minimum.feasible and balanced.feasible
+    assert summarize_service(minimum)[0]["fully_disconnected_bus_hours"] == 2
+    assert summarize_service(minimum)[1][-1][-1] == 2  # Consecutive outage streak at bus 3.
+    assert summarize_service(balanced)[0]["fully_disconnected_bus_hours"] == 0
+    step = balanced.steps[0]
+    for bus, requested in ((2, 80.), (3, 120.)):
+        served = step.operating_point.p_load_kw[bus]
+        assert 0 < served < requested
+        assert step.operating_point.q_load_kvar[bus] == pytest.approx(served * .2)
+    assert step.correction.policy_score > step.correction.objective_usd
+    assert step.correction.objective_usd == pytest.approx(step.shedding_kw * policy.shedding_penalty_per_kwh)
+    metrics = evaluate_results(balanced, EconomicConfig())
+    assert metrics.annual_total_cost is None
+    assert metrics.controller_policy_score == pytest.approx(2 * step.correction.policy_score)
+
+
+def test_progressive_tiers_aggregate_once_and_use_lowest_available_weight():
+    network, data = case()
+    # Fixed slack and near load are small enough to leave an amount in all three tiers on bus 3.
+    result = simulate_timeseries(network, data, SimulationConfig(grid_import_limit_kw=12.))
+    assert result.feasible
+    step = result.steps[0]
+    remote_shed = step.shedding_by_bus_kw[3]
+    near_shed = step.shedding_by_bus_kw[2]
+    assert remote_shed > 200 and near_shed > 32
+    weighted_kw = 125 + 3 * 75 + 10 * (remote_shed - 200) + 20 + 3 * 12 + 10 * (near_shed - 32)
+    assert step.correction.policy_score == pytest.approx(weighted_kw * 12.)
+    assert step.operating_point.q_load_kvar[3] == pytest.approx(.2 * (250. - remote_shed))
+    assert step.operating_point.q_load_kvar[4] == 10.
 
 
 def test_nonconvergence_is_diagnostic_only():

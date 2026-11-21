@@ -97,6 +97,14 @@ class PerformanceMetrics:
     annual_grid_purchases: float | None = None
     annual_export_credit: float | None = None
     annualization_basis: str | None = None
+    fully_disconnected_bus_hours: float | None = None
+    hours_with_full_disconnection: float | None = None
+    service_unverified_hours: float | None = None
+    buses_shed_over_50_percent_hours: float | None = None
+    buses_shed_over_80_percent_hours: float | None = None
+    shedding_above_50_percent_kwh: float | None = None
+    shedding_above_80_percent_kwh: float | None = None
+    controller_policy_score: float | None = None
 
 
 
@@ -133,6 +141,75 @@ def _control_values(steps, supplied_values, name):
     if any(value is None for value in recorded_values):
         return None
     return recorded_values
+
+
+SERVICE_ABS_KW = 1e-6
+SERVICE_REL = 1e-6
+
+
+def load_service(requested_kw, served_kw):
+    if requested_kw is None or requested_kw <= SERVICE_ABS_KW or served_kw is None:
+        return None, None
+    fraction = min(1., max(0., served_kw / requested_kw))
+    return fraction, served_kw <= max(SERVICE_ABS_KW, SERVICE_REL * requested_kw)
+
+
+def service_verified(step):
+    correction = getattr(step, "correction", None)
+    return (step.power_flow.converged and step.requested_point is not None
+            and (correction is None or correction.status in
+                 ("not_needed", "verified", "legacy_proportional_validation")))
+
+
+def summarize_service(simulation):
+    """Count observed service interruptions, without treating missing or unsolved hours as outages."""
+    steps, dt = simulation.steps, simulation.dt_hours
+    if not steps or not any(step.requested_point is not None for step in steps):
+        return {}, []
+    totals = dict.fromkeys(("fully_disconnected_bus_hours", "hours_with_full_disconnection",
+                           "service_unverified_hours", "buses_shed_over_50_percent_hours",
+                           "buses_shed_over_80_percent_hours", "shedding_above_50_percent_kwh",
+                           "shedding_above_80_percent_kwh", "controller_policy_score"), 0.)
+    buses, streaks = {}, {}
+    previous = None
+    for step in steps:
+        if not service_verified(step):
+            totals["service_unverified_hours"] += dt
+            streaks.clear()
+            previous = None
+            continue
+        if previous is not None and (step.timestamp - previous).total_seconds() != dt * 3600:
+            streaks.clear()
+        previous = step.timestamp
+        correction = getattr(step, "correction", None)
+        totals["controller_policy_score"] += (correction.policy_score or 0.) * dt if correction else 0.
+        disconnected = False
+        for bus, requested in step.requested_point.p_load_kw.items():
+            served = step.operating_point.p_load_kw[bus]
+            fraction, outage = load_service(requested, served)
+            if fraction is None:
+                streaks.pop(bus, None)
+                continue
+            row = buses.setdefault(bus, [0., 0., 0., 0.])
+            row[0] += requested * dt
+            row[1] += served * dt
+            streaks[bus] = streaks.get(bus, 0.) + dt if outage else 0.
+            if outage:
+                disconnected = True
+                row[2] += dt
+                row[3] = max(row[3], streaks[bus])
+            shed = 1. - fraction
+            for tier, threshold in ((50, .5), (80, .8)):
+                if shed > threshold + SERVICE_REL:
+                    totals[f"buses_shed_over_{tier}_percent_hours"] += dt
+                    totals[f"shedding_above_{tier}_percent_kwh"] += (shed - threshold) * requested * dt
+        if disconnected:
+            totals["hours_with_full_disconnection"] += dt
+    shed_energy = sum(max(0., requested - served) for requested, served, _, _ in buses.values())
+    totals["fully_disconnected_bus_hours"] = sum(row[2] for row in buses.values())
+    return totals, [(bus, requested, served, max(0., requested-served),
+                     100 * served / requested, 100 * max(0., requested-served) / shed_energy if shed_energy else 0.,
+                     hours, longest) for bus, (requested, served, hours, longest) in sorted(buses.items())]
 
 
 def evaluate_results(simulation_result: TimeSeriesSimulationResult,
@@ -281,6 +358,8 @@ def evaluate_results(simulation_result: TimeSeriesSimulationResult,
         metrics.requested_load_energy_kwh = metrics.served_load_energy_kwh + metrics.load_shedding_energy_kwh
     if not metrics.feasible:
         metrics.notes.append("This run has network or reserve violations; retain its infeasible status.")
+    for name, value in summarize_service(simulation_result)[0].items():
+        setattr(metrics, name, value)
     return metrics
 
 

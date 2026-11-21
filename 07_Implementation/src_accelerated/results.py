@@ -6,7 +6,8 @@ from pathlib import Path
 from collections.abc import Mapping
 import json
 
-from .metrics import PerformanceMetrics, percentage_reduction
+from .metrics import (PerformanceMetrics, load_service, percentage_reduction, service_verified,
+                      summarize_service)
 from .optimizer import OptimizationResult
 from .simulation import TimeSeriesSimulationResult
 
@@ -19,6 +20,7 @@ COMPARISON_FIELDS = (
     "annual_curtailment_cost", "annual_shedding_cost", "curtailment_energy_kwh", "load_shedding_energy_kwh",
     "loss_energy_kwh", "grid_import_energy_kwh", "grid_export_energy_kwh",
     "peak_grid_import_kw", "voltage_violation_hours", "reserve_violation_hours",
+    "fully_disconnected_bus_hours", "hours_with_full_disconnection",
 )
 
 
@@ -166,6 +168,8 @@ def _hourly_rows(result):
     for index, step in enumerate(result.steps):
         flow, point, battery = step.power_flow, step.operating_point, step.bess_step
         correction = step.dispatch.correction if step.dispatch else None
+        verified = service_verified(step)
+        affected = sum(value > 1e-6 for value in (step.shedding_by_bus_kw or {}).values()) if verified else None
         balance_p = (flow.slack_p_kw + sum(point.p_pv_kw.values()) + sum(point.p_bess_kw.values())
                      - sum(point.p_load_kw.values()) - flow.total_loss_p_kw) if flow.converged else None
         balance_q = (flow.slack_q_kvar + sum(point.q_pv_kvar.values()) + sum(point.q_bess_kvar.values())
@@ -186,6 +190,7 @@ def _hourly_rows(result):
             step.reserve_power_shortfall_kw, step.reserve_energy_shortfall_kwh,
             sorted(step.voltage_violations), step.messages,
             balance_p, balance_q, (correction or {}).get("status"),
+            affected, (correction or {}).get("policy_score"), (correction or {}).get("objective_usd"),
         ]
 
 
@@ -193,10 +198,12 @@ def _bus_rows(result):
     for index, step in enumerate(result.steps):
         point, flow = step.operating_point, step.power_flow
         requested = step.requested_point
+        verified = service_verified(step)
         for bus_id in sorted(point.p_load_kw):
             requested_p = requested.p_load_kw[bus_id] if requested else None
             requested_q = requested.q_load_kvar[bus_id] if requested else None
             served = flow.converged
+            fraction, disconnected = load_service(requested_p, point.p_load_kw[bus_id] if verified else None)
             yield [index, str(step.timestamp), bus_id, flow.converged, step.feasible,
                    not flow.converged, flow.voltage_mag_pu.get(bus_id), flow.voltage_angle_deg.get(bus_id),
                    point.p_load_kw[bus_id], point.q_load_kvar[bus_id],
@@ -209,7 +216,8 @@ def _bus_rows(result):
                    requested_q - point.q_load_kvar[bus_id] if served and requested else None,
                    point.p_load_kw[bus_id] / requested_p if served and requested_p else None,
                    requested.p_pv_kw[bus_id] if requested else None,
-                   (step.pre_control_voltage_pu or {}).get(bus_id)]
+                   (step.pre_control_voltage_pu or {}).get(bus_id),
+                   (1. - fraction) * 100. if fraction is not None else None, disconnected]
 
 
 def _branch_rows(result):
@@ -336,6 +344,7 @@ def export_results(result: Result, output_path: str | Path, *,
             "bess_limit_reason", "curtailment_kw", "shedding_kw", "reserve_power_kw",
             "reserve_power_shortfall_kw", "reserve_energy_shortfall_kwh", "voltage_violation_bus_ids", "messages",
             "power_balance_residual_kw", "reactive_balance_residual_kvar", "correction_status",
+            "affected_load_buses", "controller_policy_score", "physical_correction_cost_usd_per_hour",
         ], _hourly_rows(result))
         write_table("buses.csv", [
             "step_index", "timestamp", "bus_id", "converged", "step_feasible", "diagnostic_only",
@@ -343,7 +352,13 @@ def export_results(result: Result, output_path: str | Path, *,
             "pv_input_kvar", "bess_input_kw", "bess_input_kvar", "curtailment_kw", "shedding_kw", "voltage_violation",
             "requested_load_kw", "requested_load_kvar", "shedding_kvar", "remaining_load_fraction",
             "available_pv_kw", "pre_control_voltage_pu",
+            "shed_load_percent", "fully_disconnected",
         ], _bus_rows(result))
+        quality, service_buses = summarize_service(result)
+        if quality:
+            write_table("service_by_bus.csv", ["bus_id", "requested_energy_kwh", "served_energy_kwh",
+                        "shed_energy_kwh", "served_energy_percent", "share_of_shed_energy_percent",
+                        "fully_disconnected_hours", "longest_disconnection_hours"], service_buses)
         write_table("branches.csv", [
             "step_index", "timestamp", "line_id", "converged", "step_feasible", "diagnostic_only",
             "current_a", "sending_p_kw", "sending_q_kvar", "loss_p_kw", "loss_q_kvar",
