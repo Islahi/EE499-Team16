@@ -121,4 +121,69 @@ class EngineTests(unittest.TestCase):
             with (out/'load_profile.csv').open() as f: self.assertEqual(sum(1 for _ in f)-1,136*72)
 
 
+    def test_clock_and_nasa_pv_export(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            hours = 48
+            ts = create_three(d, start='2021-01-01', hours=hours)
+            src = e.load_profiles(d)
+            net = e.load_network(ROOT/'examples'/'Guide_5Bus_Radial_Test.xlsx')
+            nasa = d/'nasa.csv'
+            pd.DataFrame({
+                'timestamp': ts,
+                'irradiance_w_m2': [800 if t.hour == 12 else 0 for t in ts],
+                'source_clock': ['UTC'] * hours,
+            }).to_csv(nasa, index=False)
+            origin = net.source.read_bytes()
+            manifest = e.export_network(
+                net, src, e.demo_cycle(net), d/'with_pv', source_clock='UTC',
+                nasa_irradiance=nasa, pv_ratings_override={2: 100., 4: 80.},
+                site_lat=43.263, site_lon=-2.935, clock_confirmed=True)
+            self.assertEqual(manifest['clock'], 'UTC')
+            self.assertEqual(manifest['pv_bus_count'], 2)
+            self.assertEqual(manifest['pv_installed_capacity_kw'], 180.)
+            self.assertTrue(manifest['pv_generation_is_modeled'])
+            self.assertTrue(manifest['pv_reference']['common_source'])
+            pv = pd.read_csv(d/'with_pv'/'pv_profile.csv')
+            self.assertEqual(len(pv), hours * 2)
+            self.assertEqual(set(pv.bus_id), {2, 4})
+            self.assertAlmostEqual(pv.loc[(pv.bus_id == 2) & (pv.timestamp.str.endswith('12:00:00')), 'p_kw'].iloc[0], 80.)
+            self.assertTrue((pv.q_kvar == 0).all())
+            summary = pd.read_csv(d/'with_pv'/'bus_summary.csv')
+            self.assertAlmostEqual(summary.loc[summary.bus_id == 4, 'pv_rated_kw'].iloc[0], 80.)
+            self.assertEqual(origin, net.source.read_bytes())
+            self.assertTrue((d/'with_pv'/'solar_irradiance.csv').exists())
+
+    def test_nasa_raw_csv_and_missing_hours(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            raw = d/'nasa_power.csv'
+            raw.write_text(
+                '-BEGIN HEADER-\\nTime Standard: UTC\\n-END HEADER-\\n'
+                'YEAR,MO,DY,HR,ALLSKY_SFC_SW_DWN\\n'
+                '2021,1,1,0,0\\n2021,1,1,1,350\\n',
+                encoding='utf-8')
+            frame = e.solar_profile.read_nasa_csv(raw)
+            self.assertEqual(len(frame), 2)
+            self.assertAlmostEqual(frame.irradiance_w_m2.iloc[1], 350.)
+            create_three(d, start='2021-01-01', hours=4)
+            src = e.load_profiles(d)
+            net = e.load_network(ROOT/'examples'/'Guide_5Bus_Radial_Test.xlsx')
+            with self.assertRaisesRegex(ValueError, 'missing'):
+                e.export_network(net, src, e.demo_cycle(net), d/'missing',
+                                 nasa_irradiance=raw, pv_ratings_override={2: 100.})
+            self.assertFalse((d/'missing').exists())
+
+    def test_pv_rating_validation_and_clock(self):
+        case = e.load_network(ROOT/'examples'/'Guide_5Bus_Radial_Test.xlsx')
+        self.assertEqual(
+            e.solar_profile.parse_bus_ratings('2:100, 4:80', case.loads.bus_id.tolist(), case.slack),
+            {2:100, 4:80})
+        with self.assertRaisesRegex(ValueError, 'Duplicate'):
+            e.solar_profile.parse_bus_ratings('2:100,2:90', case.loads.bus_id.tolist(), case.slack)
+        with self.assertRaisesRegex(ValueError, 'slack'):
+            e.solar_profile.parse_bus_ratings(f'{case.slack}:100', case.loads.bus_id.tolist(), case.slack)
+        with self.assertRaisesRegex(ValueError, 'Unknown clock'):
+            e.solar_profile.checked_clock('Imaginary/Invalid_Time_Zone')
+
 if __name__=='__main__':unittest.main()
