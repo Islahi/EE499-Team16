@@ -85,11 +85,11 @@ def parse_bus_ratings(text: str, known_buses, slack: int) -> dict[int, float]:
     result: dict[int, float] = {}
     if not str(text or "").strip():
         return result
-    for token in re.split(r"[,;\\n]+", text):
+    for token in re.split(r"[,;\n]+", text):
         token = token.strip()
         if not token:
             continue
-        match = re.fullmatch(r"(\\d+)\\s*:\\s*(\\d+(?:\\.\\d+)?)", token)
+        match = re.fullmatch(r"(\d+)\s*:\s*(\d+(?:\.\d+)?)", token)
         if not match:
             raise ValueError(f"PV entry {token!r} is invalid; use bus:rating, e.g. 5:100")
         bus = int(match.group(1))
@@ -212,7 +212,7 @@ def apply_pv_and_clock(destination: Path, demand_timestamps, network, clock: str
             "Modeled nonzero PV generation imported from NASA POWER irradiance. "
             "Network workbook and bus load profiles are not changed. "
             "Solar output is modeled (not measured). Verify GoiEner source time zone before formal study. "
-            "Use dataset PV history; do not enable fallback solar a second time.\\n", encoding="utf-8")
+            "Use dataset PV history; do not enable fallback solar a second time.\n", encoding="utf-8")
     else:
         manifest["pv_status"] = "ZERO-PV PLACEHOLDER ONLY; no NASA/actual generation supplied"
         manifest["pv_generation_is_modeled"] = False
@@ -224,5 +224,5 @@ def apply_pv_and_clock(destination: Path, demand_timestamps, network, clock: str
     if (destination / "solar_irradiance.csv").exists():
         manifest["profile_hashes_sha256"]["solar_irradiance.csv"] = hashlib.sha256(
             (destination / "solar_irradiance.csv").read_bytes()).hexdigest()
-    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\\n", encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return manifest
