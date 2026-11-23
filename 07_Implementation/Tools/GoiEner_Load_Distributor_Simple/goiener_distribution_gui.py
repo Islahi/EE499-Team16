@@ -8,7 +8,7 @@ from pathlib import Path
 import queue
 import threading
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 
 import distribution_engine as core
 
@@ -184,6 +184,13 @@ class App(tk.Tk):
         self.map_folder = tk.StringVar()
         self.output_root = tk.StringVar(value=str(Path.home() / "Documents"))
         self.zero_pv = tk.BooleanVar(value=False)
+        self.source_clock = tk.StringVar(value="UTC")
+        self.clock_confirmed = tk.BooleanVar(value=False)
+        self.nasa_csv = tk.StringVar(value="")
+        self.nasa_lat = tk.StringVar(value="")
+        self.nasa_lon = tk.StringVar(value="")
+        self.pv_overrides: dict[str, dict[int, float]] = {}
+        self.pv_summary = tk.StringVar(value="Choose a network in tab 2, then edit its PV installations here.")
         self.status = tk.StringVar(value="Load your cleaned GoiEner profiles, then add networks.")
         self._build()
         self.after(150, self._poll)
@@ -199,11 +206,14 @@ class App(tk.Tk):
         self.p1 = ttk.Frame(tabs, padding=16)
         self.p2 = ttk.Frame(tabs, padding=16)
         self.p3 = ttk.Frame(tabs, padding=16)
+        self.p4 = ttk.Frame(tabs, padding=16)
         tabs.add(self.p1, text="1  Profiles")
         tabs.add(self.p2, text="2  Networks & bus types")
-        tabs.add(self.p3, text="3  Export")
+        tabs.add(self.p3, text="3  Solar / PV")
+        tabs.add(self.p4, text="4  Export")
         self._build_profiles()
         self._build_networks()
+        self._build_solar()
         self._build_export()
         bottom = ttk.Frame(container)
         bottom.pack(fill="x", pady=(10, 0))
@@ -367,8 +377,97 @@ class App(tk.Tk):
             except Exception as e:
                 messagebox.showerror("Invalid mapping", str(e))
 
-    def _build_export(self):
+    def _build_solar(self):
         page = self.p3
+        ttk.Label(page, text="NASA POWER irradiance and PV installations", style="Heading.TLabel").pack(anchor="w")
+        ttk.Label(page, text="Converts NASA UTC hourly irradiance into modeled bus PV output. "
+                  "The original network workbook and GoiEner load values remain unchanged.",
+                  style="Subtle.TLabel", wraplength=950).pack(anchor="w", pady=(3, 15))
+        clk = ttk.LabelFrame(page, text="Demand source clock (required)", padding=13)
+        clk.pack(fill="x", pady=(0, 12))
+        row = ttk.Frame(clk)
+        row.pack(fill="x")
+        ttk.Label(row, text="GoiEner timestamp clock:").pack(side="left")
+        ttk.Combobox(row, textvariable=self.source_clock, values=("UTC", "Europe/Madrid", "Asia/Riyadh"),
+                     state="normal", width=27).pack(side="left", padx=12)
+        ttk.Label(row, text="Use a real IANA time zone (e.g., UTC).",
+                  style="Subtle.TLabel").pack(side="left")
+        ttk.Checkbutton(clk,
+                        text="I confirm this clock is the source clock or an explicitly disclosed study assumption.",
+                        variable=self.clock_confirmed).pack(anchor="w", pady=(11, 2))
+        ttk.Label(clk, text="GoiEner's original time zone is not documented. UTC is a convenience assumption, "
+                  "not confirmed metadata. Non-UTC clocks must pass strict daylight-saving alignment.",
+                  style="Subtle.TLabel", wraplength=930).pack(anchor="w")
+
+        irradiance = ttk.LabelFrame(page, text="NASA POWER irradiance (optional)", padding=13)
+        irradiance.pack(fill="x", pady=(0, 12))
+        path_row = ttk.Frame(irradiance)
+        path_row.pack(fill="x")
+        ttk.Entry(path_row, textvariable=self.nasa_csv).pack(side="left", fill="x", expand=True)
+        ttk.Button(path_row, text="Choose NASA CSV...", command=self._pick_nasa).pack(side="left", padx=(8, 0))
+        ttk.Button(path_row, text="Clear", command=lambda: self.nasa_csv.set("")).pack(side="left", padx=(8, 0))
+        ttk.Label(irradiance,
+                  text="Accepts NASA POWER YEAR/MO/DY/HR/ALLSKY_SFC_SW_DWN or prepared "
+                       "timestamp,irradiance_w_m2 CSV in UTC. Coverage must match every demand hour.",
+                  style="Subtle.TLabel", wraplength=930).pack(anchor="w", pady=(8, 4))
+        coords = ttk.Frame(irradiance)
+        coords.pack(fill="x", pady=(6, 0))
+        ttk.Label(coords, text="Solar site latitude:").pack(side="left")
+        ttk.Entry(coords, textvariable=self.nasa_lat, width=14).pack(side="left", padx=(5, 16))
+        ttk.Label(coords, text="Longitude:").pack(side="left")
+        ttk.Entry(coords, textvariable=self.nasa_lon, width=14).pack(side="left", padx=(5, 0))
+        ttk.Label(coords, text="(optional; record actual NASA site coordinates)",
+                  style="Subtle.TLabel").pack(side="left", padx=(12, 0))
+
+        pv = ttk.LabelFrame(page, text="PV nameplate ratings per network", padding=13)
+        pv.pack(fill="x")
+        ttk.Label(pv, text="Existing workbook PV units are used by default. For 15-bus networks without PV, "
+                  "choose the network in tab 2 and define installations as bus:kW pairs.",
+                  style="Subtle.TLabel", wraplength=940).pack(anchor="w")
+        ttk.Button(pv, text="Edit PV for selected network...",
+                   command=self._edit_pv).pack(anchor="w", pady=(11, 7))
+        ttk.Label(pv, textvariable=self.pv_summary, wraplength=940).pack(anchor="w")
+        ttk.Label(page,
+                  text="PV model: 120 / 1000 W/m² piecewise conversion, rated kW clipping, Q=0. "
+                       "This is modeled production, not plant-measured data.",
+                  style="Subtle.TLabel", wraplength=940).pack(anchor="w", pady=(16, 0))
+
+    def _pick_nasa(self):
+        name = filedialog.askopenfilename(title="Select NASA POWER UTC irradiance CSV",
+                                          filetypes=[("CSV data", "*.csv"), ("All files", "*.*")])
+        if name:
+            self.nasa_csv.set(name)
+
+    def _edit_pv(self):
+        path = self._one_selected()
+        if path is None:
+            return
+        net = self.networks[path]
+        base = {int(row.bus_id): float(row.pv_rated_kw) for row in net.loads.itertuples()
+                if float(row.pv_rated_kw) > 0}
+        configured = self.pv_overrides.get(path, base)
+        initial = ", ".join(f"{bus}:{value:g}" for bus, value in sorted(configured.items()))
+        answer = simpledialog.askstring(
+            "PV installation ratings",
+            f"{net.source.name}\\nEnter comma-separated bus:kW pairs.\\n"
+            "Example: 5:100, 7:100, 10:100, 13:100, 15:100\\n"
+            "Clear all entries to remove installed PV:",
+            initialvalue=initial, parent=self)
+        if answer is None:
+            return
+        try:
+            ratings = core.solar_profile.parse_bus_ratings(answer, net.loads.bus_id.tolist(), net.slack)
+        except Exception as exc:
+            messagebox.showerror("Invalid PV installations", str(exc))
+            return
+        self.pv_overrides[path] = ratings
+        self.pv_summary.set(
+            f"{net.source.name}: {len(ratings)} PV buses, {sum(ratings.values()):g} kW total. "
+            + ", ".join(f"{bus}:{kw:g}" for bus, kw in sorted(ratings.items())))
+        self.status.set("PV ratings configured for " + net.source.name)
+
+    def _build_export(self):
+        page = self.p4
         ttk.Label(page, text="Generate simulation-ready load CSVs", style="Heading.TLabel").pack(anchor="w")
         ttk.Label(page, text="The full common timeline is exported. Large networks can produce multi-million-row CSVs.",
                   style="Subtle.TLabel").pack(anchor="w", pady=(3, 16))
@@ -394,9 +493,9 @@ class App(tk.Tk):
         ttk.Label(row, text="Optional folder with <network_name>_assignments.csv:").pack(side="left")
         ttk.Entry(row, textvariable=self.map_folder).pack(side="left", fill="x", expand=True, padx=8)
         ttk.Button(row, text="Browse…", command=self._pick_map_folder).pack(side="left")
-        ttk.Checkbutton(page, text="I understand: for networks containing PV units, export ZERO-PV placeholders for load-only tests.",
+        ttk.Checkbutton(page, text="Without NASA input: explicitly allow ZERO-PV placeholders for load-only tests.",
                         variable=self.zero_pv).pack(anchor="w", pady=(8, 3))
-        ttk.Label(page, text="GoiEner has no PV measurements. PV curtailment / BESS economics must NOT be evaluated using a zero-PV placeholder as real PV generation.",
+        ttk.Label(page, text="Use Solar / PV tab for NASA input and bus ratings. Without irradiance, the PV profile contains only zeros.",
                   style="Subtle.TLabel", wraplength=950).pack(anchor="w")
         pathrow = ttk.Frame(page)
         pathrow.pack(fill="x", pady=(20, 15))
