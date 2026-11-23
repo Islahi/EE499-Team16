@@ -19,6 +19,11 @@ from typing import Callable
 import numpy as np
 import pandas as pd
 
+try:
+    from . import solar_profile
+except ImportError:  # standalone script import
+    import solar_profile
+
 ROOT = Path(__file__).resolve().parent
 CATEGORIES = ("residential", "commercial", "manufacturing")
 ALIASES = {"industrial": "manufacturing", "industry": "manufacturing", "manufacture": "manufacturing",
@@ -319,9 +324,13 @@ def _safe_filename(name: str) -> str:
 
 def export_network(network: NetworkData, source: SectorData, mapping: dict[int, str],
                    destination: Path, anchor: str = "mean", allow_zero_pv: bool = False,
-                   chunk_hours: int = 168, progress: Callable[[str], None] | None = None) -> dict:
+                   chunk_hours: int = 168, progress: Callable[[str], None] | None = None,
+                   source_clock: str = "UTC", nasa_irradiance: Path | None = None,
+                   pv_ratings_override: dict[int, float] | None = None,
+                   site_lat: float | None = None, site_lon: float | None = None,
+                   clock_confirmed: bool = False) -> dict:
     validate_mapping(network, mapping)
-    if network.pv_count > 0 and not allow_zero_pv:
+    if network.pv_count > 0 and not (allow_zero_pv or nasa_irradiance is not None):
         raise ValueError(f"{network.pv_count} PV buses detected in {network.source.name}. GoiEner contains no PV generation. Explicitly enable zero-PV placeholders for load-only experiments or use a separate real PV profile.")
     if destination.exists():
         raise FileExistsError(f"Export destination already exists: {destination}")
@@ -394,6 +403,12 @@ def export_network(network: NetworkData, source: SectorData, mapping: dict[int, 
             "generation series before evaluating PV curtailment or economic BESS benefits. The original feeder "
             "workbook, topology, impedances, base kV, slack voltage and other voltage settings remain UNCHANGED. "
             "The FBS solver must calculate operating bus voltages hour by hour.\n", encoding="utf-8")
+        # Finish one-folder EE499 metadata and optionally generate real modeled
+        # PV from NASA irradiance. The original network and load CSV stay intact.
+        manifest = solar_profile.apply_pv_and_clock(
+            destination, all_time, network, source_clock,
+            nasa_csv=nasa_irradiance, pv_overrides=pv_ratings_override,
+            site_lat=site_lat, site_lon=site_lon, clock_confirmed=clock_confirmed)
         return manifest
     except Exception:
         shutil.rmtree(destination, ignore_errors=True)
