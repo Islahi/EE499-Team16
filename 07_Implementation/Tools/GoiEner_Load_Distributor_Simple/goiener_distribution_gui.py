@@ -527,6 +527,23 @@ class App(tk.Tk):
         if not self.networks:
             messagebox.showerror("Missing network", "Add one or more networks in tab 2 first.")
             return
+        if not self.clock_confirmed.get():
+            messagebox.showerror("Demand clock not confirmed",
+                                 "Open Solar / PV and confirm the selected source-clock assumption.")
+            return
+        try:
+            source_clock = core.solar_profile.checked_clock(self.source_clock.get())
+            nasa_source = self.nasa_csv.get().strip()
+            if nasa_source:
+                core.solar_profile.read_nasa_csv(Path(nasa_source))
+            lat_s, lon_s = self.nasa_lat.get().strip(), self.nasa_lon.get().strip()
+            if bool(lat_s) != bool(lon_s):
+                raise ValueError("Enter both solar site latitude and longitude or leave both blank")
+            site_lat = float(lat_s) if lat_s else None
+            site_lon = float(lon_s) if lon_s else None
+        except Exception as exc:
+            messagebox.showerror("Solar/clock configuration is invalid", str(exc))
+            return
         style = self.mapping_style.get()
         mappings = {}
         errors = []
@@ -544,8 +561,15 @@ class App(tk.Tk):
                     if mapping is None:
                         raise ValueError("No saved or imported bus map. Edit it in tab 2 or choose an explicit scenario assignment.")
                 core.validate_mapping(case, mapping)
-                if case.pv_count and not self.zero_pv.get():
-                    raise ValueError("Has PV units; explicitly check ZERO-PV placeholder if this is a load-only test")
+                effective = self.pv_overrides.get(path)
+                ratings = effective if effective is not None else {
+                    int(row.bus_id): float(row.pv_rated_kw)
+                    for row in case.loads.itertuples() if float(row.pv_rated_kw) > 0
+                }
+                if nasa_source and not ratings:
+                    raise ValueError("NASA input selected, but no PV buses configured. Use Solar / PV.")
+                if ratings and not (nasa_source or self.zero_pv.get()):
+                    raise ValueError("PV buses configured without NASA input or approved zero-PV placeholder")
                 mappings[path] = mapping
             except Exception as exc:
                 errors.append(f"{case.source.name}: {exc}")
@@ -561,10 +585,12 @@ class App(tk.Tk):
         self.progress.configure(value=0)
         self._append_log(f"Exporting {len(self.networks)} network(s) from {self.source.hours:,} GoiEner hours…")
         args = (dict(self.networks), mappings, self.source, run_folder,
-                self.anchor.get(), bool(self.zero_pv.get()), style)
+                self.anchor.get(), bool(self.zero_pv.get()), style,
+                source_clock, nasa_source, dict(self.pv_overrides), site_lat, site_lon)
         threading.Thread(target=self._worker, args=args, daemon=True).start()
 
-    def _worker(self, cases, mappings, source, root, anchor, zero_pv, style):
+    def _worker(self, cases, mappings, source, root, anchor, zero_pv, style,
+                source_clock, nasa_source, pv_overrides, site_lat, site_lon):
         results = []
         root.mkdir(parents=True)
         for index, (path, case) in enumerate(cases.items(), 1):
@@ -573,8 +599,14 @@ class App(tk.Tk):
             if folder.exists():
                 folder = root / f"{clean}_{index:02d}"
             try:
-                manifest = core.export_network(case, source, mappings[path], folder, anchor, zero_pv,
-                                                progress=lambda msg: self.events.put(("log", msg)) if msg.endswith(f"{source.hours:,} hours exported") else None)
+                manifest = core.export_network(
+                    case, source, mappings[path], folder, anchor, zero_pv,
+                    progress=lambda msg: self.events.put(("log", msg))
+                    if msg.endswith(f"{source.hours:,} hours exported") else None,
+                    source_clock=source_clock,
+                    nasa_irradiance=Path(nasa_source) if nasa_source else None,
+                    pv_ratings_override=pv_overrides.get(path),
+                    site_lat=site_lat, site_lon=site_lon, clock_confirmed=True)
                 results.append({"network": case.source.name, "status": "ok", "folder": str(folder),
                                 "message": f"{manifest['hours']:,} hours x {manifest['bus_count']} buses"})
             except Exception as e:
@@ -588,7 +620,7 @@ class App(tk.Tk):
         (root / "SCENARIO_CLASSIFICATION.txt").write_text(
             "Customer-sector assignments are selected study assumptions and are not inferred from static feeder topology.\n"
             f"Assignment rule: {style}.\n"
-            "No PV generation data is included; any exported pv_profile.csv is a ZERO placeholder.\n",
+            f"PV source: {'NASA modeled' if nasa_source else 'zero placeholder'}; "            "see per-case manifests.\\n",
             encoding="utf-8")
         self.events.put(("finish", (root, results)))
 
