@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from src.study_session import StudySession, _json_value
-from RECOVER_ARCHIVED_RUN import recover
+from Tools.Recovery.RECOVER_ARCHIVED_RUN import recover
 
 
 def test_nested_numpy_metadata_is_json_serializable():

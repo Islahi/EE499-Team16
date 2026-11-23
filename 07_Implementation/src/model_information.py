@@ -30,6 +30,8 @@ def study_information(study, *, static=False):
             "Time step hours": None if static else study.profiles.dt_hours}
     if study.request is not None:
         request = study.request
+        for key in ("Workbook provenance", "Network SHA256", "Distributor network SHA256"):
+            data[key] = study.context.get(key)
         data["Source files"] = {"network": str(request.network_path)}
         if not static:
             data["Source files"].update(
@@ -235,6 +237,9 @@ def model_information(metadata, input_snapshot=None):
         ("Maximum FBS iterations", solver.get("max_iterations")), ("FBS tolerance (pu)", solver.get("voltage_tolerance_pu")),
         ("Buses", system.get("buses", len(topology["buses"]) if "buses" in topology else None)),
         ("Branches", system.get("branches", len(topology["lines"]) if "lines" in topology else None)),
+        ("Workbook provenance", context.get("Workbook provenance")),
+        ("Selected workbook SHA256", context.get("Network SHA256")),
+        ("Distributor workbook SHA256", context.get("Distributor network SHA256")),
         ("Slack bus", system.get("slack_bus", slack.get("bus_id"))),
         ("Slack voltage (pu)", system.get("slack_voltage_pu", slack.get("v_set_pu"))),
         ("Voltage bounds (pu)", f"{simulation['voltage_min_pu']}–{simulation['voltage_max_pu']}"

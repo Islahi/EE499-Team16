@@ -39,6 +39,10 @@ def joint_search_policy(bus_count: int) -> JointSearchPolicy:
 
 def effective_joint_search(values) -> JointSearchPolicy:
     defaults = joint_search_policy(len(values.get("allowed_buses", ())))
-    return replace(defaults, population=values.get("spin_ga_population", defaults.population),
-                   generations=values.get("spin_max_generations", defaults.generations),
+    generations = values.get("spin_max_generations", defaults.generations)
+    stall = values.get("spin_ga_stall_generations", defaults.stall_generations)
+    if type(stall) is not int or not 1 <= stall <= generations:
+        raise ValueError(f"GA stall generations must be between 1 and maximum generations ({generations}).")
+    return replace(defaults, stall_generations=stall, population=values.get("spin_ga_population", defaults.population),
+                   generations=generations,
                    workers=values.get("spin_parallel_workers", defaults.workers))

@@ -73,12 +73,17 @@ generic importer for arbitrary spreadsheet column names.
   positive initial voltages and zero angles. Non-slack initial magnitudes do
   not replace the existing solver's flat initialization or become voltage limits.
 - Base load comes from `Bus Data` once. Receiving-end loads in `Branch Data`
-  must agree with that bus's values and are not added again.
+  must agree with that bus's values. Update both fields when editing a base load
+  that appears in both sheets.
+- Set the slack magnitude in the slack bus row under `Vm (p.u.) init`
+  (`Bus Data!E2` in the supplied 33-bus example). In a project-schema workbook,
+  use `Buses.v_set_pu` instead.
 - Skip explicit `TOTAL` and `Source:` footer rows without using their formulas.
   Formula cells in actual numeric input rows are rejected, even if Excel has a
   cached result. Rows after a footer cannot silently become network records.
-- Buses with zero P and zero Q do not create artificial load devices. No PV
-  equipment is created because the source has no installed-PV rating table.
+- Buses with zero P and zero Q do not create artificial load devices. Reference
+  workbooks can include an optional `ampacity_a` column under `Branch Data` and
+  an optional `PV` sheet with the project-schema columns described below.
 
 The source workbook is preserved. Notes/citations in the workbook are not
 imported as model properties; retain the source path in the later run context.
@@ -133,7 +138,7 @@ frequency values already present in the sheet still raise an error.
 | `from_bus`, `to_bus` | Yes | Integer endpoints referring to existing buses |
 | `r_ohm` | Yes | Nonnegative per-phase resistance, ohms |
 | `x_ohm` | Yes | Finite per-phase reactance, ohms; signed values follow the existing model |
-| `ampacity_a` | No | Positive A or blank. Stored only: thermal enforcement remains excluded. |
+| `ampacity_a` | No | Positive A or blank. The simulator uses a known rating for thermal checks when ampacity enforcement is enabled. |
 | `status` | No | Numeric 1/0 or TRUE/FALSE. If the column is absent, all lines are in service; if present, fill every row. Explicit 0 omits that open line from the returned operating topology. |
 | `notes` | No | Ignored text |
 
@@ -173,6 +178,12 @@ Absolute hourly profile loads **replace** base-load values at the simulation
 boundary; they are not added to them. If your source is a normalized load shape,
 convert it to per-bus kW/kvar explicitly before passing it to `ProfileData`.
 After selecting a different network, recheck profile bus IDs and search bounds.
+
+For a new distributed study, V16 checks that the selected workbook and profile
+folder agree on bus coverage and installed PV. The workbook and distributor
+hashes track where each input came from. An explicit workbook PV rating, including
+zero, takes precedence over the folder's equipment summary in workbook mode.
+Profile hashes and saved-study fingerprints detect changes to recorded inputs.
 
 With no installed PV, the unchanged profile loader still expects a PV CSV on
 the same timeline: supply an explicit all-zero PV series at a valid bus. Do

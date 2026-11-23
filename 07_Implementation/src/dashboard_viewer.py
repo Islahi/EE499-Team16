@@ -6,9 +6,13 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QDialog, QFileDialog, QHBoxLayout, QMessageBox, QPushButton, QVBoxLayout
 
 
-def show_dashboard(parent, path):
+def show_dashboard(parent, path, focus=None):
     path = Path(path).resolve(strict=True)
     url = QUrl.fromLocalFile(str(path))
+
+    if focus:
+        from urllib.parse import urlencode
+        url.setFragment(urlencode(focus))
 
     def external():
         if not QDesktopServices.openUrl(url):
@@ -26,7 +30,7 @@ def show_dashboard(parent, path):
     class OfflineRequests(QWebEngineUrlRequestInterceptor):
         def interceptRequest(self, request):
             target = request.requestUrl()
-            if target != url and target.scheme() not in ("blob", "data", "about"):
+            if target.adjusted(QUrl.UrlFormattingOption.RemoveFragment) != url.adjusted(QUrl.UrlFormattingOption.RemoveFragment) and target.scheme() not in ("blob", "data", "about"):
                 request.block(True)
 
     dialog = QDialog(parent)

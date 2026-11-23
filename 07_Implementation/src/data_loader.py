@@ -26,6 +26,9 @@ class ProfileData:
                     raise ValueError(f"{label} {name} must be finite")
             if (frame.bus_id % 1 != 0).any() or (frame.p_kw < 0).any():
                 raise ValueError(f"{label} bus IDs must be integers and active power nonnegative")
+            if label == "Load" and (frame.q_kvar < 0).any():
+                row = frame.loc[frame.q_kvar < 0].iloc[0]
+                raise ValueError(f"Load q_kvar must be nonnegative at bus {int(row.bus_id)}, {row.timestamp}")
             if frame.duplicated(["timestamp", "bus_id"]).any():
                 raise ValueError(f"Duplicate {label} timestamp/bus rows")
             frame = frame.sort_values(["timestamp", "bus_id"])

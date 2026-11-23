@@ -218,6 +218,11 @@ def simulate_timeseries_fleet(network, profiles, settings, configs, *, progress=
                                   correction=asdict(correction),
                                   reason_codes=[control_reason, f'{len(configs)} distinct battery injections'] +
                                   ([opf_audit['status']] if opf_controller is not None else []))
+            from .control_audit import constraint_evidence
+            event.requested_p_by_bus = dict(requests)
+            event.requested_q_by_bus = dict(q_requests or {})
+            event.evidence = constraint_evidence(network, settings, (check, before_check, final_check),
+                                                 (raw, accepted[1], flow))
         steps.append(SimulationStepResult(
             timestamp=timestamp, operating_point=served, power_flow=flow,
             bess_request_kw=sum(requests.values()), bess_step=None, bess_state=None,
@@ -226,6 +231,8 @@ def simulate_timeseries_fleet(network, profiles, settings, configs, *, progress=
             shedding_kw=sum(shed.values()) if shed is not None else None,
             curtailment_by_bus_kw=curtailed, shedding_by_bus_kw=shed,
             dispatch=event, requested_point=point if capture_dispatch else None,
+            uncontrolled_voltage_pu=raw.voltage_mag_pu if capture_dispatch and raw.converged else None,
+            before_correction_voltage_pu=accepted[1].voltage_mag_pu if capture_dispatch and accepted[1].converged else None,
             pre_control_voltage_pu=(dict(accepted[1].voltage_mag_pu) if accepted[1].converged else None),
             correction=correction, fleet_steps=actions,
             fleet_states={bus:BESSState(state.energy_kwh,state.soc) for bus,state in states.items()},

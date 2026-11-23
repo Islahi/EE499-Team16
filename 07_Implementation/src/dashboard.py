@@ -8,7 +8,7 @@ from hashlib import file_digest, sha256
 import json
 from math import isfinite
 from pathlib import Path
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, TemporaryFile
 from uuid import uuid4
 from zipfile import ZIP_DEFLATED, ZIP_STORED, ZipFile
 
@@ -20,7 +20,7 @@ ASSETS = Path(__file__).parent / "assets"
 RUN_FILE = "dashboard_run.json"
 MANIFEST_FILE = "dashboard_manifest.json"
 HTML_FILE = "dashboard.html"
-SCHEMA = 2
+SCHEMA = 4
 CHUNK_HOURS = 168
 TABLES = ("hourly.csv", "buses.csv", "branches.csv", "metrics.csv", "evaluations.csv", "service_by_bus.csv",
           "convergence.csv", "economic_comparison.csv", "comparison.csv", "bus_ranking_by_stage.csv",
@@ -73,6 +73,7 @@ def write_run_metadata(folder, network, kind, context, simulation, *, optimizer=
     layout = build_layout(network)
     topology = {"buses": [asdict(bus) for bus in sorted(network.buses, key=lambda bus: bus.bus_id)],
                 "lines": [asdict(line) for line in sorted(network.lines, key=lambda line: line.line_id)],
+                "loads": [asdict(load) for load in network.loads],
                 "base_power_kva": network.base_power_kva, "frequency_hz": network.frequency_hz}
     metadata = {
         "run_id": context.get("Run ID") or str(uuid4()), "folder": folder.name, "kind": kind, "context": context,
@@ -155,15 +156,16 @@ def _scenario(folder, label, static):
     path = folder / ("bus_voltages.csv" if static is not None or
                      (folder / "bus_voltages.csv").is_file() else "buses.csv")
     time_indices = {row["timestamp"]: index for index, row in enumerate(hourly)}
-    voltages_by_hour = _entity_trace(folder / "buses.csv", "bus_id", time_indices, "voltage_pu")
-    currents_by_hour = _entity_trace(folder / "branches.csv", "line_id", time_indices, "current_a")
+    compact = len(hourly) <= 336
+    voltages_by_hour = _entity_trace(folder / "buses.csv", "bus_id", time_indices, "voltage_pu") if compact else {}
+    currents_by_hour = _entity_trace(folder / "branches.csv", "line_id", time_indices, "current_a") if compact else {}
     if worst_timestamp in time_indices and voltages_by_hour:
         index = time_indices[worst_timestamp]
         voltages = {bus: values[index] for bus, values in voltages_by_hour.items() if values[index] is not None}
     elif path.is_file():
         with path.open(encoding="utf-8-sig", newline="") as stream:
             for record in csv.DictReader(stream):
-                if "timestamp" in record and record["timestamp"] != worst_timestamp:
+                if record.get("converged") == "False" or ("timestamp" in record and record["timestamp"] != worst_timestamp):
                     continue
                 try:
                     voltages[str(record["bus_id"])] = float(record["voltage_pu"])
@@ -172,7 +174,7 @@ def _scenario(folder, label, static):
     return {"label": label, "hours": hourly, "worst_bus_voltages": voltages,
             "voltages_by_hour": voltages_by_hour, "currents_by_hour": currents_by_hour,
             "metrics": list(_rows(folder / "metrics.csv")),
-            "fleet_hourly": list(_rows(folder / "fleet_hourly.csv"))}
+            "fleet_recorded": (folder / "fleet_hourly.csv").is_file()}
 
 
 def _source_files(folder, scenarios):
@@ -198,7 +200,7 @@ def _scenario_folder(folder, name):
 
 
 def _pack(value):
-    raw = _json(value).encode("utf-8")
+    raw = json.dumps(value, ensure_ascii=False, allow_nan=False, separators=(",", ":"), default=_json_value).encode("utf-8")
     return len(raw), b64encode(compress(raw, compresslevel=4, mtime=0)).decode("ascii")
 
 
@@ -211,13 +213,13 @@ def _scenario_blocks(scenario, add):
     voltages = scenario["worst_bus_voltages"]
     worst_bus = ((minimum.get("minimum_voltage_bus") or minimum.get("min_voltage_bus"))
                  or (min(voltages, key=voltages.get) if voltages else None))
-    has_bess = bool(scenario["fleet_hourly"]) or any(
+    has_bess = scenario["fleet_recorded"] or any(
         row.get("bess_accepted_soc") is not None for row in hours)
     diagnostic = {
         "nonconverged": sum(row.get("converged") is False for row in hours),
         "infeasible": sum(row.get("feasible") is False or row.get("converged") is False for row in hours),
         "known_status": any(row.get("feasible") is not None or row.get("converged") is False for row in hours),
-        "worst_voltage_pu": minimum.get("voltage_min_pu"), "worst_bus": worst_bus,
+        "worst_voltage_pu": minimum.get("voltage_min_pu"), "worst_bus": worst_bus, "worst_timestamp": minimum.get("timestamp"),
         "shedding_hours": sum((row.get("shedding_kw") or 0) > 1e-9 for row in hours)
           if any(row.get("shedding_kw") is not None for row in hours) else None,
         "curtailment_hours": sum((row.get("curtailment_kw") or 0) > 1e-9 for row in hours)
@@ -229,10 +231,11 @@ def _scenario_blocks(scenario, add):
         "hour_count": len(hours), "first": hours[0] if hours else None,
         "has_bess": has_bess, "diagnostic": diagnostic,
         "worst_bus_voltages": voltages,
-        "fleet_hourly_block": add(scenario["fleet_hourly"]) if scenario["fleet_hourly"] else None,
         "bus_voltage_block": add(scenario["voltages_by_hour"]) if scenario["voltages_by_hour"] else None,
         "line_current_block": add(scenario["currents_by_hour"]) if scenario["currents_by_hour"] else None,
-        "hours_block": add(hours) if hours else None,
+        "hours_block": add(hours) if 0 < len(hours) <= CHUNK_HOURS else None,
+        "hour_windows": [[i, add(hours[i:i+CHUNK_HOURS])] for i in range(0, len(hours), CHUNK_HOURS)]
+                        if len(hours) > CHUNK_HOURS else [],
     }
 
 
@@ -300,55 +303,74 @@ def regenerate_dashboard(run_folder):
         "summary": (list(_rows(folder / "metrics.csv")) or
                     next((scenario["metrics"] for scenario in trace_data.values() if scenario["metrics"]), [])),
     }
-    blocks = []
+    with TemporaryFile(mode="w+", encoding="ascii", dir=folder) as spool:
+        block_count = 0
+        total_size = 0
 
-    def add(data):
-        key = len(blocks)
-        blocks.append(_pack(data))
-        return key
+        def add(data):
+            nonlocal block_count, total_size
+            size, encoded = _pack(data)
+            key = block_count
+            spool.write(f'<script id="report-block-{key}" type="application/octet-stream" data-bytes="{size}">{encoded}</script>\n')
+            block_count += 1
+            total_size += size
+            return key
 
-    evaluations = list(_rows(folder / "evaluations.csv"))
-    feasible = [item for item in evaluations if item.get("feasible") is True]
-    ranked = sorted((item for item in feasible if item.get("annual_cost") is not None),
-                    key=lambda item: item["annual_cost"])[:8]
-    payload = {"manifest": manifest, "metadata": metadata,
-               "scenarios": {key: _scenario_blocks(value, add) for key, value in trace_data.items()},
-               "ranked": ranked, "feasible_count": len(feasible), "candidate_count": len(evaluations),
-               "infeasible_count": sum(item.get("feasible") is False for item in evaluations),
-               "evaluation_block": add(evaluations) if evaluations else None,
-               "convergence": list(_rows(folder / "convergence.csv")),
-               "economic_comparison": list(_rows(folder / "economic_comparison.csv")),
-               "forecast_errors": list(_rows(folder / "forecast_errors.csv")),
-               "forecast_comparison_block": add(list(_rows(folder / "forecast_comparison.csv")))
-                  if (folder / "forecast_comparison.csv").is_file() else None}
-    raw_size, packed = _pack(payload)
-    template = (ASSETS / "dashboard.html").read_text(encoding="utf-8")
-    styles = (ASSETS / "dashboard.css").read_text(encoding="utf-8")
-    if not metadata.get("legacy"):
-        styles += (ASSETS / "model_information.css").read_text(encoding="utf-8")
-    replacements = {
-        "<!-- REPORT_STYLE -->": styles,
-        "<!-- REPORT_SCRIPT -->": (ASSETS / "dashboard.js").read_text(encoding="utf-8"),
-        "<!-- REPORT_DATA -->": packed,
-        "<!-- REPORT_SIZE -->": str(raw_size),
-        "<!-- TOTAL_SIZE -->": str(raw_size + sum(size for size, _ in blocks)),
-        "<!-- MODEL_INFORMATION -->": "".join(
-            f"<section><h2>{title}</h2>{content}</section>"
-            for title, content in model_information(metadata, snapshot).items()),
-    }
-    for marker, value in replacements.items():
-        template = template.replace(marker, value)
-    header, footer = template.split("<!-- REPORT_BLOCKS -->")
+        evaluations = list(_rows(folder / "evaluations.csv"))
+        feasible = [item for item in evaluations if item.get("feasible") is True]
+        ranked = sorted((item for item in feasible if item.get("annual_cost") is not None),
+                        key=lambda item: item["annual_cost"])[:8]
+        payload = {"manifest": manifest, "metadata": metadata,
+                   "scenarios": {key: _scenario_blocks(value, add) for key, value in trace_data.items()},
+                   "ranked": ranked, "feasible_count": len(feasible), "candidate_count": len(evaluations),
+                   "infeasible_count": sum(item.get("feasible") is False for item in evaluations),
+                   "evaluation_block": add(evaluations) if evaluations else None,
+                   "convergence": list(_rows(folder / "convergence.csv")),
+                   "economic_comparison": list(_rows(folder / "economic_comparison.csv")),
+                   "forecast_errors": list(_rows(folder / "forecast_errors.csv")),
+                   "forecast_comparison_block": add(list(_rows(folder / "forecast_comparison.csv")))
+                      if (folder / "forecast_comparison.csv").is_file() else None}
+        from .dashboard_series import catalogue
+        inputs_cache = {}
+        for key, trace in trace_data.items():
+            payload["scenarios"][key]["gallery"] = catalogue(_scenario_folder(folder, key), trace["hours"], add,
+                root=folder, snapshot=snapshot, inputs_cache=inputs_cache,
+                static=metadata.get("kind") == "base case" or (folder / "bus_voltages.csv").is_file())
+        payload["input_info"] = snapshot
+        raw_size, packed = _pack(payload)
+        template = (ASSETS / "dashboard.html").read_text(encoding="utf-8")
+        styles = (ASSETS / "dashboard.css").read_text(encoding="utf-8")
+        if not metadata.get("legacy"):
+            styles += (ASSETS / "model_information.css").read_text(encoding="utf-8")
+        scripts = (ASSETS / "dashboard_gallery.js").read_text(encoding="utf-8") + "\n" + (ASSETS / "dashboard.js").read_text(encoding="utf-8")
+        # Compress the offline viewer too, so small and historical reports stay compact.
+        script_source = b64encode(compress(scripts.encode("utf-8"), mtime=0)).decode("ascii")
+        bootstrap = ("(async()=>{const b=Uint8Array.from(atob('" + script_source +
+                     "'),c=>c.charCodeAt(0));const s=document.createElement('script');"
+                     "s.textContent=await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream('gzip'))).text();"
+                     "document.body.append(s)})().catch(e=>document.getElementById('notice').textContent=e.message);")
+        replacements = {
+            "<!-- REPORT_STYLE -->": styles,
+            "<!-- REPORT_SCRIPT -->": bootstrap,
+            "<!-- REPORT_DATA -->": packed,
+            "<!-- REPORT_SIZE -->": str(raw_size),
+            "<!-- TOTAL_SIZE -->": str(raw_size + total_size),
+            "<!-- MODEL_INFORMATION -->": "".join(
+                f"<section><h2>{title}</h2>{content}</section>"
+                for title, content in model_information(metadata, snapshot).items()),
+        }
+        for marker, value in replacements.items():
+            template = template.replace(marker, value)
+        header, footer = template.split("<!-- REPORT_BLOCKS -->")
 
-    def html_parts():
-        yield header
-        for key, (size, data) in enumerate(blocks):
-            yield f'<script id="report-block-{key}" type="application/octet-stream" data-bytes="{size}">'
-            yield data
-            yield "</script>\n"
-        yield footer
+        def html_parts():
+            yield header
+            spool.seek(0)
+            while part := spool.read(1024 * 1024):
+                yield part
+            yield footer
 
-    _atomic_write(folder / HTML_FILE, html_parts())
+        _atomic_write(folder / HTML_FILE, html_parts())
     manifest["html_sha256"] = _hash(folder / HTML_FILE)
     _atomic_write(folder / MANIFEST_FILE, _json(manifest))
     return folder / HTML_FILE

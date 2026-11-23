@@ -61,7 +61,7 @@ def test_settings_apply_restore_and_cancel(dialog):
     assert dialog.capture_values()["allowed_buses"] == (2, 3, 4)
     buttons = widget(dialog, "buttons_settings")
     dialog.tariffs_confirmed = True
-    expected = {"spin_ga_population": 17, "spin_max_generations": 9,
+    expected = {"spin_ga_population": 17, "spin_max_generations": 9, "spin_ga_stall_generations": 3,
                 "spin_parallel_workers": min(2, widget(dialog, "spin_parallel_workers").maximum())}
     for name, value in expected.items():
         control = widget(dialog, name)
@@ -241,6 +241,7 @@ def test_desktop_ga_overrides_reach_optimizer(dialog):
     study = ui_workflow.PreparedStudy(network, profiles, None, {})
     widget(dialog, "spin_ga_population").setValue(19)
     widget(dialog, "spin_max_generations").setValue(5)
+    widget(dialog, "spin_ga_stall_generations").setValue(1)
     workers = min(2, widget(dialog, "spin_parallel_workers").maximum())
     widget(dialog, "spin_parallel_workers").setValue(workers)
     dialog.tariffs_confirmed = True
@@ -252,6 +253,7 @@ def test_desktop_ga_overrides_reach_optimizer(dialog):
             ui_workflow.run_study(study, settings, True, log.append)
     config = run.call_args.args[4]
     assert (config.population_size, config.max_iterations, config.workers) == (19, 5, workers)
+    assert config.convergence_patience == 1
     assert run.call_args.kwargs["ga_mutation_rate"] == .20
     assert run.call_args.kwargs["ga_crossover_rate"] == .80
     assert any(f"population=19, maximum generations=5, parallel workers={workers}" in line for line in log)

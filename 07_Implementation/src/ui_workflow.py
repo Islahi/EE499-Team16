@@ -75,6 +75,8 @@ class PreparedStudy:
     input_mode: str = "historical"
     simulation_window: dict = field(default_factory=dict)
 
+    source_irradiance: object = None
+
     def select_source(self, mode, start=None, end=None):
         raw = self.historical_profiles if mode == "historical" else self.forecast_profiles if mode == "forecast" else None
         if raw is None:
@@ -355,8 +357,7 @@ def _prepare_distributed(request, network, stage):
         raise ValueError("Dataset clock is unspecified in manifest.json. Declare its actual IANA/UTC source clock in dataset metadata before import")
     workbook_ratings = {}
     for unit in network.pv_units:
-        if unit.p_rated_kw > 0:
-            workbook_ratings[unit.bus_id] = workbook_ratings.get(unit.bus_id, 0.) + unit.p_rated_kw
+        workbook_ratings[unit.bus_id] = workbook_ratings.get(unit.bus_id, 0.) + unit.p_rated_kw
     imported = workbook_ratings or dataset.ratings
     ratings = dict(request.pv_ratings_kw) if request.pv_override else dict(imported)
     if request.pv_source == "none":
@@ -379,9 +380,12 @@ def _prepare_distributed(request, network, stage):
     raw = dataset.profiles
     times = pd.DatetimeIndex(raw.timestamps)
     pvref = None
+    if request.pv_source == "dataset" and not ratings and not request.pv_override and any(
+            np.any(values) for values in raw.pv_p_kw.values()):
+        raise ValueError(dataset.pv_reason + ". Select installed PV ratings or choose No PV study.")
     if sum(ratings.values()) > 0:
         if request.pv_source == "dataset" and not dataset.pv_valid:
-            raise ValueError("The study folder has no usable PV history. Enable Use fallback solar source or choose No PV study.")
+            raise ValueError(dataset.pv_reason + ". Enable Use fallback solar source or choose No PV study.")
         site_meta = meta.get("site") or (meta.get("pv_reference") or {}).get("site") or {}
         source_meta = {}
         if not dataset.pv_valid and request.pv_path is not None and request.pv_source == "nasa_power":
@@ -424,7 +428,7 @@ def _prepare_distributed(request, network, stage):
                 weather,sources = fetch_irradiance(mode.removeprefix("auto_"),times,site,
                     request.solar_cache or Path(request.network_path).parent/"solar_cache")
                 power = [irradiance_to_power(v,capacity,conversion) for v in weather.irradiance_w_m2]
-                pvref = PVReference(times,power,capacity,site,{"sources":sources,"conversion":asdict(conversion),"clock":"UTC converted to load clock"})
+                pvref = PVReference(times,power,capacity,site,{"sources":sources,"conversion":asdict(conversion),"clock":"UTC converted to load clock"}, weather.irradiance_w_m2.to_numpy())
             elif request.pv_path is not None and mode in ("power","prepared","nasa_power","open_meteo"):
                 declared_clock = source_meta.get("source_clock", source_meta.get("timezone"))
                 if declared_clock and request.solar_source_clock and declared_clock != request.solar_source_clock:
@@ -443,12 +447,19 @@ def _prepare_distributed(request, network, stage):
     else:
         pv = {b:np.zeros(len(times)).tolist() for b in ids}
     raw = ProfileData.from_arrays(times,raw.load_p_kw,raw.load_q_kvar,pv,{b:np.zeros(len(times)).tolist() for b in ids})
-    context = {"Network":f"{len(ids)}-bus radial network","Network SHA256":sha256(Path(request.network_path).read_bytes()).hexdigest(),
+    stage(meta["workbook_provenance"])
+    if dataset.pv_valid and ratings != dataset.ratings and pvref:
+        stage("PV nameplates differ: applying the validated historical common capacity factor to selected ratings.")
+    context = {"Network":f"{len(ids)}-bus radial network","Network SHA256":meta["selected_network_sha256"],
+        "Distributor network SHA256":meta["distributor_network_sha256"],
+        "Workbook provenance":meta["workbook_provenance"],
+        "Load profile buses": len(raw.load_p_kw),
         "Load source SHA256":meta["source_hashes"]["load_profile.csv"],
         "PV source": ("None" if pvref is None else "Validated dataset history" if dataset.pv_valid else request.pv_source),
         "PV source provenance": pvref.provenance if pvref else None,
         "PV ratings (kW)":str(ratings), "Workbook PV ratings (kW)":str(workbook_ratings),
         "Folder PV ratings (kW)":str(dataset.ratings),
+        "PV scaling": ("Historical common capacity factor × selected installed kW" if pvref else "No PV"),
         "PV rating selection": ("No PV" if request.pv_source == "none" else
             (request.pv_rating_selection or "Explicit override") if request.pv_override else
             "Workbook" if workbook_ratings else "Dataset folder"),
@@ -459,6 +470,22 @@ def _prepare_distributed(request, network, stage):
         "Dataset provenance":json.dumps(meta),"PV history validation":dataset.pv_reason}
     study = PreparedStudy(network,raw,request,context,historical_profiles=raw,assignments=dataset.assignments,
                           dataset_metadata=meta,pv_reference=pvref)
+    if pvref is not None and pvref.irradiance_w_m2 is not None:
+        study.source_irradiance = pd.Series(pvref.irradiance_w_m2, index=pvref.timestamps)
+    source_name = meta.get("pv_conversion_source_file")
+    aligned_name = "nasa_irradiance_aligned.csv"
+    if not source_name and aligned_name in meta.get("profile_hashes_sha256", {}):
+        source_name = aligned_name
+    if dataset.pv_valid and source_name and source_name == Path(source_name).name and source_name in meta["source_hashes"]:
+        source = pd.read_csv(dataset.folder / source_name)
+        aligned_clock = (source.source_clock.eq(clock).all() if "source_clock" in source else
+                         source_name == aligned_name and meta.get("solar_source_clock") == clock)
+        if {"timestamp", "irradiance_w_m2"} <= set(source) and aligned_clock:
+            series = source.set_index(pd.to_datetime(source.timestamp, errors="raise")).irradiance_w_m2
+            if series.index.is_unique and series.index.tz is None:
+                aligned = pd.to_numeric(series.reindex(times), errors="coerce")
+                if np.isfinite(aligned).all() and (aligned >= 0).all():
+                    study.source_irradiance = aligned
     select_default_history(study)
     stage(f"Demand and PV profiles validated: {len(times):,} aligned hourly timestamps")
     return study
@@ -797,6 +824,8 @@ def run_base_case(study: PreparedStudy, settings: RunSettings, stage=lambda mess
                                log=True))
     context = {"Network": study.context["Network"], "Case definition": "Static base loads + installed PV ratings; BESS inactive (0 kW)", "Compute backend": settings.simulation.fbs_config.backend,
                "PV installations": study.context["PV ratings (kW)"]}
+    context.update({key: study.context[key] for key in
+                    ("Network SHA256", "Distributor network SHA256", "Workbook provenance") if key in study.context})
     from .study_session import runtime_provenance
     context["Runtime provenance"] = runtime_provenance()
     context["FBS settings"] = asdict(settings.simulation.fbs_config)
@@ -893,19 +922,36 @@ def _save_numerical_run(study, report, optimization, output, network_snapshot, s
 
 
 def _write_numerical_files(study, report, optimization, output, network_snapshot):
-    export_results(report.result, output, metrics=report.metrics, context=report.context,
-                   input_snapshot={"profiles": study.profiles, "workbook": network_snapshot,
+    label = "Manual BESS" if "Manual BESS" in report.context else "No BESS"
+    config = report.context.get("Simulation settings") or {}
+    bounds = (config["voltage_min_pu"], config["voltage_max_pu"]) if "voltage_min_pu" in config else None
+    export_results(report.result, output, metrics=report.metrics, context={**report.context, "Alternative": label} if not optimization else report.context,
+                   network=study.network, voltage_bounds=bounds,
+                   input_snapshot={"profiles": study.profiles, "workbook": network_snapshot or getattr(study.request, "network_path", None),
                                    "metadata": {"clock": study.context.get("Clock"),
+                                                "selected_network_sha256": study.context.get("Network SHA256"),
+                                                "distributor_network_sha256": study.context.get("Distributor network SHA256"),
                                                 "dt_hours": study.profiles.dt_hours,
-                                                "window": study.simulation_window}})
-    scenarios = {".": "Manual BESS" if "Manual BESS" in report.context else "No BESS"}
+                                                "window": study.simulation_window,
+                                                "assignments": study.assignments, "site": study.dataset_metadata.get("site"),
+                                                "clock_status":study.dataset_metadata.get("clock_status") or study.dataset_metadata.get("clock_provenance")}})
+    if study.input_mode == "historical":
+        weather = pd.DataFrame(index=pd.DatetimeIndex(study.profiles.timestamps, name="timestamp"))
+        if study.source_irradiance is not None:
+            weather["irradiance_w_m2"] = study.source_irradiance.reindex(weather.index)
+        if study.pv_reference is not None:
+            ref = study.pv_reference
+            weather["reference_pv_kw"] = pd.Series(ref.p_kw, index=ref.timestamps).reindex(weather.index)
+        if len(weather.columns):
+            weather.to_csv(output / "inputs" / "solar_reference.csv")
+    scenarios = {".": label}
     if optimization:
         scenarios = {}
         baseline_series = report.alternatives["no_bess"][0]
         for name, (series, metrics) in report.alternatives.items():
             label = ("No BESS" if name == "no_bess" else "Best evaluated feasible BESS")
             scenarios[name] = label
-            export_results(series, output / name, metrics=metrics,
+            export_results(series, output / name, metrics=metrics, network=study.network, voltage_bounds=bounds,
                            context={**report.context, "Alternative": label},
                            baseline_series=baseline_series if name == "best_bess" else None)
     return scenarios
@@ -974,12 +1020,19 @@ def run_base_case_and_export(study, settings, output_path, stage=lambda message:
     output = Path(output_path)
     output.mkdir(parents=True, exist_ok=False)
     from .study_session import write_input_snapshot
-    write_input_snapshot(output, point=report.step.operating_point, workbook=network_snapshot,
-                         metadata={"source": "Static base case"})
-    rows = [{"bus_id": bus_id, "voltage_pu": voltage}
+    write_input_snapshot(output, point=report.step.operating_point, workbook=network_snapshot or getattr(study.request, "network_path", None),
+                         metadata={"source": "Static base case", "selected_network_sha256": study.context.get("Network SHA256"),
+                                   "distributor_network_sha256": study.context.get("Distributor network SHA256")})
+    rows = [{"bus_id": bus_id, "voltage_pu": voltage, "voltage_angle_deg":report.result.voltage_angle_deg[bus_id],
+             "converged": report.result.converged}
             for bus_id, voltage in sorted(report.result.voltage_mag_pu.items())]
     pd.DataFrame(rows).to_csv(output / "bus_voltages.csv", index=False)
-    pd.DataFrame([{"line_id": line_id, "p_kw": report.result.branch_p_kw[line_id],
+    from .electrical_details import branch_readings, line_ends
+    ends = line_ends(study.network)
+    lines = {line.line_id: line for line in study.network.lines}
+    pd.DataFrame([{"line_id": line_id, "p_kw": report.result.branch_p_kw[line_id], "converged": report.result.converged,
+                   **branch_readings(report.result, lines[line_id], ends[line_id]),
+                   "loss_q_kvar": report.result.line_loss_q_kvar[line_id],
                    "q_kvar": report.result.branch_q_kvar[line_id],
                    "current_a": report.result.branch_current_a[line_id],
                    "loss_kw": report.result.line_loss_p_kw[line_id]}

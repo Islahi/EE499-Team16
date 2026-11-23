@@ -51,6 +51,9 @@ class DispatchEvent:
     projected_stress_actions: list[dict] = field(default_factory=list)
     reason_codes: list[str] = field(default_factory=list)
     correction: dict | None = None
+    requested_p_by_bus: dict = field(default_factory=dict)
+    requested_q_by_bus: dict = field(default_factory=dict)
+    evidence: dict = field(default_factory=dict)
 
 
 def check_flow(flow, network, config):

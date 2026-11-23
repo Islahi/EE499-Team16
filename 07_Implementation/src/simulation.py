@@ -181,6 +181,8 @@ class SimulationStepResult:
     correction: Correction | None = None
     fleet_steps: dict[int, BESSStepResult] | None = None
     fleet_states: dict[int, BESSState] | None = None
+    uncontrolled_voltage_pu: dict[int, float] | None = None
+    before_correction_voltage_pu: dict[int, float] | None = None
 
 
 @dataclass
@@ -401,6 +403,7 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
     curtailment = shedding = None
     after_bess_check = (event.after_bess if event is not None and event.after_bess is not None
                         else raw_check if power_flow is raw_flow else check_flow(power_flow, network, settings))
+    reference_flow = power_flow
     if capture_dispatch and event is not None:
         event.after_bess = after_bess_check
         event.after_bess_kw = bess_result.actual_power_kw if bess_result is not None and power_flow.converged else None
@@ -462,6 +465,9 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
             messages.append("Network voltage/import/export limits remain violated after controls")
     if capture_dispatch and event is not None:
         event.final = check_flow(power_flow, network, settings)
+        from .control_audit import constraint_evidence
+        event.evidence = constraint_evidence(network, settings, (event.pre, event.after_bess, event.final),
+                                             (raw_flow, reference_flow, power_flow))
         event.correction = asdict(correction)
         event.accepted_kw = (bess_result.actual_power_kw if bess_result is not None and power_flow.converged
                              else None)
@@ -493,6 +499,8 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
         dispatch=event if capture_dispatch else None,
         requested_point=requested_point if capture_dispatch else None,
         pre_control_voltage_pu=raw_flow.voltage_mag_pu if capture_dispatch and raw_flow.converged else None,
+        uncontrolled_voltage_pu=raw_flow.voltage_mag_pu if capture_dispatch and raw_flow.converged else None,
+        before_correction_voltage_pu=reference_flow.voltage_mag_pu if capture_dispatch and reference_flow.converged else None,
         correction=correction,
     )
 

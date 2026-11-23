@@ -113,7 +113,7 @@ def _project_network(book, frequency_hz):
     elif "frequency_hz" in settings:
         if _number(settings["frequency_hz"], "Network frequency_hz") <= 0:
             raise ValueError("Network frequency_hz must be positive")
-    buses, lines, loads, pv_units = [], [], [], []
+    buses, lines, loads = [], [], []
     for row, record in _table(book["Buses"], ("bus_id", "base_kv", "is_slack"),
                               ("name", "v_set_pu", "notes")):
         label = f"Buses row {row}"
@@ -152,6 +152,11 @@ def _project_network(book, frequency_hz):
                               _integer(record["bus_id"], f"{label} bus_id"),
                               _number(record["p_base_kw"], f"{label} p_base_kw"),
                               _number(record["q_base_kvar"], f"{label} q_base_kvar")))
+    return NetworkModel(buses, lines, loads, _pv_units(book), base, frequency_hz)
+
+
+def _pv_units(book):
+    pv_units = []
     if "PV" in book.sheetnames:
         for row, record in _table(book["PV"], ("pv_id", "bus_id", "p_rated_kw"),
                                   ("q_capability_kvar", "notes")):
@@ -163,7 +168,7 @@ def _project_network(book, frequency_hz):
                 _number(record["q_capability_kvar"], f"{label} q_capability_kvar")
                 if record.get("q_capability_kvar") is not None else None,
             ))
-    return NetworkModel(buses, lines, loads, pv_units, base, frequency_hz)
+    return pv_units
 
 
 def _overview_quantity(sheet, label, unit):
@@ -182,7 +187,7 @@ def _overview_quantity(sheet, label, unit):
 
 def _reference_network(book, frequency_hz):
     _check_sheets(book, ("Overview", "Bus Data", "Branch Data"),
-                  ("Overview", "Bus Data", "Branch Data"))
+                  ("Overview", "Bus Data", "Branch Data", "PV"))
     if frequency_hz is None:
         raise ValueError("Bus/branch reference workbook has no frequency: supply frequency_hz explicitly (e.g. 50 or 60 Hz)")
     base_kva = 1000.0 * _overview_quantity(book["Overview"], "Base MVA", "MVA")
@@ -212,7 +217,7 @@ def _reference_network(book, frequency_hz):
             book["Branch Data"],
             ("Branch No.", "From Bus", "To Bus", "R (Ohm)", "X (Ohm)",
              "P_load at To Bus (kW)", "Q_load at To Bus (kVAr)"),
-            reference_footer=True):
+            ("ampacity_a",), reference_footer=True):
         label = f"Branch Data row {row}"
         target = _integer(record["To Bus"], f"{label} To Bus")
         p_kw = _number(record["P_load at To Bus (kW)"], f"{label} receiving P_load")
@@ -226,8 +231,9 @@ def _reference_network(book, frequency_hz):
             _integer(record["From Bus"], f"{label} From Bus"), target,
             _number(record["R (Ohm)"], f"{label} R"),
             _number(record["X (Ohm)"], f"{label} X"),
+            _number(record["ampacity_a"], f"{label} ampacity_a") if record.get("ampacity_a") is not None else None,
         ))
-    return NetworkModel(buses, lines, loads, [], base_kva, frequency_hz)
+    return NetworkModel(buses, lines, loads, _pv_units(book), base_kva, frequency_hz)
 
 
 def load_network(path: str | Path, *, workbook_format: str = "auto",

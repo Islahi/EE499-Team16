@@ -20,7 +20,7 @@ Student IDs remain in the original official/submitted documents and are intentio
 
 ## Current state
 
-The current BESS Planning Tool is V15.6 in
+The current BESS Planning Tool is V16 in
 [`07_Implementation/src`](07_Implementation/README.md).
 
 As of **2026-09-26**, the team is in **Term 2 implementation/validation**.

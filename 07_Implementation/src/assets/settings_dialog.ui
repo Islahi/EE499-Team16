@@ -1143,6 +1143,20 @@
                   </widget>
                  </item>
                  <item row="3" column="0">
+                  <widget class="QLabel" name="lbl_ga_stall_generations">
+                   <property name="text"><string>GA stall generations</string></property>
+                   <property name="buddy"><cstring>spin_ga_stall_generations</cstring></property>
+                  </widget>
+                 </item>
+                 <item row="3" column="1">
+                  <widget class="QSpinBox" name="spin_ga_stall_generations">
+                   <property name="minimum"><number>1</number></property>
+                   <property name="maximum"><number>10000</number></property>
+                   <property name="value"><number>6</number></property>
+                   <property name="toolTip"><string>Stop after N consecutive generations without a significant best-fitness improvement.</string></property>
+                  </widget>
+                 </item>
+                 <item row="4" column="0">
                   <widget name="lbl_spin_parallel_workers" class="QLabel">
                    <property name="text">
                     <string>Parallel workers</string>
@@ -1152,7 +1166,7 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="3" column="1">
+                 <item row="4" column="1">
                   <widget name="spin_parallel_workers" class="QSpinBox">
                    <property name="minimum">
                     <number>1</number>
@@ -2332,6 +2346,7 @@
   <tabstop>buttons_settings</tabstop>
   <tabstop>spin_ga_population</tabstop>
   <tabstop>spin_max_generations</tabstop>
+  <tabstop>spin_ga_stall_generations</tabstop>
   <tabstop>spin_parallel_workers</tabstop>
  </tabstops>
  <resources />

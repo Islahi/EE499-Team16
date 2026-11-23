@@ -106,4 +106,4 @@ def open_study_setup(path, stage=lambda _: None):
     if window:
         study.select_source(window["mode"], window["start"], window["end_exclusive"])
     from .saved_schema import upgrade_saved_fields
-    return study, upgrade_saved_fields(document["controls"])
+    return study, upgrade_saved_fields({"spin_ga_stall_generations": 6, **document["controls"]})

@@ -2,4 +2,19 @@
 
 .ranking-stage{margin:15px 0 22px}.ranking-stage h3{margin-bottom:2px}.ranking-stage .fine{margin:2px 0 10px}
 
+@media screen and (prefers-color-scheme:dark) {
+  :root{color-scheme:dark;color:#e1edf2;background:#18242b;--teal:#77d4c9;--line:#455962}
+  main,button,select,input,#tabs button[aria-selected=true],body .model-information{background:#24343d;color:#e1edf2}
+  .tile,.empty,.treatment,th,body .model-equation{background:#2d414a;color:#e1edf2}
+  .tile,th,td{border-color:var(--line)}
+  .muted,.fine,.tile .label,.legend,small,footer,main .explorer-controls label,main .explorer-chart output{color:#bed1d7}
+  #notice:not(:empty),.warning{background:#453c28;color:#fff2cc;border-color:#877246}
+  a{color:#93d4ed}
+  .chart canvas,.feeder{background:#fff;color-scheme:light}
+  .feeder text{fill:#1d3440}
+}
+
 #tabs{flex-wrap:wrap}.feeder{display:block;width:100%;height:auto;min-height:200px;background:#f5f8f9;border:1px solid var(--line);border-radius:9px}.chart-download{margin-top:10px;font-size:.82rem}.controls input[type=range]{width:min(320px,100%)}details{margin:0 0 20px}summary{cursor:pointer;font-weight:650;margin-bottom:10px}@media print{.chart-download{display:none}}
+
+.explorer-controls{gap:12px;align-items:flex-end}.explorer-controls label{display:grid;gap:3px;color:#405660;font-size:.87rem}.explorer-controls select,.explorer-controls input{max-width:min(265px,83vw);min-height:35px}.explorer-chart{margin:14px 0}.explorer-chart canvas{height:300px;touch-action:none}.explorer-chart output{display:block;min-height:1.6em;color:#304954;font-variant-numeric:tabular-nums}.legend button{font-size:.83rem;padding:3px 7px}.legend button[aria-pressed=false]{opacity:.5}.explorer-chart .legend{max-height:110px;overflow:auto}.feeder [role=button],tbody tr[tabindex]{cursor:pointer}.feeder [role=button]:focus,tbody tr[tabindex]:focus{outline:2px solid #ce833e}label:has(>input[type=range]){display:flex;align-items:center;gap:8px;flex-wrap:wrap}#tabs button{padding:8px 11px}input[type=datetime-local],input[type=number]{border:1px solid var(--line);border-radius:5px;padding:4px}.explorer-chart .controls{margin-top:10px}@media print{.explorer-chart .controls,.explorer-controls{display:none}.legend button{border:0}}
+

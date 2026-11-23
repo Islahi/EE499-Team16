@@ -46,4 +46,6 @@ def upgrade_saved_fields(value):
             continue
         result[current] = (canonical_dispatch_mode(item) if key == "fleet_dispatch_mode"
                            else upgrade_saved_fields(item))
+    if "spin_max_generations" in result:
+        result.setdefault("spin_ga_stall_generations", 6)
     return result

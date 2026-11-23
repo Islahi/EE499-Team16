@@ -14,21 +14,34 @@ const asMetrics=sc=>Object.fromEntries((sc?.metrics||[]).map(row=>[row.metric,ro
 async function inflate(value){const raw=atob(value.trim());const bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));const data=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));return new Response(data).json();}
 let run,screen='Summary',scenario='best_bess';
 const cache=new Map();
-async function block(id){if(id==null)return null;if(cache.has(id))return cache.get(id);const el=$('report-block-'+id);if(!el)throw Error('Missing report block '+id);const result=await inflate(el.textContent);cache.set(id,result);return result;}
+let cachedBytes=0;
+async function block(id){
+  if(id==null)return null;
+  if(cache.has(id))return cache.get(id).data;
+  const el=$('report-block-'+id);if(!el)throw Error('Missing report block '+id);
+  const size=Number(el.dataset.bytes)||0,data=await inflate(el.textContent);
+  if(size<=16*1024*1024&&!cache.has(id)){
+    while(cache.size&&(cache.size>=64||cachedBytes+size>16*1024*1024)){
+      const oldest=cache.keys().next().value;cachedBytes-=cache.get(oldest).size;cache.delete(oldest);
+    }
+    cache.set(id,{data,size});cachedBytes+=size;
+  }
+  return data;
+}
 const sc=key=>run.scenarios[key]||null;
 const selected=()=>sc(scenario)||Object.values(run.scenarios)[0];
-async function hours(s){return s?.hours_block!=null?await block(s.hours_block):s?.hours||[];}
-function line(ctx,data,color,width,height,minY,maxY){ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();let started=false;data.forEach((p,i)=>{if(!Number.isFinite(p)){started=false;return;}const x=50+i*Math.max(1,(width-65))/Math.max(1,data.length-1);const y=height-37-(p-minY)/(maxY-minY)*Math.max(1,height-62);if(!started){ctx.moveTo(x,y);started=true;}else ctx.lineTo(x,y);});ctx.stroke();}
-function plot(parent,title,series,labels){const wrap=elem('div',undefined,'chart');wrap.append(elem('h3',title));const cv=elem('canvas');cv.height=275;wrap.append(cv);parent.append(wrap);const legend=elem('div',undefined,'legend');series.forEach((item,i)=>{const s=elem('span');const b=elem('i');b.style.background=palette[i%palette.length];s.append(b,document.createTextNode(item.name));legend.append(s);});wrap.append(legend);
- const download=elem('button','Save PNG','chart-download');
- download.type='button'; download.addEventListener('click',()=>cv.toBlob(blob=>{
-   if(!blob)return;
-   const url=URL.createObjectURL(blob),link=elem('a');
-   link.href=url;link.download=title.replace(/[^a-z0-9]+/gi,'-')+'.png';link.click();
-   setTimeout(()=>URL.revokeObjectURL(url),1000);
- }));
- wrap.append(download);
- const draw=()=>{const cssWidth=Math.max(320,wrap.clientWidth-30),dpr=window.devicePixelRatio||1;cv.width=Math.round(cssWidth*dpr);cv.height=Math.round(275*dpr);cv.style.width=cssWidth+'px';const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);const w=cssWidth,h=275;ctx.clearRect(0,0,w,h);const values=series.flatMap(s=>s.data).filter(Number.isFinite);if(!values.length){ctx.fillStyle='#697b84';ctx.fillText('No data available',24,30);return;}let ymin=values.reduce((min,value)=>Math.min(min,value),Infinity),ymax=values.reduce((max,value)=>Math.max(max,value),-Infinity);if(ymin===ymax){ymin-=1;ymax+=1;}const pad=(ymax-ymin)*.08;ymin-=pad;ymax+=pad;ctx.strokeStyle='#dde7e8';ctx.lineWidth=1;ctx.font='12px Segoe UI';ctx.fillStyle='#647782';for(let i=0;i<=4;i++){const y=h-37-i*(h-62)/4;ctx.beginPath();ctx.moveTo(50,y);ctx.lineTo(w-15,y);ctx.stroke();ctx.fillText(fmt(ymin+(ymax-ymin)*i/4,1),2,y+4);}series.forEach((s,i)=>line(ctx,s.data,palette[i%palette.length],w,h,ymin,ymax));ctx.fillText(labels?.[0]||'',50,h-9);const tail=labels?.[1]||'';ctx.fillText(tail,w-20-ctx.measureText(tail).width,h-9);};draw();return draw;
+async function hourWindow(s, first, end){
+  if(!s.hour_windows?.length)return (s.hours_block!=null?await block(s.hours_block):s.hours||[]).slice(first,end);
+  const rows=[];
+  for(const [i,id] of s.hour_windows){
+    if(i>=end)break;
+    if(i+168>first)rows.push(...(await block(id)).slice(Math.max(0,first-i),end-i));
+  }
+  return rows;
+}
+function plot(parent,title,series,labels){
+  const unit=title.match(/\(([^()]*)\)$/)?.[1] || (title.includes('voltage')?'pu':'');
+  return interactiveChart(parent,title,labels,series.map(s=>({label:s.name,data:s.data})),unit);
 }
 function statusLabel(value){return value===true?'Feasible':value===false?'Infeasible':'Not recorded';}
 function summary(){const root=$('content');const b=asMetrics(sc('no_bess')),c=asMetrics(sc('best_bess')),a=asMetrics(selected());const opt=run.metadata.optimizer||{};
@@ -131,33 +144,49 @@ function summary(){const root=$('content');const b=asMetrics(sc('no_bess')),c=as
 
 }
 let redraw=[];
-async function charts(){const root=$('content');const control=section(root,'Power and voltage');const options=Object.keys(run.scenarios).filter(key=>sc(key)?.hours_block!=null);const select=elem('select');options.forEach(key=>select.add(new Option(sc(key).label,key)));scenario=options.includes(scenario)?scenario:options[0];select.value=scenario;const date=elem('input');date.type='date';const chooser=elem('div',undefined,'controls');chooser.append(elem('span','Scenario'),select,elem('span','First day of 14-day view'),date);control.append(chooser);const graph=elem('div',undefined,'charts');control.append(graph);
-  async function paint(){scenario=select.value;const s=selected(),hour=await hours(s);graph.replaceChildren();redraw=[];if(!hour.length){graph.append(elem('p','No hourly simulation records were saved.','empty'));return;}const start=hour[0].timestamp.slice(0,10);date.min=start;date.max=hour[hour.length-1].timestamp.slice(0,10);if(!date.value)date.value=start;let begin=hour.findIndex(row=>String(row.timestamp).slice(0,10)>=date.value);begin=Math.max(0,begin);const arr=hour.slice(begin,begin+14*24);const dates=[arr[0]?.timestamp?.slice(0,16)||'',arr.at(-1)?.timestamp?.slice(0,16)||''];
-  redraw.push(plot(graph,'Hourly demand, solar, and grid import (kW)',[
+async function charts(){const root=$('content');const control=section(root,'Power and voltage');const options=Object.keys(run.scenarios).filter(key=>sc(key)?.hour_count);const select=elem('select');options.forEach(key=>select.add(new Option(sc(key).label,key)));scenario=options.includes(galleryState.scenario)?galleryState.scenario:options[0];select.value=scenario;const date=elem('input');date.type='date';const chooser=elem('div',undefined,'controls');chooser.append(elem('span','Scenario'),select,elem('span','First day of 14-day view'),date);control.append(chooser);const graph=elem('div',undefined,'charts');control.append(graph);
+  async function paint(){
+    scenario=select.value;galleryState.scenario=scenario;
+    const s=selected(),axis=s.gallery?.timestamps!=null?await block(s.gallery.timestamps):[];
+    graph.replaceChildren();redraw=[];
+    if(!axis.length){graph.append(elem('p','No hourly simulation records were saved.','empty'));return;}
+    date.min=axis[0].slice(0,10);date.max=axis.at(-1).slice(0,10);
+    if(!date.value)date.value=axis[Math.min(galleryState.hour,axis.length-1)].slice(0,10);
+    const begin=Math.max(0,axis.findIndex(t=>t.slice(0,10)>=date.value));
+    const arr=await hourWindow(s,begin,begin+336),dates=arr.map(r=>r.timestamp);
+    for(const [i,row] of arr.entries())if(row.converged===false)arr[i]={timestamp:row.timestamp,converged:false};
+  plot(graph,'Hourly demand, solar, and grid import (kW)',[
    {name:'Demand served',data:arr.map(r=>r.load_input_kw)},
    {name:'PV used',data:arr.map(r=>r.pv_input_kw)},
-   {name:'Grid import (+) / export (−)',data:arr.map(r=>r.slack_p_kw)}],dates));
-  redraw.push(plot(graph,'Minimum / maximum bus voltage (pu)',[
+   {name:'Grid import (+) / export (−)',data:arr.map(r=>r.slack_p_kw)}],dates);
+  plot(graph,'Minimum / maximum bus voltage (pu)',[
    {name:'Minimum voltage',data:arr.map(r=>r.voltage_min_pu)},
-   {name:'Maximum voltage',data:arr.map(r=>r.voltage_max_pu)}],dates));
-  if(s.fleet_hourly_block!=null){const fleetRows=await block(s.fleet_hourly_block);const included=new Set(arr.map(row=>row.timestamp));const busIDs=[...new Set(fleetRows.map(row=>Number(row.bus_id)))].sort((a,b)=>a-b);const byKey=new Map(fleetRows.filter(row=>included.has(row.timestamp)).map(row=>[row.bus_id+'|'+row.timestamp,row.soc_after]));redraw.push(plot(graph,'Battery SOC per installation (%)',busIDs.map(bus=>({name:'Bus '+bus,data:arr.map(row=>{const value=byKey.get(bus+'|'+row.timestamp);return value==null?null:100*value;})})),dates));
-    const powerByKey=new Map(fleetRows.filter(row=>included.has(row.timestamp)).map(row=>[row.bus_id+'|'+row.timestamp,row]));
-    const traces=(key)=>busIDs.map(bus=>({name:'Bus '+bus,data:arr.map(row=>powerByKey.get(bus+'|'+row.timestamp)?.[key]??null)}));
-    redraw.push(plot(graph,'Battery active power (kW)',traces('power_kw'),dates));
-    redraw.push(plot(graph,'Battery reactive power (kvar)',traces('reactive_power_kvar'),dates));
-    redraw.push(plot(graph,'BESS inverter apparent power (kVA)',busIDs.map(bus=>({name:'Bus '+bus,data:arr.map(row=>(()=>{const unit=powerByKey.get(bus+'|'+row.timestamp);return unit?Math.hypot(unit.power_kw,unit.reactive_power_kvar):null;})())})),dates));}
-
-  if(arr.some(r=>r.bess_accepted_soc!=null))redraw.push(plot(graph,'Battery state of charge (%)',[
-    {name:'SOC',data:arr.map(r=>r.bess_accepted_soc==null?null:100*r.bess_accepted_soc)}],dates));
+   {name:'Maximum voltage',data:arr.map(r=>r.voltage_max_pu)}],dates);
+  const fleet=s.gallery.groups.battery;
+  if(fleet){
+    const ids=Object.keys(fleet.entities);
+    for(const [field,title,factor] of [['soc_after','Battery SOC per installation (%)',100],['power_kw','Battery active power (kW)',1],['reactive_power_kvar','Battery reactive power (kvar)',1]]){
+      if(!fleet.fields.includes(field))continue;
+      const traces=await Promise.all(ids.map(async id=>({name:'Bus '+id,data:(await seriesValues(fleet,id,field,begin,begin+arr.length)).map((v,i)=>v==null||arr[i].converged===false?null:v*factor)})));
+      plot(graph,title,traces,dates);
+    }
+    const bus=s.gallery.groups.bus;
+    if(bus?.fields.includes('bess_s_kva')){
+      const traces=await Promise.all(ids.map(async id=>({name:'Bus '+id,data:await seriesValues(bus,id,'bess_s_kva',begin,begin+arr.length)})));
+      plot(graph,'BESS inverter apparent power (kVA)',traces,dates);
+    }
+  }
+  if(arr.some(r=>r.bess_accepted_soc!=null))plot(graph,'Battery state of charge (%)',[
+    {name:'SOC',data:arr.map(r=>r.bess_accepted_soc==null?null:100*r.bess_accepted_soc)}],dates);
   // At the worst recorded hour, show the actual per-bus voltage profile.
-  const worst=hour.reduce((best,row,i)=>typeof row.voltage_min_pu==='number'&&(!best||row.voltage_min_pu<best.v)?{v:row.voltage_min_pu,i}:best,null);
-  if(worst){const voltages=s.worst_bus_voltages||{};const busIDs=Object.keys(voltages).sort((a,b)=>Number(a)-Number(b));if(busIDs.length){const vals=busIDs.map(id=>voltages[id]);redraw.push(plot(graph,'Bus voltages at worst hour: '+hour[worst.i].timestamp,[{name:'Bus voltage (pu)',data:vals}],['Bus '+busIDs[0],'Bus '+busIDs.at(-1)]));}}
+  const worst=s.diagnostic?.worst_timestamp;
+  if(worst){const voltages=s.worst_bus_voltages||{};const busIDs=Object.keys(voltages).sort((a,b)=>Number(a)-Number(b));if(busIDs.length){const vals=busIDs.map(id=>voltages[id]);plot(graph,'Bus voltages at worst hour: '+worst,[{name:'Bus voltage (pu)',data:vals}],busIDs.map(b=>'Bus '+b));}}
   if(arr.some(r=>r.shedding_kw!=null||r.curtailment_kw!=null))
-    redraw.push(plot(graph,'Shedding and curtailment (kW)',[
+    plot(graph,'Shedding and curtailment (kW)',[
       {name:'Load shedding',data:arr.map(r=>r.shedding_kw)},
-      {name:'PV curtailment',data:arr.map(r=>r.curtailment_kw)}],dates));
-  await feederView(graph,s,hour,begin,arr.length);
-  if(run.convergence?.length){redraw.push(plot(graph,'Optimizer convergence: scenario-cost objective (USD/year)',[{name:'Best screening objective',data:run.convergence.map(r=>r.best_annual_cost)}],['First evaluation','Last evaluation']));}
+      {name:'PV curtailment',data:arr.map(r=>r.curtailment_kw)}],dates);
+  await feederView(graph,s,axis,begin,arr.length);
+  if(run.convergence?.length){plot(graph,'Optimizer convergence: scenario-cost objective (USD/year)',[{name:'Best screening objective',data:run.convergence.map(r=>r.best_annual_cost)}],run.convergence.map((r,i)=>String(r.iteration??i+1)));}
   }
   select.addEventListener('change',paint);date.addEventListener('change',paint);await paint();}
 async function forecast(){const root=$('content');const rows=run.forecast_errors||[];const s=section(root,'Forecasting errors — observed holdout');if(!rows.length){s.append(elem('p','Unavailable: this run has no matched post-training actual observations. Run the forecast for a historical holdout (for example 2021 trained through 2020) and optimize using that forecast. Training error is not substituted.','empty'));return;}
@@ -167,15 +196,21 @@ async function forecast(){const root=$('content');const rows=run.forecast_errors
        rows.map(r=>perBus?[r.category,r.bus_count,r.hours,fmt(r.mae_kw,2),fmt(r.rmse_kw,2),r.wape_percent==null?'Undefined':fmt(r.wape_percent,2)+'%']:[r.category,r.hours,fmt(r.mae_kw,2),fmt(r.rmse_kw,2),r.wape_percent==null?'Undefined':fmt(r.wape_percent,2)+'%']));
   if(run.forecast_comparison_block==null)return;
   const recorded=await block(run.forecast_comparison_block);const control=section(root,'Actual vs forecast (14 days)');const row=elem('div',undefined,'controls');const category=elem('select');const names=[...new Set(recorded.map(r=>r.category))];names.forEach(n=>category.add(new Option(n.replaceAll('_',' '),n)));const date=elem('input');date.type='date';row.append(elem('span','Profile'),category,elem('span','First day'),date);control.append(row);const graph=elem('div',undefined,'charts');control.append(graph);
-  function paint(){graph.replaceChildren();redraw=[];const subset=recorded.filter(r=>r.category===category.value);if(!subset.length)return;date.min=subset[0].timestamp.slice(0,10);date.max=subset.at(-1).timestamp.slice(0,10);if(!date.value)date.value=date.min;let start=subset.findIndex(r=>r.timestamp.slice(0,10)>=date.value);start=Math.max(0,start);const a=subset.slice(start,start+14*24);redraw.push(plot(graph,'Hourly actual and forecast (kW)',[{name:'Actual',data:a.map(r=>r.actual_kw)},{name:'Forecast',data:a.map(r=>r.forecast_kw)}],[a[0]?.timestamp.slice(0,16),a.at(-1)?.timestamp.slice(0,16)]));}
+  function paint(){graph.replaceChildren();redraw=[];const subset=recorded.filter(r=>r.category===category.value);if(!subset.length)return;date.min=subset[0].timestamp.slice(0,10);date.max=subset.at(-1).timestamp.slice(0,10);if(!date.value)date.value=date.min;let start=subset.findIndex(r=>r.timestamp.slice(0,10)>=date.value);start=Math.max(0,start);const a=subset.slice(start,start+14*24);plot(graph,'Hourly actual and forecast (kW)',[{name:'Actual',data:a.map(r=>r.actual_kw)},{name:'Forecast',data:a.map(r=>r.forecast_kw)}],a.map(r=>r.timestamp));}
   category.addEventListener('change',()=>{date.value='';paint();});date.addEventListener('change',paint);paint();}
 async function feederView(parent, selectedScenario, hourly, start, length) {
   const positions=run.metadata.layout?.positions;
-  const readings=await block(selectedScenario.bus_voltage_block);
-  if(!positions||!readings||!length)return;
-  const currents=await block(selectedScenario.line_current_block)||{};
+  if(!positions||!length)return;
+  const series=selectedScenario.gallery.groups;
+  async function readingsFor(group,field){
+    if(!group?.fields.includes(field))return {};
+    const entries=await Promise.all(Object.keys(group.entities).map(async id=>[id,await seriesValues(group,id,field,start,start+length)]));
+    return Object.fromEntries(entries);
+  }
+  const readings=await readingsFor(series.bus,'voltage_pu'),currents=await readingsFor(series.line,'current_a');
+  if(!Object.keys(readings).length)return;
   const panel=section(parent,'Hourly feeder');
-  const slider=elem('input');slider.type='range';slider.min=0;slider.max=length-1;slider.value=0;
+  const slider=elem('input');slider.type='range';slider.min=0;slider.max=length-1;slider.value=Math.max(0,Math.min(length-1,galleryState.hour-start));
   slider.setAttribute('aria-label','Hour within the selected window');
   const stamp=elem('output');
   const controls=elem('div',undefined,'controls');
@@ -195,10 +230,19 @@ async function feederView(parent, selectedScenario, hourly, start, length) {
     const label=document.createElementNS(ns,'title');label.textContent=caption;node.append(label);svg.append(node);
     return [node,label];
   }
+  function linkElement(shape,group,id,caption){
+    shape.setAttribute('role','button');shape.setAttribute('tabindex','0');
+    shape.setAttribute('aria-label',caption);
+    shape.onclick=()=>{galleryState.scenario=scenario;jump(group,id,start+Number(slider.value));};
+    shape.onkeydown=e=>{
+      if(e.key==='Enter'||e.key===' '){e.preventDefault();shape.onclick();}
+    };
+  }
   for(const branch of run.metadata.topology?.lines||[]) {
     const route=run.metadata.layout.routes?.[branch.line_id]||[positions[branch.from_bus],positions[branch.to_bus]];
     if(!route.every(Boolean))continue;
     const [shape, title]=append('polyline',{points:route.map(point=>point.join(',')).join(' '),fill:'none',stroke:'#728697','stroke-width':6},branch.line_id);
+    linkElement(shape,'line',branch.line_id,'Plot line '+branch.line_id);
     branches.set(branch.line_id,{shape,title,ampacity:branch.ampacity_a});
   }
   for(const [bus,[x,y]] of Object.entries(positions)) {
@@ -206,26 +250,63 @@ async function feederView(parent, selectedScenario, hourly, start, length) {
     const label=document.createElementNS(ns,'text');
     label.setAttribute('x',x);label.setAttribute('y',y-22);label.setAttribute('text-anchor','middle');
     label.setAttribute('font-size',27);label.textContent=bus;svg.append(label);
+    linkElement(shape,'bus',bus,'Plot bus '+bus);
     buses.set(bus,{shape,title});
   }
   const min=run.metadata.simulation?.voltage_min_pu, max=run.metadata.simulation?.voltage_max_pu;
   function showHour() {
     const index=start+Number(slider.value);
-    stamp.textContent=hourly[index].timestamp;
+    galleryState.hour=index;stamp.textContent=hourly[index];
     for(const [bus,{shape,title}] of buses) {
-      const value=readings[bus]?.[index];
+      const value=readings[bus]?.[index-start];
       const outside=Number.isFinite(value)&&(value<min||value>max);
       shape.setAttribute('fill',outside?'#b54c21':Number.isFinite(value)?'#208582':'#adb6bb');
       title.textContent='Bus '+bus+' · '+fmt(value,4)+' pu';
     }
     for(const [line,{shape,title,ampacity}] of branches) {
-      const value=currents[line]?.[index];
+      const value=currents[line]?.[index-start];
       const loading=Number.isFinite(value)&&ampacity?100*value/ampacity:null;
       shape.setAttribute('stroke',loading>100?'#b54c21':'#728697');
       title.textContent=line+' · '+fmt(value,2)+' A'+(loading==null?'':' · '+fmt(loading,1)+'% of rating');
     }
   }
   panel.append(svg);slider.addEventListener('input',showHour);showHour();
+}
+
+async function readSavedReport(file){
+  // Byte offsets let a comparison read only the selected blocks from a local File.
+  const offsets=new Map(),tag=/<script id="(report-data|report-block-\d+)"[^>]*>/g;
+  const decoder=new TextDecoder('latin1'),size=1024*1024;
+  let tail='',active=null;
+  for(let start=0;start<file.size;start+=size){
+    const bytes=await file.slice(start,start+size).arrayBuffer();
+    const chunk=tail+decoder.decode(bytes),base=start-tail.length;
+    let pos=0;tail='';
+    while(pos<chunk.length){
+      if(active){
+        const end=chunk.indexOf('<',pos);
+        if(end<0)break;
+        offsets.set(active.key,[active.begin,base+end]);active=null;pos=end;
+      }
+      tag.lastIndex=pos;
+      const next=tag.exec(chunk);
+      if(!next){
+        const last=chunk.lastIndexOf('<');
+        if(last>=pos&&!chunk.slice(last).includes('>'))tail=chunk.slice(last);
+        break;
+      }
+      pos=tag.lastIndex;active={key:next[1],begin:base+pos};
+    }
+  }
+  async function read(key){
+    const extent=offsets.get(key);
+    if(!extent)throw Error('Missing saved report block '+key);
+    return inflate(await file.slice(...extent).text());
+  }
+  const saved=await read('report-data');
+  if(!saved?.manifest||!saved.scenarios)throw Error('Report is incomplete');
+  saved.readBlock=id=>read('report-block-'+id);
+  return saved;
 }
 
 function compareRuns() {
@@ -238,28 +319,28 @@ function compareRuns() {
     const snapshots=[run];
     for(const file of files.files) {
       try {
-        const match=(await file.text()).match(/<script id="report-data"[^>]*>([^<]+)<\/script>/);
-        if(!match)throw Error('report payload missing');
-        const saved=await inflate(match[1]);
-        if(!saved?.manifest||!saved.scenarios)throw Error('report is incomplete');
-        if(!snapshots.some(candidate=>candidate.manifest.run_id===saved.manifest.run_id))snapshots.push(saved);
+        const saved=await readSavedReport(file);
+        if(!snapshots.some(candidate=>candidate.manifest.run_id===saved.manifest.run_id)){
+          snapshots.push(saved);
+        }
       } catch(error) { table.append(elem('p',file.name+' · '+error.message,'warning')); }
     }
     const rows=[];
     for(const saved of snapshots) {
       const manifest=saved.manifest;
-      const sameHours=manifest.timestamp_sha256===run.manifest.timestamp_sha256&&manifest.timestamp_count===run.manifest.timestamp_count;
+      const sameHours=Boolean(manifest.timestamp_sha256&&manifest.clock&&manifest.clock===run.manifest.clock&&manifest.timestamp_sha256===run.manifest.timestamp_sha256&&manifest.timestamp_count===run.manifest.timestamp_count);
       const sameTopology=manifest.topology_sha256&&manifest.topology_sha256===run.manifest.topology_sha256;
-      const sameBasis=manifest.currency===run.manifest.currency;
+      const sameBasis=Boolean(manifest.currency&&manifest.currency===run.manifest.currency);
       for(const result of Object.values(saved.scenarios)) {
         const metrics=asMetrics(result);
-        rows.push([manifest.folder||manifest.kind,result.label,fmt(metrics.duration_hours,0),
+        rows.push([manifest.folder||manifest.kind,result.label,saved.metadata?.topology?.buses?.find(b=>b.is_slack)?.v_set_pu,fmt(metrics.voltage_min_pu,5),fmt(metrics.duration_hours,0),
           statusLabel(metrics.feasible),energy(metrics.load_shedding_energy_kwh),
-          energy(metrics.curtailment_energy_kwh),money(metrics.annual_total_cost),
+          energy(metrics.curtailment_energy_kwh),metrics.annual_total_cost==null?'Unavailable':fmt(metrics.annual_total_cost)+' '+(manifest.currency||'unrecorded currency')+'/year',
           sameHours&&sameTopology&&sameBasis?'Same feeder, hours and currency':'Review comparability']);
       }
     }
-    grid(table,['Run','Scenario','Hours','Feasibility','Shedding','Curtailment','Annual cost (USD)','Comparison basis'],rows);
+    grid(table,['Run','Scenario','Slack (pu)','Minimum V (pu)','Hours','Feasibility','Shedding','Curtailment','Annual cost','Comparison basis'],rows);
+    if(snapshots.length>1)await compareCurves(table,snapshots);
   });
 }
 
@@ -269,14 +350,18 @@ async function render(){
     if(screen==='Summary')summary();
     else if(screen==='Charts')await charts();
     else if(screen==='Forecast accuracy')await forecast();
-    else compareRuns();
+    else if(screen==='Compare runs')compareRuns();
+    else await gallery();
   } catch(error) {root.append(elem('p','Unable to read saved report: '+error.message,'warning'));}
 }
 async function start(){
   run=await inflate($('report-data').textContent);
   if(!run?.manifest||!run.scenarios)throw Error('Incomplete report payload');
   const labels=['Summary','Charts'];
+  labels.push('Study inputs','Network','Demand & PV','Decisions','BESS','Economics');
+  if(focusState.group)screen=groupsFor['Study inputs'].includes(focusState.group)?'Study inputs':'Network';
   if(run.forecast_errors?.length)labels.push('Forecast accuracy');
+  if(Object.values(run.scenarios).some(s=>s.gallery?.groups?.forecast))labels.push('Forecast series');
   labels.push('Compare runs');
   for(const name of labels){
     const button=elem('button',name);button.type='button';

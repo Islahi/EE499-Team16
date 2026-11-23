@@ -5,6 +5,7 @@ when models trained before the 2021 forecast origin. For genuinely future
 forecasts with no matching historical observations, scores are unavailable.
 """
 from pathlib import Path
+import csv
 import numpy as np
 import pandas as pd
 
@@ -76,7 +77,7 @@ def compare_forecast(history, predicted, assignments, training_end=None):
                          observed_energy_kwh=float(observed.sum()),
                          forecast_energy_kwh=float(forecast.sum())))
         series.extend(dict(timestamp=str(after[index]), category=category,
-                           actual_kw=float(y), forecast_kw=float(yhat))
+                           actual_kw=float(y), forecast_kw=float(yhat), residual_kw=float(yhat-y))
                       for index, y, yhat in zip(b, observed, forecast))
     return rows, series
 
@@ -89,4 +90,23 @@ def save_comparison(folder, history, predicted, assignments, training_end=None):
     folder = Path(folder)
     pd.DataFrame(score).to_csv(folder / 'forecast_errors.csv',index=False)
     pd.DataFrame(series).to_csv(folder / 'forecast_comparison.csv',index=False)
+    a = pd.DatetimeIndex(history.timestamps).get_indexer(predicted.timestamps)
+    present = np.flatnonzero(a >= 0)
+    with (folder / "forecast_by_bus.csv").open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(("timestamp", "profile", "actual_kw", "forecast_kw", "residual_kw"))
+        for label, actual, forecast in (("Demand", history.load_p_kw, predicted.load_p_kw),
+                                        ("PV", history.pv_p_kw, predicted.pv_p_kw)):
+            totals = np.zeros((2, len(present)))
+            for bus in sorted(actual.keys() & forecast.keys()):
+                if label == "PV" and not (np.any(actual[bus]) or np.any(forecast[bus])):
+                    continue
+                for index in present:
+                    obs, pred = actual[bus][a[index]], forecast[bus][index]
+                    writer.writerow((str(predicted.timestamps[index]), f"{label} B{bus}", obs, pred, pred-obs))
+                totals[0] += np.asarray(actual[bus])[a[present]]
+                totals[1] += np.asarray(forecast[bus])[present]
+            if actual and actual.keys() == forecast.keys():
+                for index, obs, pred in zip(present, *totals):
+                    writer.writerow((str(predicted.timestamps[index]), f"Total {label}", obs, pred, pred-obs))
     return score

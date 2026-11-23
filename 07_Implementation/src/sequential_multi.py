@@ -667,7 +667,7 @@ def _optimize_joint_fleet(
     ga_cfg = FleetGAConfig(
         population_size=max(8, int(config.population_size)),
         max_generations=max(4, int(config.max_iterations)),
-        stall_generation_limit=max(3, int(config.convergence_patience)),
+        stall_generation_limit=config.convergence_patience,
         seed=config.seed,
         workers=min(config.workers, 8),
         crossover_rate=ga_crossover_rate, mutation_rate=ga_mutation_rate,

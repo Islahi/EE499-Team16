@@ -6,6 +6,7 @@ from pathlib import Path
 from collections.abc import Mapping
 import json
 
+from .electrical_details import BUS_FIELDS, BRANCH_FIELDS, battery_ratings, bus_readings, branch_readings, line_ends
 from .metrics import (PerformanceMetrics, load_service, percentage_reduction, service_verified,
                       summarize_service)
 from .optimizer import OptimizationResult
@@ -74,7 +75,7 @@ def _display(value):
 
 
 def _unit(name, metrics):
-    if name.startswith("annual_"):
+    if name.startswith("annual_") or name == "annualized_bess_cost":
         return metrics.currency + "/year"
     if name == "bess_cost":
         return metrics.currency
@@ -173,7 +174,20 @@ def _write_csv(path, header, rows):
             writer.writerow([_csv_cell(value) for value in row])
 
 
-def _hourly_rows(result):
+SYSTEM_FIELDS = ("requested_load_kw", "requested_load_kvar", "served_load_kvar", "available_pv_kw",
+                 "grid_import_kw", "grid_export_kw", "loss_q_kvar", "minimum_voltage_bus", "maximum_voltage_bus",
+                 "served_load_kwh", "pv_generation_kwh", "shed_kwh", "curtailed_kwh", "loss_kwh",
+                 "grid_purchase_cost", "grid_export_credit", "shedding_cost", "curtailment_cost",
+                 "requested_load_kwh", "available_pv_kwh", "grid_import_kwh", "grid_export_kwh",
+                 "bess_charge_kw", "bess_discharge_kw", "bess_charge_kwh", "bess_discharge_kwh")
+
+
+def _hourly_rows(result, economics=None):
+    prices = economics or {}
+    def cost(energy, key):
+        price = prices.get(key)
+        return energy * price if energy is not None and price is not None else None
+
     for index, step in enumerate(result.steps):
         flow, point, battery = step.power_flow, step.operating_point, step.bess_step
         correction = step.dispatch.correction if step.dispatch else None
@@ -183,6 +197,14 @@ def _hourly_rows(result):
                      - sum(point.p_load_kw.values()) - flow.total_loss_p_kw) if flow.converged else None
         balance_q = (flow.slack_q_kvar + sum(point.q_pv_kvar.values()) + sum(point.q_bess_kvar.values())
                      - sum(point.q_load_kvar.values()) - flow.total_loss_q_kvar) if flow.converged else None
+        requested = step.requested_point
+        imports = max(0., flow.slack_p_kw) if flow.converged else None
+        exports = max(0., -flow.slack_p_kw) if flow.converged else None
+        dt = result.dt_hours
+        charge = sum(max(-p, 0.) for p in point.p_bess_kw.values())
+        discharge = sum(max(p, 0.) for p in point.p_bess_kw.values())
+        shed = step.shedding_kw * dt if step.shedding_kw is not None else None
+        curtailed = step.curtailment_kw * dt if step.curtailment_kw is not None else None
         yield [
             index, str(step.timestamp), result.dt_hours, flow.converged, step.feasible,
             not flow.converged, flow.iterations, flow.message,
@@ -200,10 +222,32 @@ def _hourly_rows(result):
             balance_p, balance_q, (correction or {}).get("status"),
             affected, (correction or {}).get("policy_score"), (correction or {}).get("objective_usd"),
             sum(point.q_bess_kvar.values()), sum(point.q_pv_kvar.values()),
+            sum(requested.p_load_kw.values()) if requested else None,
+            sum(requested.q_load_kvar.values()) if requested else None,
+            sum(point.q_load_kvar.values()) if flow.converged else None,
+            sum(requested.p_pv_kw.values()) if requested else None,
+            imports, exports, flow.total_loss_q_kvar if flow.converged else None,
+            min(flow.voltage_mag_pu, key=flow.voltage_mag_pu.get) if flow.converged else None,
+            max(flow.voltage_mag_pu, key=flow.voltage_mag_pu.get) if flow.converged else None,
+            sum(point.p_load_kw.values()) * dt if flow.converged else None,
+            sum(point.p_pv_kw.values()) * dt if flow.converged else None, shed, curtailed,
+            flow.total_loss_p_kw * dt if flow.converged else None,
+            cost(imports * dt if imports is not None else None, "grid_import_tariff_per_kwh"),
+            cost(exports * dt if exports is not None else None, "grid_export_tariff_per_kwh"),
+            cost(shed, "shedding_penalty_per_kwh"), cost(curtailed, "curtailment_penalty_per_kwh"),
+            sum(requested.p_load_kw.values()) * dt if requested else None,
+            sum(requested.p_pv_kw.values()) * dt if requested else None,
+            imports * dt if imports is not None else None, exports * dt if exports is not None else None,
+            *(value if flow.converged else None for value in (charge, discharge, charge*dt, discharge*dt)),
         ]
 
 
-def _bus_rows(result):
+def _bus_rows(result, network=None, bounds=None, context=None):
+    context = context or {}
+    batteries = battery_ratings(context)
+    prices = context.get("Economic inputs", {})
+    buses = {b.bus_id: b for b in network.buses} if network else {}
+    ratings = {bus: sum(p.p_rated_kw for p in units) for bus, units in network.pv_by_bus().items()} if network else {}
     for index, step in enumerate(result.steps):
         point, flow = step.operating_point, step.power_flow
         requested = step.requested_point
@@ -213,6 +257,10 @@ def _bus_rows(result):
             requested_q = requested.q_load_kvar[bus_id] if requested else None
             served = flow.converged
             fraction, disconnected = load_service(requested_p, point.p_load_kw[bus_id] if verified else None)
+            shed = (step.shedding_by_bus_kw or {}).get(bus_id)
+            curtailed = (step.curtailment_by_bus_kw or {}).get(bus_id)
+            dt = result.dt_hours
+            price_shed, price_curtail = prices.get("shedding_penalty_per_kwh"), prices.get("curtailment_penalty_per_kwh")
             yield [index, str(step.timestamp), bus_id, flow.converged, step.feasible,
                    not flow.converged, flow.voltage_mag_pu.get(bus_id), flow.voltage_angle_deg.get(bus_id),
                    point.p_load_kw[bus_id], point.q_load_kvar[bus_id],
@@ -226,17 +274,29 @@ def _bus_rows(result):
                    fraction,
                    requested.p_pv_kw[bus_id] if requested else None,
                    (step.pre_control_voltage_pu or {}).get(bus_id),
-                   (1. - fraction) * 100. if fraction is not None else None, disconnected]
+                   (1. - fraction) * 100. if fraction is not None else None, disconnected,
+                   *(bus_readings(step, buses[bus_id], ratings[bus_id], bounds, batteries.get(bus_id)).values()
+                     if bus_id in buses else [None] * len(BUS_FIELDS)),
+                   requested.q_pv_kvar[bus_id] if requested else None,
+                   requested_p*dt if requested_p is not None else None,
+                   point.p_load_kw[bus_id]*dt if served else None,
+                   shed*dt if shed is not None else None, curtailed*dt if curtailed is not None else None,
+                   shed*dt*price_shed if shed is not None and price_shed is not None else None,
+                   curtailed*dt*price_curtail if curtailed is not None and price_curtail is not None else None]
 
 
-def _branch_rows(result):
+def _branch_rows(result, network=None):
+    lines = {line.line_id: line for line in network.lines} if network else {}
+    ends = line_ends(network) if network else {}
     for index, step in enumerate(result.steps):
         flow = step.power_flow
         for line_id in sorted(flow.branch_current_a):
             yield [index, str(step.timestamp), line_id, flow.converged, step.feasible,
                    not flow.converged, flow.branch_current_a[line_id],
                    flow.branch_p_kw.get(line_id), flow.branch_q_kvar.get(line_id),
-                   flow.line_loss_p_kw.get(line_id), flow.line_loss_q_kvar.get(line_id)]
+                   flow.line_loss_p_kw.get(line_id), flow.line_loss_q_kvar.get(line_id),
+                   *(branch_readings(flow, lines[line_id], ends[line_id]).values()
+                     if line_id in lines else [None] * len(BRANCH_FIELDS))]
 
 
 EVALUATION_HEADER = [
@@ -288,7 +348,9 @@ def _dispatch_rows(result, baseline, context):
         if event is None:
             continue
         matched = baseline.steps[index] if baseline is not None else None
-        row = asdict(event)
+        row = {key: value for key, value in vars(event).items() if key != "evidence"}
+        for key in ("pre", "after_bess", "final"):
+            row[key] = asdict(row[key]) if row[key] else None
         row.update(step_index=index, timestamp=str(step.timestamp), run_id=context.get("Run ID"),
                    scenario=context.get("Alternative", "Simulation"),
                    source=event.source or context.get("Active input source"),
@@ -311,7 +373,7 @@ def export_results(result: Result, output_path: str | Path, *,
                    metrics: PerformanceMetrics | None = None,
                    baseline_metrics: PerformanceMetrics | None = None,
                    context: Mapping[str, str] | None = None, input_snapshot=None,
-                   baseline_series: TimeSeriesSimulationResult | None = None) -> dict[str, Path]:
+                   baseline_series: TimeSeriesSimulationResult | None = None, network=None, voltage_bounds=None) -> dict[str, Path]:
     """Create a new export directory. Existing paths are never overwritten.
 
     Matching duration/currency is necessary, not sufficient, for a fair baseline
@@ -349,6 +411,12 @@ def export_results(result: Result, output_path: str | Path, *,
                     json.dump(row, stream, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
                     stream.write("\n")
             written[path.name] = path
+            from .control_audit import ledger_hours
+            ledger = output / "control_decisions.jsonl"
+            with ledger.open("x", encoding="utf-8") as stream:
+                for hour in ledger_hours(result, context or {}):
+                    stream.write(json.dumps(hour, separators=(",", ":"), allow_nan=False) + "\n")
+            written[ledger.name] = ledger
         if any(getattr(step, "fleet_steps", None) for step in result.steps):
             write_table("fleet_hourly.csv", ["step_index", "timestamp", "bus_id", "power_kw",
                         "soc_before", "soc_after", "energy_after_kwh", "limited", "limit_reason",
@@ -402,16 +470,17 @@ def export_results(result: Result, output_path: str | Path, *,
             "bess_limit_reason", "curtailment_kw", "shedding_kw", "voltage_violation_bus_ids", "messages",
             "power_balance_residual_kw", "reactive_balance_residual_kvar", "correction_status",
             "affected_load_buses", "controller_policy_score", "physical_correction_cost_usd_per_hour",
-            "bess_reactive_power_kvar", "pv_reactive_power_kvar",
-        ], _hourly_rows(result))
+            "bess_reactive_power_kvar", "pv_reactive_power_kvar", *SYSTEM_FIELDS,
+        ], _hourly_rows(result, (context or {}).get("Economic inputs")))
         write_table("buses.csv", [
             "step_index", "timestamp", "bus_id", "converged", "step_feasible", "diagnostic_only",
             "voltage_pu", "voltage_angle_deg", "load_input_kw", "load_input_kvar", "pv_input_kw",
             "pv_input_kvar", "bess_input_kw", "bess_input_kvar", "curtailment_kw", "shedding_kw", "voltage_violation",
             "requested_load_kw", "requested_load_kvar", "shedding_kvar", "remaining_load_fraction",
             "available_pv_kw", "pre_control_voltage_pu",
-            "shed_load_percent", "fully_disconnected",
-        ], _bus_rows(result))
+            "shed_load_percent", "fully_disconnected", *BUS_FIELDS, "available_pv_kvar", "requested_load_kwh",
+            "served_load_kwh", "shed_kwh", "curtailed_kwh", "shedding_cost", "curtailment_cost",
+        ], _bus_rows(result, network, voltage_bounds, context))
         quality, service_buses = summarize_service(result)
         if quality:
             write_table("service_by_bus.csv", ["bus_id", "requested_energy_kwh", "served_energy_kwh",
@@ -419,8 +488,8 @@ def export_results(result: Result, output_path: str | Path, *,
                         "fully_disconnected_hours", "longest_disconnection_hours"], service_buses)
         write_table("branches.csv", [
             "step_index", "timestamp", "line_id", "converged", "step_feasible", "diagnostic_only",
-            "current_a", "sending_p_kw", "sending_q_kvar", "loss_p_kw", "loss_q_kvar",
-        ], _branch_rows(result))
+            "current_a", "sending_p_kw", "sending_q_kvar", "loss_p_kw", "loss_q_kvar", *BRANCH_FIELDS,
+        ], _branch_rows(result, network))
     if isinstance(result, OptimizationResult):
         if result.metadata.get("fleet"):
             inverter_ratio = float(result.metadata.get('inverter_kva_per_kw', 1.0))

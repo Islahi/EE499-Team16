@@ -47,7 +47,7 @@ from .approved_methodology import (
     read_manifest_assumptions,
 )
 from .planning_policy import (DEFAULT_DISPATCH_EFFICIENCY, DEFAULT_DISPATCH_HORIZON_HOURS,
-                              DEFAULT_MINIMUM_DISCHARGE_PF, desktop_worker_limit, joint_search_policy)
+                              DEFAULT_MINIMUM_DISCHARGE_PF, desktop_worker_limit, joint_search_policy, effective_joint_search)
 from .ui_workflow import (
     BaseCaseReport, DataRequest, RunSettings, prepare_study, run_and_export, regenerate_saved_dashboard,
     effective_simulation, first_calendar_year, forecast_and_export, run_base_case_and_export, size_catalog,
@@ -335,7 +335,6 @@ class LoadDataDialog(QDialog):
         if network:
             for unit in network.pv_units:
                 workbook_ratings[unit.bus_id] = workbook_ratings.get(unit.bus_id, 0.) + unit.p_rated_kw
-            workbook_ratings = {bus: kw for bus, kw in workbook_ratings.items() if kw > 0}
         existing = self.pv_rows()
         if existing == self.ratings_seed:
             # Replace only suggestions. Workbook and edited ratings take precedence.
@@ -528,7 +527,10 @@ class LoadDataDialog(QDialog):
     def job_succeeded(self, result):
         if self.pending_action == "prepare":
             self.study = result
-            set_status(widget(self,"lbl_load_validation"),"Data prepared and validated","success")
+            details = result.context
+            status = " · ".join(str(value) for value in (details.get("Network"),
+                details.get("History interval"), details.get("Workbook provenance")) if value)
+            set_status(widget(self,"lbl_load_validation"), status or "Data prepared and validated", "success")
             widget(self,"lbl_load_validation").setToolTip("")
             self.accept()
             return
@@ -721,6 +723,7 @@ class SettingsDialog(QDialog):
 
     def read_settings(self, optimization=False, *, values=None, require_ready=True, validate_manual=True):
         values = self.capture_values() if values is None else values
+        effective_joint_search(values)
         if require_ready and not self.engine_ready:
             raise ValueError("Mandatory Numba solver is not ready: "+widget(self,"lbl_compute_status").text())
         simulation = SimulationConfig(
@@ -1048,6 +1051,8 @@ class MainWindow(QMainWindow):
         self.result_index = None
         self.pending_action = ""
         self.pending_run_output = None
+        self.result_scenario = "."
+        self.result_folder = None
         self.dashboard_folder = None
         self.dashboard_job_folder = None
         self.pending_run_optimization = False
@@ -1273,7 +1278,12 @@ class MainWindow(QMainWindow):
     def add_network_controls(self):
         self.diagram_status = widget(self, "lbl_diagram_timestamp")
         self.diagram_status.hide()
-        widget(self, "group_bus_details").hide()
+        group = widget(self, "group_bus_details")
+        group.hide()
+        self.plot_element = QPushButton("Plot selected element", group)
+        self.plot_element.clicked.connect(self.plot_selection)
+        group.layout().addRow(self.plot_element)
+        self.plot_element.hide()
         widget(self, "lbl_line_details").setTextFormat(Qt.TextFormat.PlainText)
         widget(self, "group_bus_details").layout().setRowVisible(widget(self, "lbl_line_details"), False)
         widget(self, "chk_network_properties").toggled.connect(self.update_network_layers)
@@ -1307,6 +1317,9 @@ class MainWindow(QMainWindow):
     def simulation_steps(self):
         if self.report and isinstance(self.report.result, TimeSeriesSimulationResult):
             return self.report.result.steps
+        alternatives = getattr(self.report, "alternatives", {})
+        if self.result_scenario in alternatives:
+            return alternatives[self.result_scenario][0].steps
         if isinstance(self.report, BaseCaseReport):
             return [self.report.step]
         return []
@@ -1386,9 +1399,18 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Run Simulation or Base-Case FBS first; optimization summaries do not retain network results.")
             return False
         index = self.result_index if self.result_index is not None else len(steps) - 1
+        alternatives = getattr(self.report, "alternatives", {})
+        scenario = self.result_scenario
+        if len(alternatives) > 1:
+            names = list(alternatives)
+            scenario, ok = QInputDialog.getItem(self, "Retained simulation", "Scenario", names, names.index(scenario), False)
+            if not ok:
+                return False
+            steps = alternatives[scenario][0].steps
         dialog = TimestampDialog(steps, index, self)
         accepted = dialog.exec() == QDialog.DialogCode.Accepted
         if accepted:
+            self.result_scenario = scenario
             self.result_index = dialog.timestamps.currentData()
             self.refresh_network()
             self.refresh_selection_details()
@@ -1530,7 +1552,7 @@ class MainWindow(QMainWindow):
         self.study = study
         self.settings_dialog.set_network(study.network)
         if controls is not None:
-            previous = dict(controls)
+            previous = {"spin_ga_stall_generations": 6, **controls}
             if "spin_ga_population" in previous:
                 previous.setdefault("population_automatic", False)
             self.settings_dialog.committed.update(previous)
@@ -1599,6 +1621,8 @@ class MainWindow(QMainWindow):
         self.show_full_result_details = False
         widget(self, "progress_run").setFormat("%p%")
         self.report = None
+        self.result_folder = None
+        self.plot_element.hide()
         self.runner.result = None
         self.result_index = None
         control = widget(self, "chk_network_results")
@@ -1860,6 +1884,9 @@ class MainWindow(QMainWindow):
             try:
                 self.finish_run_clock()
                 self.report = result
+                self.result_folder = None
+                alternatives = getattr(result, "alternatives", {})
+                self.result_scenario = "best_bess" if "best_bess" in alternatives else next(iter(alternatives), ".")
                 base_case = getattr(self, "pending_base_case", False)
                 kind = "base case" if base_case else "optimization" if self.pending_run_optimization else "simulation"
                 self.completed_information = deepcopy({
@@ -1872,7 +1899,7 @@ class MainWindow(QMainWindow):
                     elif result.persistence_warning is None:
                         self.session = StudySession.open_for_updates(self.session.root)
                     self.append_log(f"Run files saved in {self.pending_run_output}")
-                    self.dashboard_folder = Path(self.pending_run_output)
+                    self.dashboard_folder = self.result_folder = Path(self.pending_run_output)
                     if result.dashboard_path:
                         self.append_log(f"Dashboard saved to {result.dashboard_path}")
                 self.show_full_result_details = False
@@ -1968,26 +1995,90 @@ class MainWindow(QMainWindow):
         if hasattr(self, "resize_fit_timer"):
             self.resize_fit_timer.start()
 
+    def plot_selection(self):
+        from .dashboard_viewer import show_dashboard
+        step = self.selected_step()
+        if not self.result_folder or not step:
+            return
+        path = self.result_folder / "dashboard.html"
+        if not path.is_file():
+            self.statusBar().showMessage("The saved dashboard is still being built.", 6000)
+            return
+        kind, entity = self.inspected_element
+        show_dashboard(self, path, focus={"group":kind, "entity":str(entity), "timestamp":str(step.timestamp),
+                                         "scenario":self.result_scenario})
+
+    def inspector_target(self, kind, entity):
+        self.inspected_element = kind, entity
+        self.plot_element.setText("Plot " + kind)
+        self.plot_element.setVisible(bool(self.result_folder and self.selected_step()))
+
     def show_bus(self, bus_id):
         if self.study is None:
             return
-        self.show_detail_rows(False)
-        widget(self, "group_bus_details").setTitle(f"Bus B{bus_id}")
+        from .electrical_details import battery_ratings, bus_readings
         network = self.study.network
-        widget(self, "lbl_bus_id").setText(f"B{bus_id}")
-        last = self.selected_step()
-        if last:
-            prefix = "" if last.power_flow.converged else "Diagnostic only: "
-            widget(self, "lbl_bus_voltage").setText(f"{prefix}{last.power_flow.voltage_mag_pu[bus_id]:.5f} pu at {last.timestamp}")
-            point = last.operating_point
-            load_text = f"{point.p_load_kw[bus_id]:g} kW / {point.q_load_kvar[bus_id]:g} kvar at {last.timestamp}"
-            pv_text = f"{point.p_pv_kw[bus_id]:g} kW at {last.timestamp}"
-        else:
-            widget(self, "lbl_bus_voltage").setText("Not calculated; optimizer retains summary metrics, not hourly bus voltages")
-            load_text = f"{sum(load.p_base_kw for load in network.loads if load.bus_id == bus_id):g} kW / {sum(load.q_base_kvar for load in network.loads if load.bus_id == bus_id):g} kvar (base)"
-            pv_text = f"{sum(unit.p_rated_kw for unit in network.pv_units if unit.bus_id == bus_id):g} kW (installed rating)"
-        widget(self, "lbl_bus_load").setText(load_text)
-        widget(self, "lbl_bus_pv").setText(pv_text)
+        bus = next(item for item in network.buses if item.bus_id == bus_id)
+        rating = sum(unit.p_rated_kw for unit in network.pv_units if unit.bus_id == bus_id)
+        base = [load for load in network.loads if load.bus_id == bus_id]
+        self.show_detail_rows(False)
+        self.inspector_target("bus", bus_id)
+        widget(self, "group_bus_details").setTitle(f"Bus B{bus_id}")
+        identity = f"B{bus_id} · {bus.base_kv:g} kV"
+        identity += f" · Slack at {bus.v_set_pu:g} pu" if bus.is_slack else " · PQ"
+        widget(self, "lbl_bus_id").setText(identity)
+        step = self.selected_step()
+        voltage = "Not calculated"
+        load = f"Base {sum(x.p_base_kw for x in base):g} kW / {sum(x.q_base_kvar for x in base):g} kvar"
+        pv = f"Installed {rating:g} kW"
+        if step:
+            flow, point = step.power_flow, step.operating_point
+            config = self.report.context.get("Simulation settings") or {}
+            bounds = (config["voltage_min_pu"], config["voltage_max_pu"]) if "voltage_min_pu" in config else None
+            info = bus_readings(step, bus, rating, bounds, battery_ratings(self.report.context).get(bus_id))
+            voltage = f"{step.timestamp} · {flow.message}"
+            if flow.converged:
+                voltage += f" | {flow.voltage_mag_pu[bus_id]:.6f} pu · {info['voltage_kv']:.5f} kV · {flow.voltage_angle_deg[bus_id]:.6f}°"
+                if bounds:
+                    voltage += f" | limits {bounds[0]:g}–{bounds[1]:g} pu, margin {info['voltage_margin_pu']:+.6f} pu"
+                for label, key in (("Uncontrolled", "uncontrolled_voltage_pu"), ("Before final correction", "before_correction_voltage_pu")):
+                    if info[key] is not None:
+                        voltage += f" | {label} {info[key]:.6f} pu"
+                load = f"Delivered {point.p_load_kw[bus_id]:g} kW / {point.q_load_kvar[bus_id]:g} kvar"
+                pv += f" | Output {point.p_pv_kw[bus_id]:g} kW / {point.q_pv_kvar[bus_id]:g} kvar"
+                req = getattr(step, "requested_point", None)
+                if req:
+                    requested = req.p_load_kw[bus_id]
+                    shed = requested - point.p_load_kw[bus_id]
+                    load += f" | Requested {requested:g} kW / {req.q_load_kvar[bus_id]:g} kvar"
+                    load += f" | Shed {shed:g} kW / {req.q_load_kvar[bus_id]-point.q_load_kvar[bus_id]:g} kvar"
+                    if requested:
+                        load += f" ({100*shed/requested:.2f}%)"
+                    pv += f" | Available {req.p_pv_kw[bus_id]:g} kW / {req.q_pv_kvar[bus_id]:g} kvar, curtailed {req.p_pv_kw[bus_id]-point.p_pv_kw[bus_id]:g} kW"
+                if info["bess_soc_percent"] is not None:
+                    pv += (f"\nBESS {point.p_bess_kw[bus_id]:g} kW / {point.q_bess_kvar[bus_id]:g} kvar / "
+                           f"{info['bess_s_kva']:.3f} kVA · SOC {info['bess_soc_percent']:.2f}% · {info['bess_energy_kwh']:.3f} kWh")
+                    if info["bess_rating_kw"] is not None:
+                        pv += f" | Rated {info['bess_rating_kw']:g} kW / {info['bess_capacity_kwh']:g} kWh"
+                    if info["inverter_rating_kva"] is not None:
+                        pv += f" | Inverter {info['inverter_rating_kva']:g} kVA ({info['inverter_loading_percent']:.1f}%)"
+            elif getattr(step, "requested_point", None):
+                load = "Delivered load unavailable (FBS did not converge)"
+            event = getattr(step, "dispatch", None)
+            if event:
+                from .control_audit import decisions
+                actions = [a["action"] for a in decisions(step) if a["bus_id"] == bus_id]
+                affected = [item["constraint"] for item in event.evidence.get("constraints", [])
+                            if item["type"] in ("undervoltage", "overvoltage") and item["entity"] == str(bus_id)]
+                if affected:
+                    pv += "\nObserved constraints " + ", ".join(affected)
+                if actions:
+                    pv += "\n" + ", ".join(actions) + " | " + ", ".join(event.reason_codes or ["Reason not recorded"])
+        for name, value in (("voltage", voltage), ("load", load), ("pv", pv)):
+            label = widget(self, "lbl_bus_" + name)
+            label.setTextFormat(Qt.TextFormat.PlainText)
+            label.setWordWrap(True)
+            label.setText(value)
 
     def show_detail_rows(self, line_selected):
         layout = widget(self, "group_bus_details").layout()
@@ -2016,6 +2107,8 @@ class MainWindow(QMainWindow):
         parent = order.parent_bus_by_bus[child]
         lines = [f"{line_id}: {parent} → {child} (source-rooted sending direction)",
                  f"R {line.r_ohm:g} Ω; X {line.x_ohm:g} Ω"]
+        self.inspector_target("line", line_id)
+        lines.append(f"Ampacity {line.ampacity_a:g} A" if line.ampacity_a else "Ampacity not recorded")
         step = self.selected_step()
         if step is None:
             lines.append("Not calculated: run Simulation for hourly line results.")
@@ -2026,6 +2119,15 @@ class MainWindow(QMainWindow):
             lines.extend((f"{step.timestamp} (source clock)",
                           f"P {flow.branch_p_kw[line_id]:.3f} kW; Q {flow.branch_q_kvar[line_id]:.3f} kvar; I {flow.branch_current_a[line_id]:.3f} A",
                           f"Loss {flow.line_loss_p_kw[line_id]:.4f} kW / {flow.line_loss_q_kvar[line_id]:.4f} kvar"))
+            from .electrical_details import branch_readings
+            details = branch_readings(flow, line, (parent, child))
+            lines.extend((f"End voltages {details['from_voltage_pu']:.6f} / {details['to_voltage_pu']:.6f} pu · "
+                          f"angles {details['from_angle_deg']:.5f}° / {details['to_angle_deg']:.5f}° "
+                          f"(difference {details['angle_difference_deg']:.5f}°)",
+                          f"Receiving {details['receiving_p_kw']:.4f} kW / {details['receiving_q_kvar']:.4f} kvar"))
+            if details["loading_percent"] is not None:
+                lines.append(f"Loading {details['loading_percent']:.2f}% · " +
+                             ("ampacity exceeded" if details["overloaded"] else "within rating"))
         self.show_detail_rows(True)
         widget(self, "group_bus_details").setTitle(f"Line {line_id}")
         widget(self, "lbl_line_details").setText("\n".join(lines))

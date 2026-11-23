@@ -62,8 +62,16 @@ def _write_profile(path, timestamps, active, reactive):
                 ])
 
 
+def _workbook_bytes(path, expected):
+    data = Path(path).read_bytes()
+    if expected and sha256(data).hexdigest() != expected:
+        raise ValueError("Network workbook changed after preparation. Prepare a new study with the edited workbook.")
+    return data
+
+
 def write_input_snapshot(output, *, metadata, profiles=None, point=None, workbook=None):
     """Save the profiles actually used by a run and their alignment metadata."""
+    network_bytes = _workbook_bytes(workbook, metadata.get("selected_network_sha256")) if workbook else None
     root = Path(output) / "inputs"
     root.mkdir(exist_ok=False)
     paths = {}
@@ -81,7 +89,7 @@ def write_input_snapshot(output, *, metadata, profiles=None, point=None, workboo
         paths[f"inputs/{name}"] = root / name
     if workbook is not None:
         name = "network" + Path(workbook).suffix.lower()
-        shutil.copy2(workbook, root / name)
+        (root / name).write_bytes(network_bytes)
         paths[f"inputs/{name}"] = root / name
     manifest = root / "input_snapshot.json"
     manifest.write_text(json.dumps(_json_value(metadata), indent=2), encoding="utf-8")
@@ -115,6 +123,8 @@ class StudySession:
 
     @classmethod
     def create(cls, study, results_root):
+        network_source = Path(study.request.network_path)
+        network_bytes = _workbook_bytes(network_source, study.context.get("Network SHA256"))
         created = datetime.now().astimezone()
         network_name = Path(study.request.network_path).stem
         base_name = f"{created:%Y%m%d_%H%M%S}_{_slug(network_name)}"
@@ -127,9 +137,8 @@ class StudySession:
         inputs.mkdir(parents=True)
 
         raw = study.historical_profiles or study.profiles
-        network_source = Path(study.request.network_path)
         network_snapshot = inputs / f"network{network_source.suffix.lower()}"
-        shutil.copy2(network_source, network_snapshot)
+        network_snapshot.write_bytes(network_bytes)
         _write_profile(
             inputs / "load_profile.csv", raw.timestamps,
             raw.load_p_kw, raw.load_q_kvar,
@@ -169,7 +178,11 @@ class StudySession:
         if study.pv_reference is not None:
             ref = study.pv_reference
             import pandas as pd
-            pd.DataFrame({"timestamp":ref.timestamps,"p_kw":ref.p_kw}).to_csv(inputs/"common_pv_reference.csv",index=False)
+            source = pd.DataFrame({"timestamp":ref.timestamps,"p_kw":ref.p_kw})
+            irradiance = getattr(study, "source_irradiance", None)
+            if irradiance is not None:
+                source["irradiance_w_m2"] = irradiance.reindex(ref.timestamps).to_numpy()
+            source.to_csv(inputs/"common_pv_reference.csv",index=False)
         manifest = {
             "format_version": 2,
             "engines": {"power_flow":"numba", "load":"sector_sum", "pv":"common modeled XGBoost"},
@@ -355,6 +368,8 @@ def migrate_inputs(historical, results_root):
         import pandas as pd
         from .solar_source import SolarSite, PVReference
         frame = pd.read_csv(historical.root/"inputs/common_pv_reference.csv")
+        if "irradiance_w_m2" in frame:
+            study.source_irradiance = frame.set_index(pd.to_datetime(frame.timestamp)).irradiance_w_m2
         provenance = ref_info["provenance"]
         site = ref_info.get("site") or provenance.get("site") or study.dataset_metadata.get("site")
         if site:

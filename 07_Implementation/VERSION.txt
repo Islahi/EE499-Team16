@@ -1,1 +1,1 @@
-V15.6 desktop refinement - editable GA controls, daily MILP dispatch, accessible data loading and offline dashboard
+V16 - Excel input compatibility, electrical and control diagnostics, offline results dashboard, and adjustable GA stall generations

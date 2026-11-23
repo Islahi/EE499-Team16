@@ -123,6 +123,7 @@ class PVReference:
     capacity_kw: float
     site: SolarSite
     provenance: dict
+    irradiance_w_m2: object = None
 
     def __post_init__(self):
         p = np.asarray(self.p_kw, dtype=float)
@@ -154,4 +155,5 @@ def reference_from_file(path, kind, capacity, site, source_clock, conversion):
     dates = convert_clock(pd.to_datetime(frame.timestamp), source_clock, site.clock)
     return PVReference(dates, p, capacity, site, {"path":str(path), "sha256":sha256(Path(path).read_bytes()).hexdigest(),
         "target":"modeled electrical kW", "source_clock":source_clock, "site":asdict(site),
-        "conversion":asdict(conversion) if kind != "power" else "already modeled kW; no conversion"})
+        "conversion":asdict(conversion) if kind != "power" else "already modeled kW; no conversion"},
+        frame.irradiance_w_m2.to_numpy() if kind != "power" else None)
