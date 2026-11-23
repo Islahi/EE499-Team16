@@ -48,7 +48,7 @@ The GUI builds the diagram automatically from network data. This plan does not a
   New studies select the first 24 historical hours. Annual GA/GWO comparisons
   use a complete calendar year and either scheduled SOC closure or explicit
   terminal energy pricing. See the
-  [desktop user guide](07_Implementation/BESS_Planning_Tool_User_Guide.md).
+  [current desktop quick start](07_Implementation/Release_Notes/V15_6/V15_6_CLEANUP_QUICKSTART.md).
 
 - On 20 Oct 2026, the isolated `src_accelerated` desktop gained timestamped
   study sessions and a separate four-tab **Scenarios** workflow. Accepted
@@ -102,7 +102,7 @@ The GUI builds the diagram automatically from network data. This plan does not a
   voltage/reserve checks and FBS failure handling. Fifteen new integration tests
   and synthetic 24-hour/2,160-hour demos pass. Existing `bess.py` and
   `data_loader.py` were preserved. Real-data integrated validation is pending;
-  see `07_Implementation/Validation/Simulation_Test_Guide.md`.
+  see `07_Implementation/Validation/MISC/Simulation_Test_Guide.md`.
 - On 17 Oct 2026, `metrics.py` was implemented with simulation energy totals,
   voltage/reserve violation durations, SOC ranges, simple two-coefficient BESS
   investment cost and percentage-reduction comparisons. Missing coefficients

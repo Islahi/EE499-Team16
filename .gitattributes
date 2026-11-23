@@ -21,4 +21,4 @@
 *.jpeg filter=lfs diff=lfs merge=lfs -text
 
 # Small uploaded verification guide stored directly for connector-based publication.
-07_Implementation/Validation/FBS_Step_by_Step_Guide.pdf -filter -diff -merge -text
+07_Implementation/Validation/MISC/FBS_Step_by_Step_Guide.pdf -filter -diff -merge -text

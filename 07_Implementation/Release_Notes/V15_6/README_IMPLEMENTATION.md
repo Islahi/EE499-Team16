@@ -22,7 +22,7 @@ Read **`V11_CHANGES.md`** first. V11 adds paper-grounded 24-hour coordinated LP 
 
 For a quick fixed-battery experiment (without running GWO):
 
-`python COMPARE_V10_V11_CONTROL.py --folder "C:\\your\\inputs" --hours 168`
+`python -m Validation.Controller_Comparisons.COMPARE_V10_V11_CONTROL --folder "C:\\your\\inputs" --hours 168`
 
 **CAUTION:** 24-hour future data are read from the supplied load/PV CSV. If these are hindsight actuals instead of genuine forecasts, the outcome is a perfect-foresight backtest. See `V11_CHANGES.md` for the research references, mathematical assumptions, validation and limitations.
 

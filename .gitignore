@@ -15,6 +15,7 @@ venv/
 .env
 .env.*
 .venv-neural/
+/.venv-exe/
 tools/VideoTranscriber/API_key.txt
 
 # MATLAB / common generated files
@@ -40,6 +41,11 @@ dist/
 *.tmp
 *.temp
 *.part
+/tmp/
+/.tmp/
+/output/
+/outputs/
+/Local_Archive/
 
 # Generated simulation, optimization and scenario-session outputs.
 # Existing tracked reference results remain versioned.

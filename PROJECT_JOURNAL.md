@@ -1,5 +1,16 @@
 # Project Journal
 
+## 2026-11-23 - Project folder and validation material organized
+
+- Moved the validation process PDF, two research workbooks, and historical
+  controller scripts to their respective project folders. Added indexes for the
+  validation kits and results so the original inputs and evidence can be found.
+- Archived old Windows builds, delivery ZIPs and demonstration exports locally.
+  `Local_Archive/2026-11-23_Cleanup/MOVED.csv` records the original and destination
+  paths. Previously tracked demonstrations are also recoverable from Git history.
+- Verified that both Working_RDS collections were identical and kept the canonical
+  copy under `04_Research/Working_Data/Network_Data/Working_RDS`.
+
 ## 2026-11-23 - V15.6 promoted to the project implementation
 
 - Consolidated the desktop application, launchers, assets and current regression
@@ -38,7 +49,7 @@
   priced and efficiency-adjusted terminal energy difference.
 - Added solar source controls and protected workbook and edited PV ratings
   during GoiEner folder selection. Added archived C1/C2 regression checks and
-  a [desktop user guide](07_Implementation/BESS_Planning_Tool_User_Guide.md).
+  a desktop user guide. See the [current quick start](07_Implementation/Release_Notes/V15_6/V15_6_CLEANUP_QUICKSTART.md).
 
 ## 2026-10-10 - Member 1 FBS contribution reviewed and preserved
 
@@ -613,7 +624,7 @@ Log items such as confirmed decisions, important advisor guidance, meaningful re
 
 - At the user's request, reviewed src_accelerated and updated 25 implementation tasks to Done/100% and four verification/testing tasks to In Progress in the live Task Register. Preserved owners, dates, documentation/formal-validation statuses; added cell notes with evidence and limitations.
 - Checked 56 focused accelerated regression tests and direct synthetic baseline/BESS, GWO/reference, 100-to-45 scenario, scenario optimization, workflow/export and offscreen GUI/drawing paths. ARIMA fallback and stable-versus-accelerated test incompatibilities remain explicit limitations.
-- Full assessment and task-by-task mapping: `07_Implementation/Validation/2026-10-24_Accelerated_Task_Audit.md`. Implementation completion does not imply final project validation or successful project-data forecast validation.
+- Full assessment and task-by-task mapping: `07_Implementation/Validation/MISC/2026-10-24_Accelerated_Task_Audit.md`. Implementation completion does not imply final project validation or successful project-data forecast validation.
 
 ## 2026-10-24 — Remaining semester replanned after accelerated audit
 

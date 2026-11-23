@@ -4,7 +4,9 @@
 
 - `EE499_Team16_5Bus_Network_Data.pdf` — a project reference for the 11 kV, 10 MVA radial five-bus development case. It records topology, published line impedances, grid-strength cases and PV-placement scenarios.
 - `PJM_5Bus_Network_Data.xlsx` — the MATPOWER/PJM five-bus test system for power-flow, optimal-power-flow and BESS-integration reference work.
-- `IEEE_33Bus_Network_Data.xlsx` — the standard Baran and Wu 33-bus radial distribution system, with overview, bus-load and branch-impedance sheets.
+- The canonical [Working_RDS collection](Working_RDS/README.md) contains 22 radial test workbooks.
+- [`Working_RDS/IEEE_33Bus_Network_Data.xlsx`](Working_RDS/IEEE_33Bus_Network_Data.xlsx) is the Baran and Wu 33-bus radial distribution workbook used for the RDS collection.
+- [`Baghzouz_Ertem_10Bus_Test_Network.xlsx`](Study_Workbooks/Baghzouz_Ertem_10Bus_Test_Network.xlsx) and [`Baran_Wu_IEEE_33Bus_Base_Case.xlsx`](Study_Workbooks/Baran_Wu_IEEE_33Bus_Base_Case.xlsx) are the study workbooks previously kept in the root output folder.
 - [`Radial_Test_Systems/`](Radial_Test_Systems/README.md) — six original MATPOWER
   8.1 distribution cases (10/12/15/22/33/69 buses), downloaded 19 Oct 2026 with
   pinned sources, checksums, attribution and read-only topology/FBS checks.
@@ -20,7 +22,7 @@
 1–2–3–4 and 2–5). Its loads and PV are software-test inputs. It is distinct
 from both the research five-bus source and the meshed PJM workbook, and is not
 claimed to be an IEEE-standard case. Use
-[`Five_Bus_Diagnostic_Guide.md`](../../../07_Implementation/Validation/Five_Bus_Diagnostic_Guide.md)
+[`Five_Bus_Diagnostic_Guide.md`](../../../07_Implementation/Validation/MISC/Five_Bus_Diagnostic_Guide.md)
 for a short, reproducible desktop/GWO test and timing comparisons.
 
 The five-bus source provides four line impedances but does **not** provide individual bus-load magnitudes in its network-parameter table. Any five-bus load allocation must therefore be labelled as a project assumption or derived profile, not published source data.

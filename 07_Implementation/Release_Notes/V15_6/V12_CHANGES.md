@@ -20,7 +20,7 @@
 3. In the Settings dialog choose **Predictive 72h LP (V12 recommended)** or **Predictive 24h LP (V11 comparison)** for fixed-configuration A/B testing. Existing worker controls remain unchanged.
 4. Load `network.xlsx`, `load_profile.csv`, `pv_profile.csv` from the **new 50%-of-nominal-demand PV dataset**. Do not multiply the solar CSV again.
 5. Start with a *fixed BESS* comparison, then run GWO with the same initial candidate catalogs, seed, cost inputs, no-export policy and import limit as your previous tests. Expect GWO screening to take longer because each event is now 72 hours and each accepted stage can test additional annual energy capacities.
-6. Use `python COMPARE_V11_V12_CONTROL.py --folder "C:\\path\\to\\new_inputs" --hours 8760 --buses 17 --power-kw 500 --energy-kwh 50000 --output results_v12.json` to compare both controllers without rerunning GWO.
+6. Use `python -m Validation.Controller_Comparisons.COMPARE_V11_V12_CONTROL --folder "C:\\path\\to\\new_inputs" --hours 8760 --buses 17 --power-kw 500 --energy-kwh 50000 --output results_v12.json` to compare both controllers without rerunning GWO.
 
 ## Validation and engineering limitations
 

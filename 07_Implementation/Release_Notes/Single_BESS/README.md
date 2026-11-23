@@ -1,11 +1,7 @@
 # BESS Planning Tool
 
-For the current V15.6 app, see the [implementation README](README.md). The workflow below records earlier accelerated development and replay experiments.
-
-
-Start with the [user guide](BESS_Planning_Tool_User_Guide.md) for the Windows launcher,
-GoiEner folder import, solar input formats, technical simulations, annual optimization,
-and saved study migration.
+The workflow below records the earlier accelerated development and replay experiments.
+See the [current desktop quick start](../V15_6/V15_6_CLEANUP_QUICKSTART.md) for V15.6.
 
 The desktop application in `src` uses Numba CPU FBS. Sector-sum demand
 forecasts use CalendarRidge, XGBoost, and LightGBM. The common PV forecast uses
@@ -54,9 +50,9 @@ Fast search uses Numba FBS and coordinated correction to rank bounded injection 
 From `07_Implementation`, point the benchmark at a saved run containing `inputs/network.xlsx`, `inputs/load_profile.csv`, `inputs/pv_profile.csv` and `inputs/input_snapshot.json`.
 
 ```powershell
-python benchmark_single_bess.py 'C:\Path\To\run_001' '.\paired.json' --window stress --window week --window year
-python benchmark_single_bess.py 'C:\Path\To\run_001' '.\search.json' --workers 2 --search quick thorough standard
-python benchmark_single_bess.py 'C:\Path\To\run_001' '.\workers.json' --worker-sweep 1 4 6 12
+python -m Validation.Controller_Comparisons.benchmark_single_bess 'C:\Path\To\run_001' '.\paired.json' --window stress --window week --window year
+python -m Validation.Controller_Comparisons.benchmark_single_bess 'C:\Path\To\run_001' '.\search.json' --workers 2 --search quick thorough standard
+python -m Validation.Controller_Comparisons.benchmark_single_bess 'C:\Path\To\run_001' '.\workers.json' --worker-sweep 1 4 6 12
 $env:QT_QPA_PLATFORM = 'offscreen'
 python src/app.pyw --check-runtime '.\launcher-smoke.txt'
 ```

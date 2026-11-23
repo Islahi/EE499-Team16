@@ -1,4 +1,4 @@
-> Historical implementation reference. For executable production behavior, see [the current application instructions](../../README_ACCELERATED.md). Retired solver, forecasting and objective descriptions below are preserved for historical interpretation.
+> Historical implementation reference. For executable production behavior, see [the current application instructions](../../README.md). Retired solver, forecasting and objective descriptions below are preserved for historical interpretation.
 
 # `src` — detailed script and calculation reference
 

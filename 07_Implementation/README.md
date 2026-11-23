@@ -31,8 +31,11 @@ CHECK_WINDOWS_GUI.bat --no-pause
 
 - Application code and technical notes are under [src](src/docs/README.md).
 - Saved-run recovery and dashboard regeneration utilities are beside the launcher.
-- Historical validation kits are under [Validation](Validation/). Standalone
-  data-preparation and plotting tools are under [Tools](Tools/).
+- The [validation index](Validation/README.md) lists each test kit, its inputs,
+  and its entry point. Standalone data-preparation and plotting tools are under
+  [Tools](Tools/README.md).
+- The [results guide](Results/README.md) identifies the active run directory and
+  where to recover archived demonstration outputs.
 - [Earlier releases](Release_Notes/) document the evolution of the solver and UI.
 
 The previous desktop tests and the raw weighted-sum and synthetic uncertainty

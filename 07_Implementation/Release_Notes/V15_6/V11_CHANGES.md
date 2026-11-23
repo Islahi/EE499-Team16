@@ -33,7 +33,7 @@ No method can recharge batteries without available supply, grid capacity, and el
 2. Load the same network and load/PV profiles, SOC, tariffs, GWO size ranges, and random seed as V10. Keep your Windows worker counts at **6 GWO and 2 annual** on your 16 logical processor / 16 GB RAM PC.
 3. Select **Predictive 24h LP** for the new run. To reproduce the historical V10 control, choose **Legacy** instead. Do not compare different battery placements or sizes as evidence of dispatch quality.
 4. For a *fixed* BESS configuration without GWO, run:
-   `python COMPARE_V10_V11_CONTROL.py --folder "C:\\your\\inputs" --hours 168`
+   `python -m Validation.Controller_Comparisons.COMPARE_V10_V11_CONTROL --folder "C:\\your\\inputs" --hours 168`
    or replace 168 with 8760 for a full 2021 annual comparison. Your input folder must contain `network.xlsx`, `load_profile.csv`, `pv_profile.csv`. Ratings default to 500 kW / 50 MWh at Buses 17, 33 and 14; supply CLI flags if needed. The comparison saves JSON and never overwrites input data.
 5. Compare `fleet_hourly.csv`, `service_by_bus.csv`, `annual_finalist_checks.csv`, `lateral_improvement_by_stage.csv`, and the dashboard. Look at SOC-min hours, charge/discharge, **pre-shedding voltage deficits**, shed kWh, annual cost, verified coverage, and runtime. The LP runtime/failure count appears in `dispatch_timing`.
 

@@ -53,7 +53,7 @@ This is **sequential, FBS-linearized OPF**, not full nonconvex AC OPF or globall
 ### Command-line fixed-fleet comparison
 
 ```bat
-py -3.14 COMPARE_V12_V13_OPF.py --folder "C:\path\to\inputs" --hours 168 --bess "8:1750:33250,29:250:250,16:250:250"
+py -3.14 -m Validation.Controller_Comparisons.COMPARE_V12_V13_OPF --folder "C:\path\to\inputs" --hours 168 --bess "8:1750:33250,29:250:250,16:250:250"
 ```
 
 For full annual evaluation use `--hours 8760`; the CLI saves `V13_FIXED_FLEET_COMPARISON.json`. To test equipment oversizing explicitly, add `--bess-kva-multiplier 1.2 --pv-kva-multiplier 1.1`.

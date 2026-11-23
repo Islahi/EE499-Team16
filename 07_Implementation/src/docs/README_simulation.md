@@ -310,7 +310,7 @@ python -m unittest discover -s tests -p test_simulation.py -v
 
 The example uses synthetic data; `tests/test_simulation.py` contains automated
 checks. Both call the actual simulation module. See the
-[simulation test guide](../Validation/Simulation_Test_Guide.md) for CSV usage,
+[simulation test guide](../../Validation/MISC/Simulation_Test_Guide.md) for CSV usage,
 test coverage and the checks to make with actual project data.
 
 The current module does not choose the best battery, calculate economic
