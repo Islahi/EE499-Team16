@@ -1,2 +1,0 @@
-possibility to use GPU instead of CPU
-testing how much faster it becomes

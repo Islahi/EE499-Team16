@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>InformationDialog</class>
+ <widget class="QDialog" name="InformationDialog">
+  <property name="windowTitle"><string>Model Information</string></property>
+  <property name="geometry"><rect><x>0</x><y>0</y><width>720</width><height>540</height></rect></property>
+  <layout class="QVBoxLayout" name="information_layout">
+   <item>
+    <layout class="QHBoxLayout" name="information_context_layout">
+     <item><widget class="QLabel" name="lbl_information_context"><property name="text"><string>Viewing</string></property><property name="buddy"><cstring>combo_information_context</cstring></property></widget></item>
+     <item><widget class="QComboBox" name="combo_information_context"/></item>
+     <item><widget class="QPushButton" name="btn_information_archive"><property name="text"><string>Open saved run…</string></property></widget></item>
+    </layout>
+   </item>
+   <item><widget class="QTabWidget" name="tabs_information">
+    <widget class="QWidget" name="page_information_parameters"><attribute name="title"><string>Parameters</string></attribute><layout class="QVBoxLayout" name="parameters_layout"><item><widget class="QTextBrowser" name="information_parameters"/></item></layout></widget>
+    <widget class="QWidget" name="page_information_equations"><attribute name="title"><string>Equations</string></attribute><layout class="QVBoxLayout" name="equations_layout"><item><widget class="QTextBrowser" name="information_equations"/></item></layout></widget>
+    <widget class="QWidget" name="page_information_assumptions"><attribute name="title"><string>Assumptions</string></attribute><layout class="QVBoxLayout" name="assumptions_layout"><item><widget class="QTextBrowser" name="information_assumptions"/></item></layout></widget>
+   </widget></item>
+   <item><widget class="QDialogButtonBox" name="buttons_information"><property name="standardButtons"><set>QDialogButtonBox::Close</set></property></widget></item>
+  </layout>
+ </widget>
+</ui>

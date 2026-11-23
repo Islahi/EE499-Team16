@@ -1,0 +1,110 @@
+﻿Form,Qt object ID,Label,Widget type,Designer default,Disposition,Binding or successor
+forecast_dialog,btn_cancel_forecast,Close,QPushButton,,Retained,clicked → self.reject
+forecast_dialog,btn_generate_forecast,Generate forecast,QPushButton,,Retained,ForecastDialog.start_forecast / forecast interval state
+forecast_dialog,combo_horizon_preset,Horizon preset,QComboBox,2,Retained,currentIndexChanged → self.change_horizon
+forecast_dialog,date_forecast_origin,Forecast origin,QDateTimeEdit,,Retained,ForecastDialog.start_forecast / forecast interval state
+forecast_dialog,date_training_end,Training end (inclusive),QDateTimeEdit,,Retained,ForecastDialog.start_forecast / forecast interval state
+forecast_dialog,date_training_start,Training start,QDateTimeEdit,,Retained,ForecastDialog.start_forecast / forecast interval state
+forecast_dialog,spin_forecast_horizon,Horizon (hours),QSpinBox,8760,Retained,ForecastDialog.start_forecast / forecast interval state
+load_data_dialog,btn_add_pv_row,Add PV Row,QPushButton,,Retained,clicked → self.add_pv_row
+load_data_dialog,btn_browse_load,Choose folder…,QPushButton,,Retained,clicked → self.browse_load
+load_data_dialog,btn_browse_load_file,Choose file…,QPushButton,,Retained,clicked → self.browse_load_file
+load_data_dialog,btn_browse_network,Browse…,QPushButton,,Retained,clicked → self.browse_network
+load_data_dialog,btn_browse_pv_source,Browse…,QPushButton,,Retained,clicked → self.browse_pv
+load_data_dialog,btn_load_network,Inspect network,QPushButton,,Retained,clicked → self.load_network_preview
+load_data_dialog,btn_remove_pv_row,Remove Selected Row,QPushButton,,Retained,clicked → self.remove_pv_row
+load_data_dialog,buttons_load_data,,QDialogButtonBox,,Retained,Prepare → prepare_data; Cancel/Stop → reject
+load_data_dialog,chk_no_pv,No PV study,QCheckBox,,Retained,toggled → self.update_modes
+load_data_dialog,chk_pv_fallback,Use fallback solar source,QCheckBox,,Retained,toggled → self.update_modes
+load_data_dialog,combo_pv_source,Fallback source,QComboBox,,Retained,currentIndexChanged → self.update_modes
+load_data_dialog,edit_load_path,,QLineEdit,,Retained,LoadDataDialog.read_request / source-specific display
+load_data_dialog,edit_network_path,,QLineEdit,,Retained,textChanged → self.update_network_button
+load_data_dialog,edit_pv_source_path,,QLineEdit,,Retained,LoadDataDialog.read_request / source-specific display
+load_data_dialog,edit_solar_clock,Solar source clock,QLineEdit,,Retained,LoadDataDialog.read_request / source-specific display
+load_data_dialog,spin_frequency_hz,Frequency,QDoubleSpinBox,60,Retained,LoadDataDialog.read_request / source-specific display
+load_data_dialog,table_pv_installations,,QTableWidget,,Retained,read_request → explicit PV bus and kW ratings
+load_data_dialog,tabs_data,,QTabWidget,0,Retained,LoadDataDialog.read_request / source-specific display
+main_window,btn_clear_results,Clear results,QPushButton,,Retained,clicked → self.clear_results
+main_window,btn_clear_workspace,Reset,QPushButton,,Retained,clicked → self.clear_workspace
+main_window,btn_dashboard,Dashboard,QPushButton,,Retained,Open/rebuild saved report or package via add_dashboard_actions
+main_window,btn_empty_import,Import study data,QPushButton,,Retained,clicked → self.load_data
+main_window,btn_fit_network,Fit network,QPushButton,,Retained,clicked → self.fit_network
+main_window,btn_input_window,Study interval,QPushButton,,Retained,clicked → self.open_input_window
+main_window,btn_load_data,Import data,QPushButton,,Retained,clicked → self.load_data
+main_window,btn_open_setup,Open setup…,QPushButton,,Added,clicked → self.open_setup
+main_window,btn_result_details,Show full details,QPushButton,,Retained,clicked → self.toggle_result_details
+main_window,btn_result_timestamp,Timestamp…,QPushButton,,Retained,clicked → self.choose_result_timestamp
+main_window,btn_rotate_network,Rotate network,QPushButton,,Retained,clicked → self.rotate_network
+main_window,btn_run_base_case,Base case,QPushButton,,Retained,clicked → self.run_base_case
+main_window,btn_run_optimization,Optimize,QPushButton,,Retained,clicked → self.run_optimization
+main_window,btn_run_simulation,Simulate,QPushButton,,Retained,clicked → self.run_simulation
+main_window,btn_save_setup,Save setup…,QPushButton,,Added,clicked → self.save_setup
+main_window,btn_scenarios,Forecast,QPushButton,,Retained,clicked → self.open_forecasting
+main_window,btn_settings,Settings,QPushButton,,Retained,clicked → self.open_settings
+main_window,btn_stop_run,Stop run,QPushButton,,Retained,JobRunner.cancel → cooperative interruption
+main_window,btn_zoom_in,Zoom in,QPushButton,,Retained,clicked → self.zoom_in
+main_window,btn_zoom_out,Zoom out,QPushButton,,Retained,clicked → self.zoom_out
+main_window,chk_bus_details,Bus details,QCheckBox,,Retained,toggled → self.show_bus_details
+main_window,chk_hide_diagram,Hide diagram,QCheckBox,,Retained,toggled → self.hide_diagram
+main_window,chk_network_properties,Properties,QCheckBox,,Retained,toggled → self.update_network_layers
+main_window,chk_network_results,Results,QCheckBox,,Retained,toggled → self.toggle_network_results
+main_window,chk_show_log,Show run log,QCheckBox,false,Retained,toggled → self.scroll_log_to_latest
+main_window,tabs_workspace,,QTabWidget,0,Retained,currentChanged → self.schedule_network_fit
+settings_dialog,btn_clear_allowed_buses,Clear,QPushButton,,Retained,clicked → self.clear_allowed_buses
+settings_dialog,btn_select_all_buses,Select all,QPushButton,,Retained,clicked → self.select_all_allowed_buses
+settings_dialog,buttons_settings,,QDialogButtonBox,,Retained,Save/Apply → apply_settings; Cancel → restore_values and reject
+settings_dialog,chk_allow_curtailment,Allow PV curtailment,QCheckBox,true,Retained,SettingsDialog.capture_values → chk_allow_curtailment
+settings_dialog,chk_allow_shedding,Allow load shedding,QCheckBox,true,Retained,SettingsDialog.capture_values → chk_allow_shedding
+settings_dialog,combo_bess_bus,Installation bus,QComboBox,,Retained,bess_bus → manual BESSConfig
+settings_dialog,combo_sindi_horizon,Dispatch look-ahead,QComboBox,,Internalized or replaced,Fixed desktop daily MILP horizon
+settings_dialog,combo_terminal_policy,Annual terminal energy,QComboBox,,Retained,SettingsDialog.capture_values → combo_terminal_policy
+settings_dialog,group_export_limit,Limit Grid Export,QGroupBox,false,Retained,SettingsDialog.capture_values → group_export_limit
+settings_dialog,group_import_limit,Limit Grid Import,QGroupBox,false,Retained,SettingsDialog.capture_values → group_import_limit
+settings_dialog,group_manual_bess,Enable manual BESS,QGroupBox,false,Retained,SettingsDialog.capture_values → group_manual_bess
+settings_dialog,list_allowed_buses,,QListWidget,,Retained,allowed_buses → OptimizationBounds; non-slack set
+settings_dialog,list_settings_pages,,QListWidget,0,Retained,SettingsDialog.capture_values → list_settings_pages
+settings_dialog,spin_annual_om_percent,Annual O&M (% of BESS cost),QDoubleSpinBox,2,Retained,SettingsDialog.capture_values → spin_annual_om_percent
+settings_dialog,spin_battery_energy_capex,Battery energy CAPEX (USD/kWh),QDoubleSpinBox,200.0,Added,SettingsDialog.capture_values → spin_battery_energy_capex
+settings_dialog,spin_bess_energy_kwh,Energy capacity,QDoubleSpinBox,0,Retained,SettingsDialog.capture_values → spin_bess_energy_kwh
+settings_dialog,spin_bess_lifetime,BESS useful life (years),QDoubleSpinBox,10,Retained,SettingsDialog.capture_values → spin_bess_lifetime
+settings_dialog,spin_bess_power_kw,Power rating,QDoubleSpinBox,0,Retained,SettingsDialog.capture_values → spin_bess_power_kw
+settings_dialog,spin_bess_units,Maximum BESS units,QSpinBox,3,Retained,SettingsDialog.capture_values → spin_bess_units
+settings_dialog,spin_curtailment_penalty,Curtailment (USD/kWh),QDoubleSpinBox,0.07,Retained,SettingsDialog.capture_values → spin_curtailment_penalty
+settings_dialog,spin_export_limit_kw,Export cap,QDoubleSpinBox,0,Retained,SettingsDialog.capture_values → spin_export_limit_kw
+settings_dialog,spin_ga_population,Population,QSpinBox,12,Added,valueChanged → self.use_custom_population
+settings_dialog,spin_grid_export_tariff,Export credit (USD/kWh),QDoubleSpinBox,0,Retained,SettingsDialog.capture_values → spin_grid_export_tariff
+settings_dialog,spin_grid_import_tariff,Import price (USD/kWh),QDoubleSpinBox,0,Retained,SettingsDialog.capture_values → spin_grid_import_tariff
+settings_dialog,spin_import_limit_kw,Import cap,QDoubleSpinBox,0,Retained,SettingsDialog.capture_values → spin_import_limit_kw
+settings_dialog,spin_inverter_capex,Inverter CAPEX (USD/kVA),QDoubleSpinBox,175.0,Added,SettingsDialog.capture_values → spin_inverter_capex
+settings_dialog,spin_max_generations,Maximum generations,QSpinBox,20,Added,SettingsDialog.capture_values → spin_max_generations
+settings_dialog,spin_opf_bess_kva_multiplier,BESS inverter nameplate (kVA/kW),QDoubleSpinBox,1.00,Internalized or replaced,Derived inverter capability in SimulationConfig
+settings_dialog,spin_opf_pv_kva_multiplier,PV inverter nameplate (kVA/kW),QDoubleSpinBox,1.00,Internalized or replaced,Internal PV inverter capability
+settings_dialog,spin_opt_duration_max_hours,Maximum duration (E/P),QDoubleSpinBox,12.0,Retained,SettingsDialog.capture_values → spin_opt_duration_max_hours
+settings_dialog,spin_opt_duration_min_hours,Minimum duration (E/P),QDoubleSpinBox,2.0,Retained,SettingsDialog.capture_values → spin_opt_duration_min_hours
+settings_dialog,spin_opt_energy_max_kwh,Maximum energy,QDoubleSpinBox,15000,Retained,SettingsDialog.capture_values → spin_opt_energy_max_kwh
+settings_dialog,spin_opt_energy_min_kwh,Minimum energy,QDoubleSpinBox,250,Retained,SettingsDialog.capture_values → spin_opt_energy_min_kwh
+settings_dialog,spin_opt_energy_step_kwh,Energy step,QDoubleSpinBox,50,Retained,SettingsDialog.capture_values → spin_opt_energy_step_kwh
+settings_dialog,spin_opt_power_max_kw,Maximum power,QDoubleSpinBox,2500,Retained,SettingsDialog.capture_values → spin_opt_power_max_kw
+settings_dialog,spin_opt_power_min_kw,Minimum power,QDoubleSpinBox,250,Retained,SettingsDialog.capture_values → spin_opt_power_min_kw
+settings_dialog,spin_opt_power_step_kw,Power step,QDoubleSpinBox,50,Retained,SettingsDialog.capture_values → spin_opt_power_step_kw
+settings_dialog,spin_parallel_workers,Parallel workers,QSpinBox,4,Added,SettingsDialog.capture_values → spin_parallel_workers
+settings_dialog,spin_shedding_penalty,Unserved load (USD/kWh),QDoubleSpinBox,12,Retained,SettingsDialog.capture_values → spin_shedding_penalty
+settings_dialog,spin_sindi_efficiency_percent,Battery efficiency per direction (%),QDoubleSpinBox,95.0,Internalized or replaced,Fixed charge/discharge efficiency
+settings_dialog,spin_sindi_energy_cost,Battery energy CAPEX (USD/kWh),QDoubleSpinBox,200.0,Internalized or replaced,Renamed spin_battery_energy_capex
+settings_dialog,spin_sindi_kva_cost,Inverter CAPEX (USD/kVA),QDoubleSpinBox,175.0,Internalized or replaced,Renamed spin_inverter_capex
+settings_dialog,spin_sindi_min_pf,Minimum discharge power factor,QDoubleSpinBox,0.95,Internalized or replaced,Fixed minimum discharge power factor
+settings_dialog,spin_soc_initial_percent,Initial SOC,QDoubleSpinBox,50,Retained,SettingsDialog.capture_values → spin_soc_initial_percent
+settings_dialog,spin_soc_max_percent,Maximum SOC,QDoubleSpinBox,100,Retained,SettingsDialog.capture_values → spin_soc_max_percent
+settings_dialog,spin_soc_min_percent,Minimum SOC,QDoubleSpinBox,20,Retained,SettingsDialog.capture_values → spin_soc_min_percent
+settings_dialog,spin_voltage_max_pu,Maximum voltage,QDoubleSpinBox,1.05,Retained,SettingsDialog.capture_values → spin_voltage_max_pu
+settings_dialog,spin_voltage_min_pu,Minimum voltage,QDoubleSpinBox,0.95,Retained,SettingsDialog.capture_values → spin_voltage_min_pu
+simulation_input_dialog,btn_apply_simulation_window,Apply interval,QPushButton,,Retained,clicked → self.apply_source_window
+simulation_input_dialog,btn_browse_history,Saved studies,QPushButton,,Retained,clicked → self.browse_history
+simulation_input_dialog,buttons_input_window,,QDialogButtonBox,,Retained,MainWindow active source / interval controls
+simulation_input_dialog,combo_history_window,Source,QComboBox,3,Retained,currentIndexChanged → self.preview_source_window
+simulation_input_dialog,combo_simulation_source,Source,QComboBox,,Retained,currentIndexChanged → self.preview_source_window
+simulation_input_dialog,date_simulation_end,From,QDateTimeEdit,,Retained,MainWindow active source / interval controls
+simulation_input_dialog,date_simulation_start,From,QDateTimeEdit,,Retained,MainWindow active source / interval controls
+settings_dialog,btn_approved_methodology,Methodology / effective assumptions,QPushButton,,Removed,Effective values are saved with run metadata
+main_window,Study,Study,QMenu,,Removed,Setup actions moved to header buttons
+main_window,lbl_workspace_subtitle,Workspace subtitle,QLabel,,Removed,Load Data and study status remain accessible

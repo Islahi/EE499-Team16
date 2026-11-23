@@ -1,120 +1,81 @@
-# Stable accelerated application — Designer wiring fix v4
+# BESS Planning Tool
 
-The current release fixes the `Unknown backend: None` and invalid AutoARIMA method errors. Qt Designer `.ui` remains the owner of the visible layout. See `CHANGELOG_DESIGNER_WIRING_FIX_V4.md` for technical details.
-
-# Latest: Qt Designer–Unified UI v3
-
-The current release is the v4 Designer wiring update. The six main actions, Fit/Zoom/Rotate network controls, toolbar spacing, icon paths, labels, and tooltips live directly in `src_accelerated/assets/main_window.ui`. All permanent Settings controls are in `settings_dialog.ui`; the Forecast dialog is in `forecast_dialog.ui`.
-
-Open these `.ui` files in **Qt Widgets Designer** to preview or edit the layout directly. The primary and network actions share one **36-pixel-high toolbar** above the Network/Results tabs. The old hidden sidebar and empty menu/header have been removed. `ui.py` only loads the forms and attaches behavior; it does not build the toolbar or inject the Settings fields.
-
-**Run on Windows:** from `07_Implementation`, double-click `start_windows.bat`, or run `python -m pip install -r requirements-accelerated.txt`, then `python -m src_accelerated.ui`.
-
-**Test:** `python -m pytest -q tests`. The integrated repository suite includes the original backend regressions and the v4 upgrade tests. Automated PySide6 loading is covered; an interactive Windows display check is still required after UI changes.
-
-See `CHANGELOG_DESIGNER_UNIFIED_V3.md` for details.
-
----
-
-# BESS Planning Tool — integrated source upgrade
-
-**Date:** 2026-11-05. This ZIP contains editable Python source. It is **not a rebuilt Windows EXE**.
-The earlier `BESS_Planning_Tool.exe` was compiled separately and has not been modified.
-Keep a backup of your existing source and use this archive in a separate directory.
-
-## Windows installation
-
-1. Retain `src_accelerated/`, its `assets/`, and `requirements-accelerated.txt` together under `07_Implementation`.
-2. Install Python 3.11 or newer with versions supported by the pinned dependencies.
-3. Run `start_windows.bat` (installs packages and launches the GUI). Alternatively:
-   ```powershell
-   python -m pip install -r requirements-accelerated.txt
-   python -m src_accelerated.ui
-   ```
-4. For tests: `python -m pytest -q tests`.
-
-## Implemented changes
-
-- **Annual economic objective:** `annual_total_cost = annualized CAPEX + annual O&M + annual grid import/export cost + annual PV curtailment penalty + annual unserved-energy penalty + terminal stored-energy settlement`.
-- **Default literature assumptions (USD):** 770 USD/kW, 385 USD/kWh, 10 years, 6% annual discount, 2% annual O&M, 0.07 USD/kWh curtailment, 12 USD/kWh shedding. These are from the papers provided with the proposal. **Grid import and export tariffs default to 0 and are not sourced prices; set them in Settings before making economic claims.**
-- **Time basis:** energy-related costs are converted to an annual basis with `8760 / simulated_hours`. For short profiles this assumes repetition of the observed hours; use complete one-year data for decisions. For multi-year runs the result is average annual cost rather than the summed cost of all years.
-- **Storage end state:** terminal SOC settlement values lost initial energy using the purchase tariff (or an explicit battery end-energy price). Optional strict terminal SOC tolerance is available in Settings. The strict constraint is OFF by default because a rule-based dispatch cannot guarantee closure.
-- **Same objective for GA and GWO:** select method in the existing Optimization settings. GA uses catalog-based chromosomes, tournament selection, conventional single-point crossover producing two complementary offspring, per-gene mutation, and elitism, adapted from the user's GA instructional videos. GA has its own population and generation controls; GWO has its own population and iteration controls. Fixed seeds and evaluator caching are retained.
-- **Explicit no-BESS alternative:** after each search, evaluate no storage on identical profiles and network constraints. If feasible and less expensive, select **No battery** as the economic result. Feasible no-storage results are displayed as such, not as a fake 0-kW battery candidate.
-- **Revised dispatch:** `GridAwareDispatchPolicy` can store excess PV and discharge against load; import/export caps influence dispatch requests. The separate net-load-target policy and its GUI input were removed. The actual power is limited by battery SOC, rating and reserve. This is a *rule-based approximation*, not a globally optimal multi-hour economic dispatch.
-- **Network limits:** existing active import/export caps, optional terminal SOC requirement, and ampacity checks when branch ratings are provided. The transformer-kVA cap was intentionally removed from this scope. An overloaded line is marked infeasible; it is not automatically remedied by the shedding controller.
-- **Forecasting replaces scenarios:** independent `src_accelerated/forecasting.py` uses Nixtla **`statsforecast.models.AutoARIMA`** for automatic ARIMA model-order selection instead of `pmdarima.ARIMA` and the earlier `statsmodels` implementation. It supports ARIMA, SARIMA, and SARIMAX with *calendar variables known in advance*. It reports chronological-holdout MAE, RMSE and sMAPE alongside the hour-of-day baseline, then exports ordinary load/PV CSVs to the session's `forecasts` folder. It does not generate random scenarios.
-- **Source date handling:** full hourly interval is detected from the imported load CSV, with no Study Period control. Load and PV hours must match; non-hourly inputs are rejected. Synthetic-only load (without a dated CSV) is not part of this workflow.
-- **Results:** annual monetary metrics and the no-BESS comparison are included in summary and CSV exports.
-
-## Important limitations
-
-- **GUI runtime was not exercised on Windows in this build environment** (PySide6 was unavailable); source compiles and UI XML parses, and Qt-free regression tests pass. Launch and test interactively on your machine before relying on the application.
-- The third tutorial's publicly linked notebook could not be verified end-to-end from this session. The forecasting code follows its *baseline → fit → chronological validation → forecast → metrics* teaching pattern and now uses **StatsForecast AutoARIMA**, as requested; it remains an adaptation rather than a verbatim transcription of the tutorial.
-- Forecasts are of aggregate load and PV, redistributed using historic hour-of-day bus shares. They are *not* separately fitted to every individual bus or manufactured customer category. Multi-year input histories are usable, with a training-window control to limit model fitting time.
-- Future measured NASA irradiance must not be supplied as a future known predictor. SARIMAX currently uses calendar features only.
-- Financial defaults are study assumptions from research papers (not current supplier quotes or Saudi tariffs). The 0 tariff defaults intentionally need replacement before evaluating grid energy economics.
-- Economic PV benefits require nonzero PV generation inputs; `pv_profile.csv` with all zeros cannot show improvements in PV curtailment.
-- If all BESS candidates fail an overly strong reserve or ampacity constraint, the result reports infeasibility; expand ratings or revise appropriately justified operational assumptions.
-- The objective annualizes the one-time upfront capital with a fixed CRF and fixed O&M; it does not model battery aging/replacements unless included in the provided O&M assumption.
-- Forecast history and training period need to be chosen chronologically and independently from final optimizer test data to make valid out-of-sample claims.
-
-## Source references
-
-1. Ali, Shaaban, Sindi (2022), *Sustainability* 14, 13209, https://doi.org/10.3390/su142013209 — power/energy cost split, 10-year lifetime, 6% discount and 2% O&M (the supplied paper attributes battery parameter table to an earlier reference).
-2. Córdova et al. (2022), *IEEE Transactions on Smart Grid*, https://doi.org/10.1109/TSG.2022.3170871 — curtailment and unserved load cost study assumptions (not universal values).
-3. Mirjalili et al. (2014), *Advances in Engineering Software*, https://doi.org/10.1016/j.advengsoft.2013.12.007 — GWO.
-4. GA instructional videos from the provided Source.txt: https://youtu.be/nhT56blfRpE and https://youtu.be/uQj5UNhCPuo; tutorial code https://github.com/kiecodes/genetic-algorithms . Algorithmic mechanisms adapted, no copied knapsack objective.
-5. ARIMA tutorial: https://youtu.be/fxx_E0ojKrc and linked notebook https://github.com/marcopeix/youtube_tutorials/blob/main/YT_03_forecasting_stats.ipynb .
-6. Nixtla StatsForecast AutoARIMA official API: https://nixtlaverse.nixtla.io/statsforecast/docs/models/autoarima.html and exogenous regressors: https://nixtlaverse.nixtla.io/statsforecast/docs/how-to-guides/exogenous.html .
-
-See also `CHANGELOG_STATSFORECAST.md` for the focused migration details and live-library test limitations.
-
-## Source navigation
-
-| Component | Location |
-|---|---|
-| Economic analysis | `src_accelerated/metrics.py` |
-| GWO and GA | `src_accelerated/optimizer.py` |
-| BESS dispatch, network limits, SOC | `src_accelerated/simulation.py` |
-| Forecasting | `src_accelerated/forecasting.py` |
-| Automatic CSV interval / workflow | `src_accelerated/ui_workflow.py` |
-| Existing GUI with minimal new controls | `src_accelerated/ui.py` |
-| Monetary results exports | `src_accelerated/results.py` |
-| Regression tests | `tests/test_integrated_upgrade.py` |
-
-## StatsForecast AutoARIMA correction (2026-11-05)
-
-- The active forecasting implementation now imports `StatsForecast` and `AutoARIMA` from Nixtla's `statsforecast` package. The `pmdarima` dependency is removed.
-- Forecasting uses the library's long-form DataFrame (`unique_id`, `ds`, `y`) and the `forecast(df=..., h=..., X_df=...)` API. Model orders are selected automatically (default information criterion AICc), with bounded stepwise search and daily seasonal period 24 for seasonal options.
-- GUI default is **AutoARIMA (seasonal)**, and the drop-down retains nonseasonal, SARIMA, and SARIMAX+calendar variations. All are AutoARIMA-based.
-- The holdout validation is chronological and reports baseline and AutoARIMA MAE/RMSE/sMAPE. Both load and PV use the same logic; zero PV remains zero.
-- Only calendar features known at forecast time are passed as exogenous regressors, not future measured irradiance.
-- **Verification limitation:** This container could not install `statsforecast` because network/package-index access failed. Syntax, data framing, GUI wiring, and unit tests with a strict StatsForecast-compatible test double pass, but a real installed-library execution on Windows is still required. Do not interpret mocked tests as verification against the actual StatsForecast runtime.
-
-## Scope simplification — 2026-11-05
-
-- Removed **Net-load target** from the settings GUI, deleted its policy class, and removed the unused target field from `GridAwareDispatchPolicy`. **Net electrical load (load minus PV) remains**, because the grid-aware dispatch must use it.
-- Removed the optional **transformer kVA** setting and check. Grid import/export kW caps, voltage limits, terminal SOC, and line ampacity checks remain.
-- Battery operating policy choices are now **Idle (diagnostic)** and **Grid-aware rule-based dispatch** (default). The latter charges from PV surplus and requests discharge against positive net demand, subject to SOC, efficiencies, reserve and grid limits. It does not optimize hourly prices or predict future load/PV.
-- **Updated GA crossover:** One crossover probability check is made per parent pair. On crossover, choose one cut between genes and produce two complementary children. Otherwise both parents are copied. Apply per-gene mutation to each offspring. Separate GA population and generation controls are present in the same settings group.
-
-### Tests for this revision
-
-Use `python -m pytest -q tests`. PySide6 and StatsForecast must be installed for live GUI and forecasting verification; numerical tests do not replace interactive integration checks.
-
-## GA standard two-offspring crossover update — 2026-11-05
-
-- `src_accelerated/optimizer.py` draws crossover probability **once per parent pair** rather than once per gene.
-- On crossover, a random single-point cut yields **two complementary offspring**. Otherwise both parents carry through unchanged (before mutation).
-- Each offspring undergoes independent per-gene mutation. Elitism and tournament selection are unchanged.
-- Added explicit **GA population size** and **GA generations** spinboxes to the existing settings group; GWO controls remain independent. The random seed is shared, with a neutral label.
-- Defaults: 12 GA individuals, 20 generations, 0.80 crossover and 0.12 mutation.
-- Tested crossover at either possible cut and with no crossover; tested odd/even GA population sizes. Tests do not require PySide6 or StatsForecast.
-
-See `CHANGELOG_STANDARD_GA_TWO_OFFSPRING.md` for further details; older GA release notes are superseded.
+For the current V15.6 app, see the [implementation README](README.md). The workflow below records earlier accelerated development and replay experiments.
 
 
-## UI revision
+Start with the [user guide](BESS_Planning_Tool_User_Guide.md) for the Windows launcher,
+GoiEner folder import, solar input formats, technical simulations, annual optimization,
+and saved study migration.
 
-See [UI_REFINEMENT_NOTES.md](UI_REFINEMENT_NOTES.md) for the compact top-toolbar interface, updated controls and test limitations.
+The desktop application in `src` uses Numba CPU FBS. Sector-sum demand
+forecasts use CalendarRidge, XGBoost, and LightGBM. The common PV forecast uses
+XGBoost trained on historical modeled power. Use the repository's existing Windows
+Python 3.14 installation with the pinned dependencies in `requirements-accelerated.txt`.
+
+An imported study selects its first 24 hours while retaining the full history for
+later selections and forecast training. Annual economic optimization requires a
+complete calendar year and explicit import and export tariffs. The annual objective
+is reported in USD/year and includes ownership, net grid purchases, curtailment,
+unserved energy, and any priced terminal energy difference.
+
+The equal-SOC policy bounds each dispatch request so that the remaining hours can
+restore the starting SOC at the configured battery charge and discharge limits.
+Network and reserve constraints still apply to every hourly step. The terminal
+check marks a candidate infeasible if this schedule fails to close. The alternate
+priced policy accounts for the energy difference in the annual objective and
+requires an explicit positive replacement price. The dispatch policy evaluates
+each candidate using rules for local PV and demand rather than optimizing the
+entire annual operating schedule.
+
+Run the regression suite from `07_Implementation` in PowerShell:
+
+```powershell
+python -m pip install -r requirements-test.txt
+$env:QT_QPA_PLATFORM = 'offscreen'
+python -m pytest tests -q -ra
+```
+
+The suite uses the repository's `Validation` directory for archived C1 and C2
+fixtures. Set `EE499_VALIDATION_ROOT` to the extracted Validation directory if
+it is stored separately. Missing fixtures are reported as explicit skips.
+
+## Single-BESS study workflow
+
+1. **Import data** and select the IEEE 33-bus workbook, GoiEner case folder, PV history and installed PV rows. The workspace header shows active branches, installed PV, study hours, feeder limits and cost inputs. Use **Study interval → Full calendar year** for annual optimization.
+2. Under **Settings → Network constraints**, the default is **Balanced shedding**. Open **Show advanced shedding settings** to select **Minimum energy** or change the tier boundaries and weights. Under **Battery search**, Standard runs four representative weeks and then verifies finalists for the entire year. Quick uses two weeks and fewer iterations with the same full-year verification. Thorough runs full-year GWO directly. Search catalogs, site restrictions and worker settings are under Advanced.
+3. Run **Base case**, **Simulate**, or **Optimize**. Base case is static FBS. Simulate supports zero or one manually configured battery. Optimization compares a verified single battery with the matched No BESS baseline. The Results tab opens the saved four-tab offline report. **Study → Save study setup** saves versioned JSON with settings, source paths and checksums. **Open study setup** checks those fingerprints before restoring the selected window and controls.
+
+Balanced shedding uses marginal weights of 1, 3 and 10 on the first 50%, next 30% and final 20% of each bus's requested active demand. It can reduce full disconnections while increasing total unserved energy. The economic objective applies real VoLL and curtailment prices to unweighted physical energy. The controller score has separate export fields. A load counts as fully disconnected when requested demand exceeds `1e-6 kW` and served demand is at most `max(1e-6 kW, 1e-6 × requested demand)`. Unverified network hours have a separate count. `service_by_bus.csv` records served-energy percentage, share of shedding, outage duration and longest continuous outage.
+
+Fast search uses Numba FBS and coordinated correction to rank bounded injection and charging probes. Window costs are screening estimates. Annual selection uses feasible results from the complete chronology. The verified minimum-shedding battery is included in the optimization details. Screening can miss a better design and can add overhead for a small catalog.
+
+### Archived IEEE 33-bus validation
+
+From `07_Implementation`, point the benchmark at a saved run containing `inputs/network.xlsx`, `inputs/load_profile.csv`, `inputs/pv_profile.csv` and `inputs/input_snapshot.json`.
+
+```powershell
+python benchmark_single_bess.py 'C:\Path\To\run_001' '.\paired.json' --window stress --window week --window year
+python benchmark_single_bess.py 'C:\Path\To\run_001' '.\search.json' --workers 2 --search quick thorough standard
+python benchmark_single_bess.py 'C:\Path\To\run_001' '.\workers.json' --worker-sweep 1 4 6 12
+$env:QT_QPA_PLATFORM = 'offscreen'
+python src/app.pyw --check-runtime '.\launcher-smoke.txt'
+```
+
+Use `--source 'C:\Path\To\extracted\src_accelerated' --policy minimum_energy` to replay the original single-BESS archive. Use `--dashboard '.\report'` to save the first replay with its normal exports. The JSON records input hashes, timestamps, settings, physical trace hashes, FBS and HiGHS call counts, and wall times. Worker CPU totals are separate from elapsed wall time. Annual costs require complete annual coverage.
+
+The archived 2021 comparison uses five installed 1,200 kW PV rows (buses 6, 12, 18, 25 and 30), a 7,500 kW import limit, zero permitted export, 0.95–1.05 pu and a 10% reserve for the fixed bus-14 battery. The saved run workbook is the unmodified topology input. The five actual installation rows are in the saved run metadata.
+
+| Policy | Battery | Unserved (MWh) | Fully disconnected bus-hours | PV curtailment (MWh) | Modeled cost (USD/year) |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Minimum energy | No BESS | 3,502.61 | 19,058 | 367.86 | 44,305,792 |
+| Minimum energy | Bus 14 | 3,292.78 | 17,274 | 178.37 | 42,311,162 |
+| Balanced | No BESS | 4,319.37 | 0 | 367.86 | 54,023,147 |
+| Balanced | Bus 14 | 4,053.35 | 0 | 178.37 | 51,360,206 |
+
+All four annual cases passed the recorded network limits. The fixed battery closed at 50% SOC under both policies. The July 1 seven-day battery replay ended at about 30% SOC and failed the 50% terminal requirement with both policies. At January 11 20:00, balanced shedding changed 10 full disconnections to zero and increased unserved energy from 2.525 to 3.063 MWh. Zero observed disconnections on this run is a measured result, while physical feasibility remains the priority for other inputs.
+
+The solver uses an inexpensive LP shortcut when a provably optimal solution to a one-row relaxation also satisfies every original LP constraint. All accepted actions still go through nonlinear FBS. Ambiguous ties, multi-constraint optima and difficult cases continue through HiGHS, its Phase I fallback and the verified line search. In the matched progressive seven-day B14 replay, the shortcut replaced 215 of 424 HiGHS calls, kept 1,923 FBS calls and reproduced the physical trace to the recorded precision. On the 12-candidate weekly worker sweep, four requested workers used 19.29 seconds versus 37.13 seconds for one. Host load and Windows process warm-up affect wall time.
+
+Quick, Standard and Thorough chose bus 14 at 1,250 kW and 6,250 kWh from the two-site B14/B30 catalog. The verified result cost 51.36 million USD/year and shed 4,053.35 MWh. Excluding the common annual baseline, the observed wall times were about 165 seconds for Quick, 219 seconds for Standard and 191 seconds for Thorough. These runs establish agreement for the reduced catalog only. In this small search, reviewing additional representative weeks made Standard slower than Thorough.
+
+The annual no-BESS offline HTML report was generated with 8,760 hours and canonical CSV/JSON exports. The Windows source launcher passed its runtime smoke check. Chromium startup and peak browser memory were unavailable in the test environment. The release does not include a rebuilt executable.

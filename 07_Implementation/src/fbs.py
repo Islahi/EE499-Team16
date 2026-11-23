@@ -2,6 +2,9 @@
 import cmath
 from dataclasses import dataclass, field
 from math import degrees, isfinite, sqrt
+
+import numpy as np
+
 from .network_model import NetworkModel, _finite
 from .progress import ProgressEvent
 
@@ -22,6 +25,10 @@ class FBSConfig:
     voltage_tolerance_pu: float = 1e-6
     slack_angle_deg: float = 0.0
     record_history: bool = False
+    backend: str = "numba"
+
+    def __post_init__(self):
+        validate_config(self)
 
 
 @dataclass
@@ -48,76 +55,193 @@ class PowerFlowResult:
 
 def run_fbs(network: NetworkModel, operating_point: OperatingPoint,
             config: FBSConfig, *, progress=None) -> PowerFlowResult:
-    order = network.radial_order()
-    ids = {b.bus_id for b in network.buses}
-    if (not isinstance(config.max_iterations, int) or isinstance(config.max_iterations, bool)
-            or config.max_iterations < 1):
+    return run_array_fbs(network, operating_point, config, progress)
+
+
+def validate_config(config):
+    if not isinstance(config, FBSConfig) or config.backend != "numba":
+        raise ValueError("Only FBS — Numba (CPU) is supported for new execution")
+    if isinstance(config.max_iterations, bool) or not isinstance(config.max_iterations, int) or config.max_iterations < 1:
         raise ValueError("max_iterations must be a positive integer")
     _finite(config.voltage_tolerance_pu, "voltage_tolerance_pu", positive=True)
     _finite(config.slack_angle_deg, "slack_angle_deg")
-    for name in operating_point.__dataclass_fields__:
-        values = getattr(operating_point, name)
-        if set(values) != ids:
-            raise ValueError(f"{name} must contain exactly every network bus (explicit zeros)")
-        for value in values.values():
-            _finite(value, name, minimum=0 if name in ("p_load_kw", "q_load_kvar", "p_pv_kw") else None)
-    slack = next(b for b in network.buses if b.bus_id == order.slack_bus_id)
+
+
+def backend_status():
+    try:
+        import numba, llvmlite
+        return {"numba": f"available ({numba.__version__}; llvmlite {llvmlite.__version__})"}
+    except Exception as error:
+        return {"numba": f"unavailable: {error}. Install requirements-accelerated.txt with the application interpreter"}
+
+
+def backend_available(backend):
+    if backend != "numba":
+        return False, "Only FBS — Numba (CPU) is supported"
+    message = backend_status()["numba"]
+    return message.startswith("available"), message
+
+
+def warm_numba():
+    """Compile/execute the production signature off the GUI thread; return measured JIT time."""
+    from time import perf_counter
+    started = perf_counter()
+    values = _numba_sweeps(np.array([0j, .01+.005j]), np.array([.01+.01j]),
+        np.array([0], dtype=np.int64), np.array([1], dtype=np.int64),
+        complex(1), 100, 1e-8, False)
+    if not values[2] or not np.isfinite(values[0]).all():
+        raise RuntimeError("Numba readiness case failed to converge")
+    readiness = perf_counter()-started
+    warm_start = perf_counter()
+    _numba_sweeps(np.array([0j, .01+.005j]), np.array([.01+.01j]),
+        np.array([0],dtype=np.int64), np.array([1],dtype=np.int64),complex(1),100,1e-8,False)
+    return {"jit_readiness_seconds":readiness, "warm_kernel_seconds":perf_counter()-warm_start, "backend":"numba"}
+
+
+def _cpu_sweeps(demand, impedance, from_bus, to_bus, reference,
+                max_iterations, tolerance, record_history):
+    voltage = np.full(len(demand), reference, dtype=np.complex128)
+    current = np.zeros(len(impedance), dtype=np.complex128)
+    # Allocate two reusable voltage buffers; no full history for ordinary runs.
+    new_voltage = np.empty_like(voltage)
+    history = np.empty((max_iterations + 1 if record_history else 1, len(demand)), dtype=np.complex128)
+    history[0] = voltage
+    converged = False
+    delta = np.inf
+    completed = 0
+    status = 0
+    for iteration in range(1, max_iterations + 1):
+        if np.any(np.abs(voltage) < 1e-12):
+            status = 1
+            break
+        injection = np.conjugate(demand / voltage)
+        total = injection.copy()
+        for line_index in range(len(impedance) - 1, -1, -1):
+            child = to_bus[line_index]
+            parent = from_bus[line_index]
+            current[line_index] = total[child]
+            total[parent] += current[line_index]
+        new_voltage[:] = reference
+        for line_index in range(len(impedance)):
+            parent = from_bus[line_index]
+            child = to_bus[line_index]
+            new_voltage[child] = new_voltage[parent] - impedance[line_index] * current[line_index]
+        if not (np.all(np.isfinite(new_voltage.real)) and np.all(np.isfinite(new_voltage.imag))
+                and np.all(np.isfinite(current.real)) and np.all(np.isfinite(current.imag))):
+            status = 2
+            break
+        delta = float(np.max(np.abs(new_voltage - voltage)))
+        voltage, new_voltage = new_voltage, voltage
+        completed = iteration
+        if record_history:
+            history[completed] = voltage
+        if delta <= tolerance:
+            converged = True
+            break
+    return voltage, current, converged, completed, delta, status, history[:completed + 1]
+
+
+_NUMBA_SWEEPS = None
+
+
+def _numba_sweeps(*arguments):
+    global _NUMBA_SWEEPS
+    if _NUMBA_SWEEPS is None:
+        try:
+            from numba import njit
+        except Exception as error:
+            raise RuntimeError("Mandatory Numba import failed. Install requirements-accelerated.txt with the application interpreter: "+str(error)) from error
+        _NUMBA_SWEEPS = njit(cache=True)(_cpu_sweeps)
+    try:
+        return _NUMBA_SWEEPS(*arguments)
+    except Exception as error:
+        import sys
+        raise RuntimeError(f"FBS Numba compilation/execution failed in {sys.executable}: {error}. "
+                           "Install compatible numba/numpy/llvmlite using this interpreter; no fallback is enabled") from error
+
+
+def prepare_fbs(network, config):
+    """Bind immutable feeder arrays for a simulation with fixed topology."""
+    validate_config(config)
+    order = network.radial_order()
+    buses = sorted(network.buses, key=lambda bus: bus.bus_id)
+    bus_ids = [bus.bus_id for bus in buses]
+    bus_index = {bus_id: index for index, bus_id in enumerate(bus_ids)}
+    line_lookup = {line.line_id: line for line in network.lines}
+    line_ids = list(order.forward_line_ids)
+    lines = [line_lookup[line_id] for line_id in line_ids]
+    child_by_line = {line_id: bus_id for bus_id, line_id in order.parent_line_by_bus.items()}
+    child_ids = [child_by_line[line_id] for line_id in line_ids]
+    from_bus = np.asarray([
+        bus_index[order.parent_bus_by_bus[child_id]] for child_id in child_ids
+    ], dtype=np.int64)
+    to_bus = np.asarray([bus_index[child_id] for child_id in child_ids], dtype=np.int64)
+    slack = next(bus for bus in buses if bus.bus_id == order.slack_bus_id)
     sbase = network.base_power_kva
     zbase = slack.base_kv ** 2 / (sbase / 1000)
     ibase = sbase / (sqrt(3) * slack.base_kv)
-    impedances = {l.line_id: complex(l.r_ohm, l.x_ohm) / zbase for l in network.lines}
-    children = {line_id: bus for bus, line_id in order.parent_line_by_bus.items()}
-    op = operating_point
-    demand = {i: complex(op.p_load_kw[i] - op.p_pv_kw[i] - op.p_bess_kw[i],
-                         op.q_load_kvar[i] - op.q_pv_kvar[i] - op.q_bess_kvar[i]) / sbase for i in ids}
+    impedance = np.asarray([complex(line.r_ohm, line.x_ohm) / zbase for line in lines])
     reference = cmath.rect(slack.v_set_pu, config.slack_angle_deg * cmath.pi / 180)
-    voltages = {i: reference for i in ids}
-    currents = {l.line_id: 0j for l in network.lines}
-    history = [voltages.copy()] if config.record_history else []
-    converged, delta = False, float("inf")
-    completed_sweeps = 0
-    message = "Maximum iterations reached; last iterate is diagnostic only"
+    slack_index = bus_index[order.slack_bus_id]
+    slack_mask = from_bus == slack_index
+    ids = set(bus_ids)
+
+    def solve(operating_point, progress=None):
+        for name in operating_point.__dataclass_fields__:
+            values = getattr(operating_point, name)
+            if set(values) != ids:
+                raise ValueError(f"{name} must contain exactly every network bus (explicit zeros)")
+            for value in values.values():
+                _finite(value, name, minimum=0 if name in ("p_load_kw", "q_load_kvar", "p_pv_kw") else None)
+        return _solve_arrays(operating_point, config, bus_ids, line_ids, impedance, from_bus, to_bus,
+                             reference, slack_index, slack_mask, sbase, ibase, progress)
+
+    return solve
+
+
+def run_array_fbs(network, operating_point, config, progress=None):
+    """Run one array backend and rebuild the public dictionary result."""
+    return prepare_fbs(network, config)(operating_point, progress)
+
+
+def _solve_arrays(operating_point, config, bus_ids, line_ids, impedance, from_bus, to_bus,
+                  reference, slack_index, slack_mask, sbase, ibase, progress):
+    demand = np.asarray([
+        complex(operating_point.p_load_kw[bus_id] - operating_point.p_pv_kw[bus_id]
+                - operating_point.p_bess_kw[bus_id],
+                operating_point.q_load_kvar[bus_id] - operating_point.q_pv_kvar[bus_id]
+                - operating_point.q_bess_kvar[bus_id]) / sbase
+        for bus_id in bus_ids
+    ])
+    arguments = (demand, impedance, from_bus, to_bus, reference,
+                 config.max_iterations, config.voltage_tolerance_pu, config.record_history)
     if progress is not None:
-        progress(ProgressEvent("FBS", 0, config.max_iterations, "Starting power flow"))
-    for iteration in range(1, config.max_iterations + 1):
-        if any(abs(v) < 1e-12 for v in voltages.values()):
-            message = "Near-zero bus voltage; constant-power current is undefined"
-            break
-        injections = {i: (demand[i] / voltages[i]).conjugate() for i in ids}
-        new_currents = {}
-        for line_id in order.backward_line_ids:
-            bus = children[line_id]
-            new_currents[line_id] = injections[bus] + sum(
-                (new_currents[order.parent_line_by_bus[c]] for c in order.children_by_bus[bus]), 0j)
-        new_voltages = {order.slack_bus_id: reference}
-        for line_id in order.forward_line_ids:
-            bus = children[line_id]
-            new_voltages[bus] = new_voltages[order.parent_bus_by_bus[bus]] - impedances[line_id] * new_currents[line_id]
-        if any(not isfinite(v.real) or not isfinite(v.imag) for v in [*new_currents.values(), *new_voltages.values()]):
-            message = "Non-finite numerical iterate; power flow failed"
-            break
-        delta = max(abs(new_voltages[i] - voltages[i]) for i in ids)
-        voltages, currents = new_voltages, new_currents
-        completed_sweeps = iteration
-        if progress is not None and (iteration == 1 or iteration % 10 == 0
-                                     or delta <= config.voltage_tolerance_pu or iteration == config.max_iterations):
-            progress(ProgressEvent("FBS", iteration, config.max_iterations,
-                                   f"voltage error {delta:.3g} pu; tolerance {config.voltage_tolerance_pu:g}"))
-        if config.record_history:
-            history.append(voltages.copy())
-        if delta <= config.voltage_tolerance_pu:
-            converged, message = True, "Converged"
-            break
-    # Retain voltage/current from the same completed sweep for Ohm's law.
-    sending = {l: voltages[order.parent_bus_by_bus[children[l]]] * currents[l].conjugate() * sbase for l in currents}
-    losses = {l: abs(currents[l]) ** 2 * impedances[l] * sbase for l in currents}
-    slack_power = demand[order.slack_bus_id] * sbase + sum(
-        (sending[order.parent_line_by_bus[c]] for c in order.children_by_bus[order.slack_bus_id]), 0j)
+        progress(ProgressEvent("FBS", 0, config.max_iterations,
+                               f"Starting {config.backend} power flow"))
+    values = _numba_sweeps(*arguments)
+    voltage, current, converged, completed, delta, status, history_array = values
+    if progress is not None:
+        progress(ProgressEvent("FBS", completed, config.max_iterations,
+                               f"{config.backend}; voltage error {delta:.3g} pu"))
+    message = ("Converged" if converged else
+               "Near-zero bus voltage; constant-power current is undefined" if status == 1 else
+               "Non-finite numerical iterate; power flow failed" if status == 2 else
+               "Maximum iterations reached; last iterate is diagnostic only")
+    sending = voltage[from_bus] * np.conjugate(current) * sbase
+    losses = np.abs(current) ** 2 * impedance * sbase
+    slack_power = demand[slack_index] * sbase + sending[slack_mask].sum()
+    voltages = {bus_id: complex(voltage[index]) for index, bus_id in enumerate(bus_ids)}
+    currents = {line_id: complex(current[index]) for index, line_id in enumerate(line_ids)}
+    histories = [{bus_id: complex(row[index]) for index, bus_id in enumerate(bus_ids)}
+                 for row in history_array] if config.record_history else []
     return PowerFlowResult(
-        voltages, {i: abs(v) for i, v in voltages.items()},
-        {i: degrees(cmath.phase(v)) for i, v in voltages.items()},
-        {l: abs(i) * ibase for l, i in currents.items()},
-        {l: s.real for l, s in sending.items()}, {l: s.imag for l, s in sending.items()},
-        {l: s.real for l, s in losses.items()}, {l: s.imag for l, s in losses.items()},
-        sum(s.real for s in losses.values()), sum(s.imag for s in losses.values()),
-        slack_power.real, slack_power.imag, converged, completed_sweeps, delta, message, currents, history)
+        voltages, {bus_id: abs(value) for bus_id, value in voltages.items()},
+        {bus_id: degrees(cmath.phase(value)) for bus_id, value in voltages.items()},
+        {line_id: abs(currents[line_id]) * ibase for line_id in line_ids},
+        {line_id: float(sending[index].real) for index, line_id in enumerate(line_ids)},
+        {line_id: float(sending[index].imag) for index, line_id in enumerate(line_ids)},
+        {line_id: float(losses[index].real) for index, line_id in enumerate(line_ids)},
+        {line_id: float(losses[index].imag) for index, line_id in enumerate(line_ids)},
+        float(losses.real.sum()), float(losses.imag.sum()), float(slack_power.real),
+        float(slack_power.imag), bool(converged), int(completed), float(delta), message,
+        currents, histories)

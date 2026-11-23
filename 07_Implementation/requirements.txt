@@ -1,7 +1,9 @@
 # Shared profile, forecasting, and workbook dependencies.
-pandas>=2.2,<4
-numpy>=1.26,<3
-statsmodels>=0.14.6,<0.15
+pandas>=2.2,<3
+numpy>=1.26,<2.6
 openpyxl>=3.1.5,<4
 scipy>=1.11,<2
-statsforecast>=2.0,<3.0
+numba>=0.63,<0.69
+scikit-learn>=1.6,<2
+xgboost>=3,<4
+lightgbm>=4.6,<5

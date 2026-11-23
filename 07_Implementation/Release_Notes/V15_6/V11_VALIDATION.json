@@ -1,0 +1,103 @@
+{
+  "study": "Controlled offline fixed-fleet annual IEEE 33-bus 2021 load/PV comparison",
+  "battery_configuration": "Buses 17, 33, 14; 500 kW / 50,000 kWh per BESS; initial SOC 50%, minimum 20%, maximum 100%, efficiencies 90%/90%",
+  "data_source": "User-uploaded 20261122_153655_ieee_33bus_network_data.zip / optimization/run_001/inputs",
+  "same_network_profiles_settings": true,
+  "no_gwo_search": true,
+  "perfect_foresight_of_supplied_input": true,
+  "notes": [
+    "Annual numerical comparison uses the same fixed BESS positions, power, energy and network settings. V11 is NOT yet demonstrated to produce better GWO siting outcomes.",
+    "Python/Linux wall times are not Windows wall times.",
+    "Both controllers end at 20% SOC for all three batteries; further charging/operational limits remain."
+  ],
+  "results": {
+    "legacy": {
+      "elapsed_wall_s": 76.35,
+      "coverage": {
+        "expected_hours": 8760,
+        "processed_hours": 8760,
+        "coverage_percent": 100.0,
+        "complete": true,
+        "status": "complete_annual",
+        "converged": true,
+        "feasible": true,
+        "first_timestamp": "2021-01-01 00:00:00",
+        "last_timestamp": "2021-12-31 23:00:00"
+      },
+      "shed_kwh": 4123410.251295808,
+      "voltage_deficit_pu_hours": 2774.2892748612458,
+      "charge_kwh": 509764.0444333779,
+      "discharge_kwh": 453408.87599103653,
+      "at_min_hours": {
+        "17": 7077,
+        "33": 7045,
+        "14": 6832
+      },
+      "final_soc": {
+        "17": 0.2,
+        "33": 0.2,
+        "14": 0.2
+      },
+      "annual_total_cost": 58740161.041159585,
+      "dispatch_timing": {
+        "fleet_dispatch_mode": "legacy",
+        "fbs_calls": 41775,
+        "fbs_seconds": 7.471301842022513,
+        "correction_seconds": 70.69824468992738,
+        "correction_fbs_trials": 23557,
+        "correction_hours": 6461,
+        "correction_unresolved_hours": 0,
+        "elapsed_seconds": 76.09181014500064
+      }
+    },
+    "predictive": {
+      "elapsed_wall_s": 87.5,
+      "coverage": {
+        "expected_hours": 8760,
+        "processed_hours": 8760,
+        "coverage_percent": 100.0,
+        "complete": true,
+        "status": "complete_annual",
+        "converged": true,
+        "feasible": true,
+        "first_timestamp": "2021-01-01 00:00:00",
+        "last_timestamp": "2021-12-31 23:00:00"
+      },
+      "shed_kwh": 4001527.155705684,
+      "voltage_deficit_pu_hours": 2692.473876075264,
+      "charge_kwh": 706815.8753693408,
+      "discharge_kwh": 613020.8590491664,
+      "at_min_hours": {
+        "17": 6055,
+        "33": 5868,
+        "14": 5770
+      },
+      "final_soc": {
+        "17": 0.2,
+        "33": 0.2,
+        "14": 0.2
+      },
+      "annual_total_cost": 57292642.762847945,
+      "dispatch_timing": {
+        "fleet_dispatch_mode": "predictive",
+        "predictive_lp_calls": 365,
+        "predictive_lp_failures": 0,
+        "predictive_last_fallback_reason": null,
+        "predictive_lp_seconds": 3.373825749011303,
+        "predictive_forecast_fbs_calls": 8760,
+        "predictive_forecast_fbs_seconds": 1.25040185893522,
+        "predictive_days_planned": 365,
+        "predictive_planned_absolute_kwh": 6393209.410477561,
+        "predictive_lookahead_source": "future hourly load/PV in supplied profile (offline perfect foresight)",
+        "predictive_horizon_hours": 24,
+        "fbs_calls": 59297,
+        "fbs_seconds": 9.294642735214438,
+        "correction_seconds": 74.40921564196105,
+        "correction_fbs_trials": 22588,
+        "correction_hours": 6169,
+        "correction_unresolved_hours": 0,
+        "elapsed_seconds": 87.2047788480013
+      }
+    }
+  }
+}

@@ -1,9 +1,41 @@
 """Selectable single-line graphics with independent input/result annotations."""
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QPainterPath, QPainterPathStroker, QPen
+from PySide6.QtCore import QPointF, QRectF, Qt, Signal
+from PySide6.QtGui import (
+    QBrush, QColor, QIcon, QPainter, QPainterPath, QPainterPathStroker,
+    QPalette, QPen, QPixmap,
+)
 from PySide6.QtWidgets import QGraphicsItem, QGraphicsPathItem, QGraphicsScene, QGraphicsView
 
 from .network_layout import build_layout
+
+
+def network_icon(action: str, palette: QPalette) -> QIcon:
+    """Build a compact palette-aware Fit or Zoom toolbar icon."""
+    icon = QIcon()
+    for mode, group in ((QIcon.Mode.Normal, QPalette.ColorGroup.Active),
+                        (QIcon.Mode.Disabled, QPalette.ColorGroup.Disabled)):
+        image = QPixmap(48, 48)
+        image.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.scale(2, 2)
+        pen = QPen(palette.color(group, QPalette.ColorRole.ButtonText), 1.8)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        if action == "fit":
+            for x, y, dx, dy in ((4, 4, 1, 1), (20, 4, -1, 1),
+                                 (4, 20, 1, -1), (20, 20, -1, -1)):
+                painter.drawLine(QPointF(x, y), QPointF(x + dx * 5, y))
+                painter.drawLine(QPointF(x, y), QPointF(x, y + dy * 5))
+        else:
+            painter.drawEllipse(QRectF(3, 3, 13, 13))
+            painter.drawLine(QPointF(15, 15), QPointF(21, 21))
+            painter.drawLine(QPointF(6, 9.5), QPointF(13, 9.5))
+            if action == "zoom_in":
+                painter.drawLine(QPointF(9.5, 6), QPointF(9.5, 13))
+        painter.end()
+        icon.addPixmap(image, mode)
+    return icon
 
 
 class NetworkView(QGraphicsView):
@@ -131,7 +163,12 @@ class NetworkScene(QGraphicsScene):
             label.setRotation(-90 * self.turns)
         label.setPos(x, y)
         label.setData(1, role)
-        label.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+        # Text can be repositioned without altering the electrical model.
+        # A busbar or conductor remains the selectable electrical element.
+        if role in ("bus_number", "line_id", "bus_properties", "bus_results", "line_annotation"):
+            label.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
+        else:
+            label.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
         return label
 
     def equipment(self, node, kind, port, left=False):
@@ -166,15 +203,18 @@ class NetworkScene(QGraphicsScene):
             self.add_label(node, name, -175 if left else 145, port - 8)
 
     def draw_network(self, network, voltages=None, bounds=(0.95, 1.05), bess_bus=None,
-                     show_properties=False, step=None, bess_ratings=None):
+                     show_properties=False, step=None, bess_ratings=None, fleet_ratings=None):
         selected = next(((item.data(1), item.data(0) if item.data(1) == "bus" else item.data(2))
                          for item in self.selectedItems()), None)
         self.clear()
         self.bus_items.clear()
         self.line_items.clear()
+        ratings = dict(fleet_ratings or {})
+        if bess_bus is not None and bess_ratings is not None:
+            ratings[bess_bus] = bess_ratings
         self.layout = build_layout(network, self.branch_sides,
                                    show_properties=show_properties, show_results=step is not None,
-                                   bess_bus=bess_bus)
+                                   bess_bus=bess_bus, fleet_buses=ratings)
         good_result = step is not None and step.power_flow.converged
         if good_result:
             voltages = step.power_flow.voltage_mag_pu
@@ -201,16 +241,19 @@ class NetworkScene(QGraphicsScene):
             a, b = self.rotate_point(*a), self.rotate_point(*b)
             x, y = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
             horizontal = abs(a[1] - b[1]) < 1e-6
-            label = self.add_label(None, line.line_id, x - 30 if horizontal else x - 90, y - 38, "line_id")
+            line_text = str(line.line_id)
+            if not line_text.upper().startswith("L"):
+                line_text = f"L{line_text}"
+            label = self.add_label(None, line_text, x - 30 if horizontal else x - 90, y - 38, "line_id")
             label.setData(2, line.line_id)
             label.setToolTip(branch.toolTip())
             lines = []
             if show_properties:
-                lines.append(f"R {line.r_ohm:g} Ω; X {line.x_ohm:g} Ω")
+                lines.append(f"{line_text}: R {line.r_ohm:g} Ω; X {line.x_ohm:g} Ω")
             if step is not None:
                 if good_result:
                     flow = step.power_flow
-                    lines.extend((f"P {flow.branch_p_kw[line.line_id]:.2f} kW; Q {flow.branch_q_kvar[line.line_id]:.2f} kvar",
+                    lines.extend((f"{line_text}: P {flow.branch_p_kw[line.line_id]:.2f} kW; Q {flow.branch_q_kvar[line.line_id]:.2f} kvar",
                                   f"I {flow.branch_current_a[line.line_id]:.2f} A; loss {flow.line_loss_p_kw[line.line_id]:.3f} kW"))
                 else:
                     lines.append("Result unavailable: power flow did not converge")
@@ -251,7 +294,7 @@ class NetworkScene(QGraphicsScene):
             bar = QPainterPath()
             bar.addRect(-3, top, 6, bottom - top)
             self.add_symbol(node, bar, "busbar", f"Bus {bus_id}; {bus.base_kv:g} kV", color, color)
-            self.add_label(node, str(bus_id), -15, top - 36, "bus_number")
+            self.add_label(node, f"B{bus_id}", -15, top - 36, "bus_number")
             loads = [load for load in network.loads if load.bus_id == bus_id]
             units = [unit for unit in network.pv_units if unit.bus_id == bus_id]
             for kind, port, left in self.layout.equipment_ports[bus_id]:
@@ -271,15 +314,15 @@ class NetworkScene(QGraphicsScene):
             node.setRect(node.rect().united(node.childrenBoundingRect()))
             inputs, outputs = [], []
             if show_properties:
-                inputs = [f"Base {bus.base_kv:g} kV",
-                          f"Load {sum(l.p_base_kw for l in loads):g} kW / {sum(l.q_base_kvar for l in loads):g} kvar",
+                inputs = [f"B{bus_id}: Load {sum(l.p_base_kw for l in loads):g} kW / {sum(l.q_base_kvar for l in loads):g} kvar",
                           f"PV rating {sum(u.p_rated_kw for u in units):g} kW"]
-                if bus_id == bess_bus and bess_ratings is not None:
-                    inputs.append(f"BESS {bess_ratings[0]:g} kW / {bess_ratings[1]:g} kWh")
+                if bus_id in ratings:
+                    power, energy = ratings[bus_id]
+                    inputs.append(f"BESS {power:g} kW / {energy:g} kWh")
             if step is not None:
                 if good_result:
                     op = step.operating_point
-                    outputs = [f"V {step.power_flow.voltage_mag_pu[bus_id]:.5f} pu",
+                    outputs = [f"B{bus_id}: V {step.power_flow.voltage_mag_pu[bus_id]:.5f} pu",
                                f"Served load {op.p_load_kw[bus_id]:.2f} kW / {op.q_load_kvar[bus_id]:.2f} kvar",
                                f"PV {op.p_pv_kw[bus_id]:.2f} kW; BESS {op.p_bess_kw[bus_id]:.2f} kW"]
                     shed = step.shedding_by_bus_kw

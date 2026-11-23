@@ -1,0 +1,142 @@
+"""Dependency-light regression tests for fixed EE499 methodology and FBS.
+Qt dialog end-to-end tests require PySide6 and must run on a Windows/Qt host.
+"""
+import json
+import math
+import sys
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from src.approved_methodology import (
+    DISCOUNT_RATE, CURRENCY, FORECAST_METHOD, methodology_record,
+    normalize_settings, auto_workers, read_manifest_assumptions,
+    resolve_solar_location, PV_CRITICAL_IRRADIANCE_W_M2,
+)
+from src.metrics import EconomicConfig
+from src.network_model import Bus, Line, Load, NetworkModel
+from src.fbs import OperatingPoint, FBSConfig, run_fbs
+
+
+class ApprovedMethodologyTests(unittest.TestCase):
+    def test_migrates_old_settings_including_reserve_and_terminal_policy(self):
+        old = dict(
+            group_reserve=True, spin_reserve_percent=10,
+            spin_reserve_hours=3, dispatch_mode=0, terminal_policy="priced_energy",
+            group_terminal_soc=False, spin_terminal_soc_percent=5,
+            group_economic_inputs=False, spin_discount_rate=14,
+            spin_fixed_cost=100000, edit_currency="EUR",
+            shedding_policy="minimum_energy", spin_shed_edge_1=5,
+            spin_shed_edge_2=20, spin_shed_weight_3=1,
+            search_mode="quick", spin_screen_sites=8, screen_sites=8,
+            spin_cpu_workers=24, optimizer_algorithm="GWO",
+            spin_soc_min_percent=20, spin_grid_import_tariff=0.1,
+            chk_tariffs_confirmed=False,
+        )
+        values = normalize_settings(old, cpu_total=8)
+        self.assertEqual(values['dispatch_mode'], 1)
+        self.assertFalse(values['group_reserve'])
+        self.assertEqual(values['spin_reserve_percent'], 0)
+        self.assertTrue(values['group_terminal_soc'])
+        self.assertEqual(values['spin_terminal_soc_percent'], .0001)
+        self.assertTrue(values['group_economic_inputs'])
+        self.assertEqual(values['terminal_policy'], 'equal_soc')
+        self.assertEqual(values['edit_currency'], 'USD')
+        self.assertEqual(values['spin_discount_rate'], 6)
+        self.assertEqual(values['spin_fixed_cost'], 0)
+        self.assertEqual(values['shedding_policy'], 'progressive')
+        self.assertEqual([values[f'spin_shed_weight_{i}'] for i in (1,2,3)], [1.,3.,10.])
+        self.assertEqual([values[f'spin_shed_edge_{i}'] for i in (1,2)], [50.,80.])
+        self.assertEqual(values['search_mode'], 'standard')
+        self.assertNotIn('screen_sites', values)
+        self.assertEqual(values['spin_cpu_workers'], 4)
+        self.assertEqual(values['spin_grid_import_tariff'], .1)
+        self.assertEqual(values['spin_soc_min_percent'], 20)
+        self.assertFalse(values['chk_tariffs_confirmed'], 'no invented tariff confirmation')
+
+    def test_ga_full_year_with_same_fixed_physics(self):
+        values = normalize_settings({'optimizer_algorithm': 'GA', 'spin_ga_generations': 18})
+        self.assertEqual(values['search_mode'], 'thorough')
+        self.assertEqual(values['spin_ga_generations'], 18)
+        self.assertEqual(values['shedding_policy'], 'progressive')
+
+    def test_worker_autoselection(self):
+        self.assertEqual(auto_workers(1), 1)
+        self.assertEqual(auto_workers(2), 1)
+        self.assertEqual(auto_workers(6), 4)
+        self.assertEqual(auto_workers(32), 4)
+
+    def test_documented_economic_assumptions_not_distorted(self):
+        record = methodology_record()
+        self.assertEqual(record['discount_rate'], DISCOUNT_RATE)
+        self.assertEqual(record['currency'], CURRENCY)
+        self.assertEqual(record['forecast_method'], FORECAST_METHOD)
+        self.assertEqual(record['pv_critical_w_m2'], PV_CRITICAL_IRRADIANCE_W_M2)
+        cfg = EconomicConfig(discount_rate=record['discount_rate'], currency=record['currency'],
+                             terminal_policy=record['terminal_energy_policy'],
+                             fixed_installation_cost=record['site_capex_usd'])
+        self.assertEqual(cfg.discount_rate, .06)
+        self.assertEqual(cfg.fixed_installation_cost, 0)
+        self.assertIsNone(cfg.terminal_energy_price_per_kwh)
+
+    def test_reads_declared_source_metadata_without_defaulting_clock(self):
+        self.assertEqual(read_manifest_assumptions({
+            'clock': 'UTC', 'site': {'latitude': 43.263, 'longitude': -2.935},
+            'pv_reference': {'capacity_kw': 6000},
+        })['reference_capacity_kw'], 6000)
+        with self.assertRaisesRegex(ValueError, 'source clock'):
+            read_manifest_assumptions({'site': {'latitude': 43.2, 'longitude': -2.9}})
+        with self.assertRaisesRegex(ValueError, 'conflicting source clocks'):
+            read_manifest_assumptions({'clock':'UTC', 'timezone':'Asia/Riyadh'})
+        with self.assertRaisesRegex(ValueError, 'both'):
+            read_manifest_assumptions({'clock':'UTC','site':{'latitude':25}})
+
+    def test_detects_conflicting_solar_sites(self):
+        with self.assertRaisesRegex(ValueError, 'conflicts'):
+            resolve_solar_location({'latitude':43.263,'longitude':-2.935},
+                                   {'latitude':21.543,'longitude':39.172})
+        self.assertEqual(resolve_solar_location({'latitude':43.263,'longitude':-2.935},
+                                               {'latitude':43.263,'longitude':-2.935}), (43.263, -2.935))
+
+    def test_numba_fbs_numerical_smoke(self):
+        buses=[Bus(1,'Slack',12.66,True),Bus(2,'L1',12.66),Bus(3,'L2',12.66)]
+        network=NetworkModel(buses,[Line('a',1,2,.1,.06),Line('b',2,3,.15,.09)],
+                             [Load('load2',2,100,50),Load('load3',3,50,25)],[],100000,60)
+        network.validate()
+        op=OperatingPoint({1:0,2:100,3:50},{1:0,2:50,3:25},
+                          {1:0,2:0,3:0},{1:0,2:0,3:0},
+                          {1:0,2:0,3:0},{1:0,2:0,3:0})
+        pf=run_fbs(network,op,FBSConfig())
+        self.assertTrue(pf.converged, pf.message)
+        self.assertTrue(0.99 < pf.voltage_mag_pu[3] < pf.voltage_mag_pu[2] < 1.0)
+        self.assertTrue(0 < pf.total_loss_p_kw < 2)
+        self.assertAlmostEqual(pf.slack_p_kw,150+pf.total_loss_p_kw,delta=.005)
+
+
+class StaticAssetTests(unittest.TestCase):
+    def test_dashboard_removed_inputs_not_referenced(self):
+        html=(ROOT/'src/assets/dashboard.html').read_text(encoding='utf-8')
+        js=(ROOT/'src/assets/dashboard.js').read_text(encoding='utf-8')
+        self.assertNotIn('id="hour"',html)
+        self.assertNotIn('$("hour")',js)
+        self.assertNotIn('label("Cause", reason)',js)
+        self.assertNotIn('Additional " + type.toLowerCase()',js)
+        self.assertIn('$("next-hour")',js)
+        self.assertIn('label("Bus ID", bus)',js)
+        self.assertIn('event?.reason_codes?.join(',js)
+
+    def test_ui_does_not_use_removed_inputs_as_effective_settings(self):
+        src=(ROOT/'src/ui.py').read_text(encoding='utf-8')
+        self.assertIn('normalize_settings(values)',src)
+        self.assertIn('reserve_fraction=0.0',src)
+        self.assertIn('CURRENCY, discount_rate=DISCOUNT_RATE',src)
+        self.assertIn('fixed_installation_cost=FIXED_SITE_CAPEX_USD',src)
+        self.assertIn('dispatch = ConstraintAwareDispatch()',src)
+        self.assertIn('PV_CRITICAL_IRRADIANCE_W_M2',src)
+        self.assertIn('solar_source_clock=',src)
+        self.assertIn('hide_control_row(self, "combo_forecast_method")',src)
+
+
+if __name__=='__main__':
+    unittest.main()

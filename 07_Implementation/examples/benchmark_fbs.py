@@ -8,8 +8,8 @@ from time import perf_counter
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src_accelerated.fbs import FBSConfig, OperatingPoint, backend_available, run_fbs
-from src_accelerated.network_loader import load_network
+from src.fbs import FBSConfig, OperatingPoint, backend_available, run_fbs
+from src.network_loader import load_network
 
 
 def base_operating_point(network):

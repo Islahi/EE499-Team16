@@ -84,10 +84,10 @@ class FBSTests(unittest.TestCase):
 
     def test_invalid_inputs(self):
         n = build_5_bus_case()
-        for config in [FBSConfig(max_iterations=0), FBSConfig(max_iterations=1.5),
-                       FBSConfig(voltage_tolerance_pu=float("nan"))]:
+        for settings in ({"max_iterations": 0}, {"max_iterations": 1.5},
+                         {"voltage_tolerance_pu": float("nan")}):
             with self.assertRaises(ValueError):
-                run_fbs(n, base_operating_point(n), config)
+                FBSConfig(**settings)
         op = base_operating_point(n)
         del op.p_load_kw[5]
         with self.assertRaises(ValueError):

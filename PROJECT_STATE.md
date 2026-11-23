@@ -1,6 +1,6 @@
 # Project State
 
-**Last context update:** 2026-10-24
+**Last context update:** 2026-11-23
 
 ## Snapshot
 
@@ -37,6 +37,18 @@ Completed tasks previously placed in future development weeks now use 24 Oct as 
 The GUI builds the diagram automatically from network data. This plan does not add drag-and-drop editing, change the engineering design, or claim that implementation completion proves formal validation. Validate and disclose the current raw-WSM/simple-investment-cost and ARIMA-fallback limitations honestly.
 
 ## Current status
+
+- The V15.6 desktop application lives in
+  [07_Implementation/src](07_Implementation/README.md). Start it with
+  `07_Implementation/start_windows.bat`.
+
+- On 20 Nov 2026, the integrated v3 desktop app was updated in
+  `07_Implementation/src_accelerated`. It uses Numba CPU FBS, GoiEner folder
+  import, sector-sum demand forecasting, and common modeled-PV forecasting.
+  New studies select the first 24 historical hours. Annual GA/GWO comparisons
+  use a complete calendar year and either scheduled SOC closure or explicit
+  terminal energy pricing. See the
+  [desktop user guide](07_Implementation/BESS_Planning_Tool_User_Guide.md).
 
 - On 20 Oct 2026, the isolated `src_accelerated` desktop gained timestamped
   study sessions and a separate four-tab **Scenarios** workflow. Accepted

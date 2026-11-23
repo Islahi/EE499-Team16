@@ -1,5 +1,45 @@
 # Project Journal
 
+## 2026-11-23 - V15.6 promoted to the project implementation
+
+- Consolidated the desktop application, launchers, assets and current regression
+  suite around `07_Implementation/src`. The release notes and session recovery
+  instructions are in `07_Implementation/Release_Notes/V15_6`.
+- Preserved earlier application sources and saved sessions locally. Standalone
+  validation kits continue to carry the reference solvers used in their studies.
+
+## 2026-11-21 - Parallel progress, run input snapshots and reserve diagnosis
+
+- GWO workers now report sampled hourly progress in the desktop log. New
+  exports retain the exact load and PV profiles and the accepted workbook
+  alongside the results. Removed Open-Meteo from the desktop source menu.
+- In the completed 15-bus 2023 forecast run, all 240 candidates violated
+  reserve. The 2,705.43 kW peak required 270.54 kW for one hour. At 50% initial
+  SOC, 20% minimum SOC and 90% discharge efficiency, the minimum initial
+  capacity for that reserve was 1,002.01 kWh, above the 1,000 kWh search cap.
+  The subsequent parallel run failed before producing a decision.
+
+## 2026-11-21 - Hourly log and annual optimization guidance
+
+- Simulate now records every completed timestep with its source timestamp in
+  the run log and session log. Base case identifies its single static snapshot
+  and records the solver iterations.
+- The saved 15-bus forecast starts in June, so its 8,760 hours do not form a
+  calendar year. Optimize now explains the active interval and points to the
+  full-calendar-year preset. The preset works for historical and forecast data.
+
+## 2026-11-20 - Integrated desktop v3 repairs
+
+- Integrated the v3 desktop application in `07_Implementation/src_accelerated`.
+  Historical simulation now defaults to the first 24 hours, with separate
+  forecast training and complete-calendar-year annual optimization.
+- Annual candidate evaluation and simulation now use consistent terminal SOC
+  accounting. The application supports scheduled SOC closure or an explicitly
+  priced and efficiency-adjusted terminal energy difference.
+- Added solar source controls and protected workbook and edited PV ratings
+  during GoiEner folder selection. Added archived C1/C2 regression checks and
+  a [desktop user guide](07_Implementation/BESS_Planning_Tool_User_Guide.md).
+
 ## 2026-10-10 - Member 1 FBS contribution reviewed and preserved
 
 - The user supplied two PDFs, network/FBS/driver Python files and an hourly results CSV, identified as Member 1's work. Archived all six unchanged under `07_Implementation/Contributions/Member_1/2026-10-10_FBS/Original/`, with checksums and an evidence-based review in the contribution README.

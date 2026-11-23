@@ -11,13 +11,13 @@ from .network_model import NetworkModel
 
 # Table 1, pages 11-12, https://doi.org/10.3390/su142013209 (CC BY 4.0).
 # The paper labels periods 1-24; this prototype maps them to clock hours 00-23.
-SINDI_MEAN_PERCENT = (
+HOURLY_MEAN_PERCENT = (
     65.177, 62.018, 58.758, 57.756, 58.776, 62.223,
     70.783, 76.010, 78.115, 79.969, 81.174, 81.949,
     82.103, 81.037, 80.539, 80.640, 81.114, 81.093,
     81.050, 81.509, 80.661, 77.876, 73.689, 69.979,
 )
-SINDI_SD_PERCENT = (
+HOURLY_STANDARD_DEVIATION_PERCENT = (
     4.698, 4.410, 5.230, 4.220, 4.614, 6.212,
     9.278, 9.321, 8.115, 7.260, 6.852, 6.811,
     7.116, 7.444, 7.616, 7.944, 8.291, 8.775,
@@ -28,8 +28,8 @@ SINDI_SD_PERCENT = (
 @dataclass(frozen=True)
 class LoadGenerationConfig:
     seed: int = 42
-    mean_percent: tuple[float, ...] = SINDI_MEAN_PERCENT
-    sd_percent: tuple[float, ...] = SINDI_SD_PERCENT
+    mean_percent: tuple[float, ...] = HOURLY_MEAN_PERCENT
+    sd_percent: tuple[float, ...] = HOURLY_STANDARD_DEVIATION_PERCENT
 
     def __post_init__(self):
         if not isinstance(self.seed, int) or isinstance(self.seed, bool) or self.seed < 0:

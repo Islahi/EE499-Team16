@@ -1,0 +1,8 @@
+.model-information{margin:12px 0 0;padding:9px 14px;background:#fff;border:1px solid var(--line);border-radius:8px}
+.model-information summary{margin:0;color:var(--teal)}
+.model-information h3{margin:14px 0 3px}
+.model-information .model-values{table-layout:fixed}
+.model-values th{width:40%;font-weight:500;text-align:left}
+.model-values td{text-align:left;overflow-wrap:anywhere}
+.model-equation{font:1rem/1.65 'Segoe UI',sans-serif;background:#f5f8fa;padding:9px 12px;overflow-wrap:anywhere}
+@media print{.model-values tr,.model-equation{break-inside:avoid}}

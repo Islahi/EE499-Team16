@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='UTF-8'?>
+<?xml version='1.0' encoding='utf-8'?>
 <ui version="4.0">
  <class>SettingsDialog</class>
  <widget class="QDialog" name="SettingsDialog">
@@ -19,22 +19,20 @@
   <property name="windowTitle">
    <string>Settings</string>
   </property>
-  <layout class="QVBoxLayout" name="layout_settings_root" stretch="1,0,0">
-   <property name="leftMargin">
-    <number>12</number>
-   </property>
-   <property name="topMargin">
-    <number>12</number>
-   </property>
-   <property name="rightMargin">
-    <number>12</number>
-   </property>
-   <property name="bottomMargin">
-    <number>12</number>
-   </property>
-   <property name="spacing">
-    <number>8</number>
-   </property>
+  <layout class="QVBoxLayout" name="layout_settings_root" stretch="0,1,0,0,0">
+   <item>
+    <widget class="QLabel" name="lbl_settings_title">
+     <property name="text">
+      <string>Study settings</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="role" stdset="0">
+      <string>title</string>
+     </property>
+    </widget>
+   </item>
    <item>
     <widget class="QWidget" name="panel_settings_body">
      <layout class="QHBoxLayout" name="layout_settings_body" stretch="0,1">
@@ -55,18 +53,6 @@
       </property>
       <item>
        <widget class="QListWidget" name="list_settings_pages">
-        <property name="minimumSize">
-         <size>
-          <width>150</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>200</width>
-          <height>16777215</height>
-         </size>
-        </property>
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -78,6 +64,9 @@
         </property>
         <property name="editTriggers">
          <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+        </property>
+        <property name="currentRow">
+         <number>0</number>
         </property>
         <item>
          <property name="text">
@@ -99,13 +88,17 @@
           <string>Economics</string>
          </property>
         </item>
-        <item>
-         <property name="text">
-          <string>Uncertainty</string>
-         </property>
-        </item>
-        <property name="currentRow">
-         <number>0</number>
+        <property name="minimumSize">
+         <size>
+          <width>160</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>180</width>
+          <height>16777215</height>
+         </size>
         </property>
        </widget>
       </item>
@@ -155,25 +148,36 @@
               </rect>
              </property>
              <layout class="QVBoxLayout" name="layout_contents_battery">
-              <property name="leftMargin">
-               <number>8</number>
-              </property>
-              <property name="topMargin">
-               <number>8</number>
-              </property>
-              <property name="rightMargin">
-               <number>8</number>
-              </property>
-              <property name="bottomMargin">
-               <number>8</number>
-              </property>
-              <property name="spacing">
-               <number>8</number>
-              </property>
+              <item>
+               <widget class="QLabel" name="lbl_battery_heading">
+                <property name="text">
+                 <string>Manual simulation</string>
+                </property>
+                <property name="wordWrap">
+                 <bool>true</bool>
+                </property>
+                <property name="role" stdset="0">
+                 <string>section</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="lbl_battery_description">
+                <property name="text">
+                 <string>Set the optional battery used by Simulation.</string>
+                </property>
+                <property name="wordWrap">
+                 <bool>true</bool>
+                </property>
+                <property name="role" stdset="0">
+                 <string>hint</string>
+                </property>
+               </widget>
+              </item>
               <item>
                <widget class="QGroupBox" name="group_manual_bess">
                 <property name="title">
-                 <string>Include manual BESS in simulation</string>
+                 <string>Enable manual BESS</string>
                 </property>
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
@@ -200,18 +204,6 @@
                  <property name="bottomMargin">
                   <number>12</number>
                  </property>
-                 <property name="horizontalSpacing">
-                  <number>12</number>
-                 </property>
-                 <property name="verticalSpacing">
-                  <number>8</number>
-                 </property>
-                 <property name="fieldGrowthPolicy">
-                  <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
-                 </property>
-                 <property name="rowWrapPolicy">
-                  <enum>QFormLayout::RowWrapPolicy::WrapLongRows</enum>
-                 </property>
                  <item row="0" column="0">
                   <widget class="QLabel" name="lbl_combo_bess_bus">
                    <property name="text">
@@ -220,14 +212,14 @@
                    <property name="wordWrap">
                     <bool>true</bool>
                    </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
                    <property name="buddy">
                     <cstring>combo_bess_bus</cstring>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
                    </property>
                   </widget>
                  </item>
@@ -246,14 +238,14 @@
                    <property name="wordWrap">
                     <bool>true</bool>
                    </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
                    <property name="buddy">
                     <cstring>spin_bess_power_kw</cstring>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
                    </property>
                   </widget>
                  </item>
@@ -286,6 +278,9 @@
                    <property name="wrapping">
                     <bool>false</bool>
                    </property>
+                   <property name="specialValueText">
+                    <string>Required</string>
+                   </property>
                   </widget>
                  </item>
                  <item row="2" column="0">
@@ -296,14 +291,14 @@
                    <property name="wordWrap">
                     <bool>true</bool>
                    </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
                    <property name="buddy">
                     <cstring>spin_bess_energy_kwh</cstring>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
                    </property>
                   </widget>
                  </item>
@@ -336,15 +331,30 @@
                    <property name="wrapping">
                     <bool>false</bool>
                    </property>
+                   <property name="specialValueText">
+                    <string>Required</string>
+                   </property>
                   </widget>
                  </item>
+                 <property name="horizontalSpacing">
+                  <number>18</number>
+                 </property>
+                 <property name="verticalSpacing">
+                  <number>10</number>
+                 </property>
+                 <property name="rowWrapPolicy">
+                  <enum>QFormLayout::RowWrapPolicy::DontWrapRows</enum>
+                 </property>
+                 <property name="fieldGrowthPolicy">
+                  <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
+                 </property>
                 </layout>
                </widget>
               </item>
               <item>
                <widget class="QGroupBox" name="group_battery_parameters">
                 <property name="title">
-                 <string>Battery Parameters</string>
+                 <string>Battery parameters</string>
                 </property>
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
@@ -365,18 +375,6 @@
                  <property name="bottomMargin">
                   <number>12</number>
                  </property>
-                 <property name="horizontalSpacing">
-                  <number>12</number>
-                 </property>
-                 <property name="verticalSpacing">
-                  <number>8</number>
-                 </property>
-                 <property name="fieldGrowthPolicy">
-                  <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
-                 </property>
-                 <property name="rowWrapPolicy">
-                  <enum>QFormLayout::RowWrapPolicy::WrapLongRows</enum>
-                 </property>
                  <item row="0" column="0">
                   <widget class="QLabel" name="lbl_spin_soc_min_percent">
                    <property name="text">
@@ -385,14 +383,14 @@
                    <property name="wordWrap">
                     <bool>true</bool>
                    </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
                    <property name="buddy">
                     <cstring>spin_soc_min_percent</cstring>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
                    </property>
                   </widget>
                  </item>
@@ -411,7 +409,7 @@
                     <double>1</double>
                    </property>
                    <property name="value">
-                    <double>10</double>
+                    <double>20</double>
                    </property>
                    <property name="suffix">
                     <string> %</string>
@@ -432,14 +430,14 @@
                    <property name="wordWrap">
                     <bool>true</bool>
                    </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
                    <property name="buddy">
                     <cstring>spin_soc_max_percent</cstring>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
                    </property>
                   </widget>
                  </item>
@@ -458,7 +456,7 @@
                     <double>1</double>
                    </property>
                    <property name="value">
-                    <double>90</double>
+                    <double>100</double>
                    </property>
                    <property name="suffix">
                     <string> %</string>
@@ -479,14 +477,14 @@
                    <property name="wordWrap">
                     <bool>true</bool>
                    </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
                    <property name="buddy">
                     <cstring>spin_soc_initial_percent</cstring>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
                    </property>
                   </widget>
                  </item>
@@ -518,126 +516,31 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="3" column="0">
-                  <widget class="QLabel" name="lbl_spin_eta_charge_percent">
-                   <property name="text">
-                    <string>Charging efficiency</string>
-                   </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="buddy">
-                    <cstring>spin_eta_charge_percent</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="3" column="1">
-                  <widget class="QDoubleSpinBox" name="spin_eta_charge_percent">
-                   <property name="decimals">
-                    <number>2</number>
-                   </property>
-                   <property name="minimum">
-                    <double>0</double>
-                   </property>
-                   <property name="maximum">
-                    <double>100</double>
-                   </property>
-                   <property name="singleStep">
-                    <double>1</double>
-                   </property>
-                   <property name="value">
-                    <double>0</double>
-                   </property>
-                   <property name="suffix">
-                    <string> %</string>
-                   </property>
-                   <property name="specialValueText">
-                    <string>Set efficiency</string>
-                   </property>
-                   <property name="keyboardTracking">
-                    <bool>false</bool>
-                   </property>
-                   <property name="wrapping">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="4" column="0">
-                  <widget class="QLabel" name="lbl_spin_eta_discharge_percent">
-                   <property name="text">
-                    <string>Discharging efficiency</string>
-                   </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="buddy">
-                    <cstring>spin_eta_discharge_percent</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="4" column="1">
-                  <widget class="QDoubleSpinBox" name="spin_eta_discharge_percent">
-                   <property name="decimals">
-                    <number>2</number>
-                   </property>
-                   <property name="minimum">
-                    <double>0</double>
-                   </property>
-                   <property name="maximum">
-                    <double>100</double>
-                   </property>
-                   <property name="singleStep">
-                    <double>1</double>
-                   </property>
-                   <property name="value">
-                    <double>0</double>
-                   </property>
-                   <property name="suffix">
-                    <string> %</string>
-                   </property>
-                   <property name="specialValueText">
-                    <string>Set efficiency</string>
-                   </property>
-                   <property name="keyboardTracking">
-                    <bool>false</bool>
-                   </property>
-                   <property name="wrapping">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
-                 </item>
+                 <property name="horizontalSpacing">
+                  <number>18</number>
+                 </property>
+                 <property name="verticalSpacing">
+                  <number>10</number>
+                 </property>
+                 <property name="rowWrapPolicy">
+                  <enum>QFormLayout::RowWrapPolicy::DontWrapRows</enum>
+                 </property>
+                 <property name="fieldGrowthPolicy">
+                  <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
+                 </property>
                 </layout>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="lbl_battery_note">
-                <property name="text">
-                 <string>Generic battery; efficiencies must be supplied explicitly. No supplier catalog required.</string>
-                </property>
-                <property name="wordWrap">
-                 <bool>true</bool>
-                </property>
                </widget>
               </item>
               <item>
                <widget class="QLabel" name="lbl_dispatch_status">
                 <property name="text">
-                 <string>Dispatch policy is not configured; default simulation leaves the battery idle.</string>
+                 <string>Grid-aware dispatch requests charging from surplus PV and discharging against demand.</string>
                 </property>
                 <property name="wordWrap">
                  <bool>true</bool>
+                </property>
+                <property name="visible">
+                 <bool>false</bool>
                 </property>
                </widget>
               </item>
@@ -657,6 +560,21 @@
                 </property>
                </spacer>
               </item>
+              <property name="leftMargin">
+               <number>12</number>
+              </property>
+              <property name="topMargin">
+               <number>12</number>
+              </property>
+              <property name="rightMargin">
+               <number>12</number>
+              </property>
+              <property name="bottomMargin">
+               <number>12</number>
+              </property>
+              <property name="spacing">
+               <number>14</number>
+              </property>
              </layout>
             </widget>
            </widget>
@@ -698,21 +616,42 @@
               </rect>
              </property>
              <layout class="QVBoxLayout" name="layout_contents_operation">
-              <property name="leftMargin">
-               <number>8</number>
-              </property>
-              <property name="topMargin">
-               <number>8</number>
-              </property>
-              <property name="rightMargin">
-               <number>8</number>
-              </property>
-              <property name="bottomMargin">
-               <number>8</number>
-              </property>
-              <property name="spacing">
-               <number>8</number>
-              </property>
+              <item>
+               <widget class="QLabel" name="lbl_shedding_tradeoff">
+                <property name="text">
+                 <string>Balanced shedding discourages complete bus disconnections. It can increase unserved energy. Physical limits take priority.</string>
+                </property>
+                <property name="wordWrap">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="lbl_operation_heading">
+                <property name="text">
+                 <string>Network constraints</string>
+                </property>
+                <property name="wordWrap">
+                 <bool>true</bool>
+                </property>
+                <property name="role" stdset="0">
+                 <string>section</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="lbl_operation_description">
+                <property name="text">
+                 <string>Set voltage bounds, reserve requirements and optional grid exchange limits.</string>
+                </property>
+                <property name="wordWrap">
+                 <bool>true</bool>
+                </property>
+                <property name="role" stdset="0">
+                 <string>hint</string>
+                </property>
+               </widget>
+              </item>
               <item>
                <widget class="QGroupBox" name="group_voltage">
                 <property name="title">
@@ -737,18 +676,6 @@
                  <property name="bottomMargin">
                   <number>12</number>
                  </property>
-                 <property name="horizontalSpacing">
-                  <number>12</number>
-                 </property>
-                 <property name="verticalSpacing">
-                  <number>8</number>
-                 </property>
-                 <property name="fieldGrowthPolicy">
-                  <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
-                 </property>
-                 <property name="rowWrapPolicy">
-                  <enum>QFormLayout::RowWrapPolicy::WrapLongRows</enum>
-                 </property>
                  <item row="0" column="0">
                   <widget class="QLabel" name="lbl_spin_voltage_min_pu">
                    <property name="text">
@@ -757,14 +684,14 @@
                    <property name="wordWrap">
                     <bool>true</bool>
                    </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
                    <property name="buddy">
                     <cstring>spin_voltage_min_pu</cstring>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
                    </property>
                   </widget>
                  </item>
@@ -804,14 +731,14 @@
                    <property name="wordWrap">
                     <bool>true</bool>
                    </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
                    <property name="buddy">
                     <cstring>spin_voltage_max_pu</cstring>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
                    </property>
                   </widget>
                  </item>
@@ -843,145 +770,18 @@
                    </property>
                   </widget>
                  </item>
-                </layout>
-               </widget>
-              </item>
-              <item>
-               <widget class="QGroupBox" name="group_reserve">
-                <property name="title">
-                 <string>Hold BESS Reserve</string>
-                </property>
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="checkable">
-                 <bool>true</bool>
-                </property>
-                <property name="checked">
-                 <bool>true</bool>
-                </property>
-                <layout class="QFormLayout" name="group_reserve_layout">
-                 <property name="leftMargin">
-                  <number>12</number>
-                 </property>
-                 <property name="topMargin">
-                  <number>12</number>
-                 </property>
-                 <property name="rightMargin">
-                  <number>12</number>
-                 </property>
-                 <property name="bottomMargin">
-                  <number>12</number>
-                 </property>
                  <property name="horizontalSpacing">
-                  <number>12</number>
+                  <number>18</number>
                  </property>
                  <property name="verticalSpacing">
-                  <number>8</number>
+                  <number>10</number>
+                 </property>
+                 <property name="rowWrapPolicy">
+                  <enum>QFormLayout::RowWrapPolicy::DontWrapRows</enum>
                  </property>
                  <property name="fieldGrowthPolicy">
                   <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
                  </property>
-                 <property name="rowWrapPolicy">
-                  <enum>QFormLayout::RowWrapPolicy::WrapLongRows</enum>
-                 </property>
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="lbl_spin_reserve_percent">
-                   <property name="text">
-                    <string>Peak demand reserve</string>
-                   </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="buddy">
-                    <cstring>spin_reserve_percent</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QDoubleSpinBox" name="spin_reserve_percent">
-                   <property name="decimals">
-                    <number>2</number>
-                   </property>
-                   <property name="minimum">
-                    <double>0</double>
-                   </property>
-                   <property name="maximum">
-                    <double>100</double>
-                   </property>
-                   <property name="singleStep">
-                    <double>1</double>
-                   </property>
-                   <property name="value">
-                    <double>10</double>
-                   </property>
-                   <property name="suffix">
-                    <string> %</string>
-                   </property>
-                   <property name="keyboardTracking">
-                    <bool>false</bool>
-                   </property>
-                   <property name="wrapping">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="lbl_spin_reserve_hours">
-                   <property name="text">
-                    <string>Reserve duration</string>
-                   </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="buddy">
-                    <cstring>spin_reserve_hours</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QDoubleSpinBox" name="spin_reserve_hours">
-                   <property name="decimals">
-                    <number>2</number>
-                   </property>
-                   <property name="minimum">
-                    <double>0.01</double>
-                   </property>
-                   <property name="maximum">
-                    <double>8760</double>
-                   </property>
-                   <property name="singleStep">
-                    <double>0.25</double>
-                   </property>
-                   <property name="value">
-                    <double>1</double>
-                   </property>
-                   <property name="suffix">
-                    <string> h</string>
-                   </property>
-                   <property name="keyboardTracking">
-                    <bool>false</bool>
-                   </property>
-                   <property name="wrapping">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
-                 </item>
                 </layout>
                </widget>
               </item>
@@ -1015,34 +815,22 @@
                  <property name="bottomMargin">
                   <number>12</number>
                  </property>
-                 <property name="horizontalSpacing">
-                  <number>12</number>
-                 </property>
-                 <property name="verticalSpacing">
-                  <number>8</number>
-                 </property>
-                 <property name="fieldGrowthPolicy">
-                  <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
-                 </property>
-                 <property name="rowWrapPolicy">
-                  <enum>QFormLayout::RowWrapPolicy::WrapLongRows</enum>
-                 </property>
                  <item row="0" column="0">
                   <widget class="QLabel" name="lbl_spin_import_limit_kw">
                    <property name="text">
-                    <string>Maximum import</string>
+                    <string>Import cap</string>
                    </property>
                    <property name="wordWrap">
                     <bool>true</bool>
                    </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
                    <property name="buddy">
                     <cstring>spin_import_limit_kw</cstring>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
                    </property>
                   </widget>
                  </item>
@@ -1074,6 +862,18 @@
                    </property>
                   </widget>
                  </item>
+                 <property name="horizontalSpacing">
+                  <number>18</number>
+                 </property>
+                 <property name="verticalSpacing">
+                  <number>10</number>
+                 </property>
+                 <property name="rowWrapPolicy">
+                  <enum>QFormLayout::RowWrapPolicy::DontWrapRows</enum>
+                 </property>
+                 <property name="fieldGrowthPolicy">
+                  <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
+                 </property>
                 </layout>
                </widget>
               </item>
@@ -1107,34 +907,22 @@
                  <property name="bottomMargin">
                   <number>12</number>
                  </property>
-                 <property name="horizontalSpacing">
-                  <number>12</number>
-                 </property>
-                 <property name="verticalSpacing">
-                  <number>8</number>
-                 </property>
-                 <property name="fieldGrowthPolicy">
-                  <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
-                 </property>
-                 <property name="rowWrapPolicy">
-                  <enum>QFormLayout::RowWrapPolicy::WrapLongRows</enum>
-                 </property>
                  <item row="0" column="0">
                   <widget class="QLabel" name="lbl_spin_export_limit_kw">
                    <property name="text">
-                    <string>Maximum export</string>
+                    <string>Export cap</string>
                    </property>
                    <property name="wordWrap">
                     <bool>true</bool>
                    </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
                    <property name="buddy">
                     <cstring>spin_export_limit_kw</cstring>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
                    </property>
                   </widget>
                  </item>
@@ -1166,6 +954,18 @@
                    </property>
                   </widget>
                  </item>
+                 <property name="horizontalSpacing">
+                  <number>18</number>
+                 </property>
+                 <property name="verticalSpacing">
+                  <number>10</number>
+                 </property>
+                 <property name="rowWrapPolicy">
+                  <enum>QFormLayout::RowWrapPolicy::DontWrapRows</enum>
+                 </property>
+                 <property name="fieldGrowthPolicy">
+                  <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
+                 </property>
                 </layout>
                </widget>
               </item>
@@ -1190,16 +990,6 @@
                </widget>
               </item>
               <item>
-               <widget class="QLabel" name="lbl_operation_note">
-                <property name="text">
-                 <string>A feasible voltage result may still include unserved demand. Thermal constraints are not applied.</string>
-                </property>
-                <property name="wordWrap">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item>
                <spacer name="spacer_operation">
                 <property name="orientation">
                  <enum>Qt::Orientation::Vertical</enum>
@@ -1215,6 +1005,21 @@
                 </property>
                </spacer>
               </item>
+              <property name="leftMargin">
+               <number>12</number>
+              </property>
+              <property name="topMargin">
+               <number>12</number>
+              </property>
+              <property name="rightMargin">
+               <number>12</number>
+              </property>
+              <property name="bottomMargin">
+               <number>12</number>
+              </property>
+              <property name="spacing">
+               <number>14</number>
+              </property>
              </layout>
             </widget>
            </widget>
@@ -1256,57 +1061,232 @@
               </rect>
              </property>
              <layout class="QVBoxLayout" name="layout_contents_optimization">
-              <property name="leftMargin">
-               <number>8</number>
-              </property>
-              <property name="topMargin">
-               <number>8</number>
-              </property>
-              <property name="rightMargin">
-               <number>8</number>
-              </property>
-              <property name="bottomMargin">
-               <number>8</number>
-              </property>
-              <property name="spacing">
-               <number>8</number>
-              </property>
               <item>
-               <widget class="QLabel" name="lbl_allowed_buses">
+               <widget class="QGroupBox" name="group_bess_units">
+                <property name="title">
+                 <string>Sequential battery placement</string>
+                </property>
+                <layout class="QFormLayout" name="layout_bess_units">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="lbl_spin_bess_units">
+                   <property name="text">
+                    <string>Maximum BESS units</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QSpinBox" name="spin_bess_units">
+                   <property name="minimum">
+                    <number>1</number>
+                   </property>
+                   <property name="maximum">
+                    <number>3</number>
+                   </property>
+                   <property name="value">
+                    <number>3</number>
+                   </property>
+                   <property name="toolTip">
+                    <string>Maximum simultaneous battery installations considered by Joint GA.</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget name="lbl_spin_ga_population" class="QLabel">
+                   <property name="text">
+                    <string>Population</string>
+                   </property>
+                   <property name="buddy">
+                    <cstring>spin_ga_population</cstring>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget name="spin_ga_population" class="QSpinBox">
+                   <property name="minimum">
+                    <number>8</number>
+                   </property>
+                   <property name="maximum">
+                    <number>1000</number>
+                   </property>
+                   <property name="value">
+                    <number>12</number>
+                   </property>
+                   <property name="keyboardTracking">
+                    <bool>false</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget name="lbl_spin_max_generations" class="QLabel">
+                   <property name="text">
+                    <string>Maximum generations</string>
+                   </property>
+                   <property name="buddy">
+                    <cstring>spin_max_generations</cstring>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget name="spin_max_generations" class="QSpinBox">
+                   <property name="minimum">
+                    <number>4</number>
+                   </property>
+                   <property name="maximum">
+                    <number>10000</number>
+                   </property>
+                   <property name="value">
+                    <number>20</number>
+                   </property>
+                   <property name="keyboardTracking">
+                    <bool>false</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="0">
+                  <widget name="lbl_spin_parallel_workers" class="QLabel">
+                   <property name="text">
+                    <string>Parallel workers</string>
+                   </property>
+                   <property name="buddy">
+                    <cstring>spin_parallel_workers</cstring>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="1">
+                  <widget name="spin_parallel_workers" class="QSpinBox">
+                   <property name="minimum">
+                    <number>1</number>
+                   </property>
+                   <property name="maximum">
+                    <number>8</number>
+                   </property>
+                   <property name="value">
+                    <number>4</number>
+                   </property>
+                   <property name="keyboardTracking">
+                    <bool>false</bool>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="lbl_optimization_heading">
                 <property name="text">
-                 <string>Allowed installation buses (location is optimized across selected buses)</string>
+                 <string>Optimization design</string>
                 </property>
                 <property name="wordWrap">
                  <bool>true</bool>
                 </property>
+                <property name="role" stdset="0">
+                 <string>section</string>
+                </property>
                </widget>
               </item>
               <item>
-               <widget class="QListWidget" name="list_allowed_buses">
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>100</height>
-                 </size>
+               <widget class="QLabel" name="lbl_optimization_description">
+                <property name="text">
+                 <string>Joint GA searches the selected buses and sizes. Annual verification checks the best screened fleets.</string>
                 </property>
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
+                <property name="wordWrap">
+                 <bool>true</bool>
                 </property>
-                <property name="selectionMode">
-                 <enum>QAbstractItemView::SelectionMode::MultiSelection</enum>
+                <property name="role" stdset="0">
+                 <string>hint</string>
                 </property>
-                <property name="editTriggers">
-                 <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+               </widget>
+              </item>
+              <item>
+               <widget class="QGroupBox" name="group_allowed_buses">
+                <property name="title">
+                 <string>Eligible installation buses</string>
                 </property>
+                <layout class="QVBoxLayout" name="layout_allowed_bus_selection">
+                 <item>
+                  <widget class="QLabel" name="lbl_allowed_buses">
+                   <property name="wordWrap">
+                    <bool>true</bool>
+                   </property>
+                   <property name="text">
+                    <string>Select the network buses to include in the battery search.</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QListWidget" name="list_allowed_buses">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>100</height>
+                    </size>
+                   </property>
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="selectionMode">
+                    <enum>QAbstractItemView::SelectionMode::MultiSelection</enum>
+                   </property>
+                   <property name="editTriggers">
+                    <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QWidget" name="panel_allowed_bus_actions">
+                   <layout class="QHBoxLayout" name="layout_allowed_bus_actions">
+                    <property name="spacing">
+                     <number>6</number>
+                    </property>
+                    <property name="leftMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="rightMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>0</number>
+                    </property>
+                    <property name="bottomMargin">
+                     <number>0</number>
+                    </property>
+                    <item>
+                     <widget class="QPushButton" name="btn_select_all_buses">
+                      <property name="text">
+                       <string>Select all</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="btn_clear_allowed_buses">
+                      <property name="text">
+                       <string>Clear</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="lbl_allowed_bus_count">
+                      <property name="text">
+                       <string>0 eligible buses selected</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                </layout>
                </widget>
               </item>
               <item>
                <widget class="QGroupBox" name="group_optimization_bounds">
+                <property name="toolTip">
+                 <string>Catalog values use min/max/step. Only selected non-slack buses can host a BESS.</string>
+                </property>
                 <property name="title">
-                 <string>Battery Search Bounds</string>
+                 <string>BESS search bounds</string>
                 </property>
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
@@ -1327,18 +1307,6 @@
                  <property name="bottomMargin">
                   <number>12</number>
                  </property>
-                 <property name="horizontalSpacing">
-                  <number>12</number>
-                 </property>
-                 <property name="verticalSpacing">
-                  <number>8</number>
-                 </property>
-                 <property name="fieldGrowthPolicy">
-                  <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
-                 </property>
-                 <property name="rowWrapPolicy">
-                  <enum>QFormLayout::RowWrapPolicy::WrapLongRows</enum>
-                 </property>
                  <item row="0" column="0">
                   <widget class="QLabel" name="lbl_spin_opt_power_min_kw">
                    <property name="text">
@@ -1347,14 +1315,14 @@
                    <property name="wordWrap">
                     <bool>true</bool>
                    </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
                    <property name="buddy">
                     <cstring>spin_opt_power_min_kw</cstring>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
                    </property>
                   </widget>
                  </item>
@@ -1373,7 +1341,7 @@
                     <double>10</double>
                    </property>
                    <property name="value">
-                    <double>0</double>
+                    <double>250</double>
                    </property>
                    <property name="suffix">
                     <string> kW</string>
@@ -1387,6 +1355,9 @@
                    <property name="wrapping">
                     <bool>false</bool>
                    </property>
+                   <property name="specialValueText">
+                    <string>Required</string>
+                   </property>
                   </widget>
                  </item>
                  <item row="1" column="0">
@@ -1397,14 +1368,14 @@
                    <property name="wordWrap">
                     <bool>true</bool>
                    </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
                    <property name="buddy">
                     <cstring>spin_opt_power_max_kw</cstring>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
                    </property>
                   </widget>
                  </item>
@@ -1423,7 +1394,7 @@
                     <double>10</double>
                    </property>
                    <property name="value">
-                    <double>0</double>
+                    <double>2500</double>
                    </property>
                    <property name="suffix">
                     <string> kW</string>
@@ -1437,6 +1408,9 @@
                    <property name="wrapping">
                     <bool>false</bool>
                    </property>
+                   <property name="specialValueText">
+                    <string>Required</string>
+                   </property>
                   </widget>
                  </item>
                  <item row="2" column="0">
@@ -1447,14 +1421,14 @@
                    <property name="wordWrap">
                     <bool>true</bool>
                    </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
                    <property name="buddy">
                     <cstring>spin_opt_energy_min_kwh</cstring>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
                    </property>
                   </widget>
                  </item>
@@ -1473,7 +1447,7 @@
                     <double>10</double>
                    </property>
                    <property name="value">
-                    <double>0</double>
+                    <double>250</double>
                    </property>
                    <property name="suffix">
                     <string> kWh</string>
@@ -1487,6 +1461,9 @@
                    <property name="wrapping">
                     <bool>false</bool>
                    </property>
+                   <property name="specialValueText">
+                    <string>Required</string>
+                   </property>
                   </widget>
                  </item>
                  <item row="3" column="0">
@@ -1497,14 +1474,14 @@
                    <property name="wordWrap">
                     <bool>true</bool>
                    </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
                    <property name="buddy">
                     <cstring>spin_opt_energy_max_kwh</cstring>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
                    </property>
                   </widget>
                  </item>
@@ -1523,7 +1500,7 @@
                     <double>10</double>
                    </property>
                    <property name="value">
-                    <double>0</double>
+                    <double>15000</double>
                    </property>
                    <property name="suffix">
                     <string> kWh</string>
@@ -1537,190 +1514,206 @@
                    <property name="wrapping">
                     <bool>false</bool>
                    </property>
+                   <property name="specialValueText">
+                    <string>Required</string>
+                   </property>
                   </widget>
                  </item>
-                </layout>
-               </widget>
-              </item>
-              <item>
-               <widget class="QGroupBox" name="group_gwo_settings">
-                <property name="title">
-                 <string>GWO Settings</string>
-                </property>
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <layout class="QFormLayout" name="group_gwo_settings_layout">
-                 <property name="leftMargin">
-                  <number>12</number>
-                 </property>
-                 <property name="topMargin">
-                  <number>12</number>
-                 </property>
-                 <property name="rightMargin">
-                  <number>12</number>
-                 </property>
-                 <property name="bottomMargin">
-                  <number>12</number>
-                 </property>
+                 <item row="4" column="0">
+                  <widget class="QLabel" name="lbl_spin_opt_power_step_kw">
+                   <property name="text">
+                    <string>Power step</string>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="4" column="1">
+                  <widget class="QDoubleSpinBox" name="spin_opt_power_step_kw">
+                   <property name="decimals">
+                    <number>2</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0</double>
+                   </property>
+                   <property name="maximum">
+                    <double>1000000000.0</double>
+                   </property>
+                   <property name="value">
+                    <double>50</double>
+                   </property>
+                   <property name="keyboardTracking">
+                    <bool>false</bool>
+                   </property>
+                   <property name="suffix">
+                    <string> kW</string>
+                   </property>
+                   <property name="toolTip">
+                    <string>Power capacity grid increment.</string>
+                   </property>
+                   <property name="specialValueText">
+                    <string>Required</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="0">
+                  <widget class="QLabel" name="lbl_spin_opt_energy_step_kwh">
+                   <property name="text">
+                    <string>Energy step</string>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="1">
+                  <widget class="QDoubleSpinBox" name="spin_opt_energy_step_kwh">
+                   <property name="decimals">
+                    <number>2</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0</double>
+                   </property>
+                   <property name="maximum">
+                    <double>1000000000.0</double>
+                   </property>
+                   <property name="value">
+                    <double>50</double>
+                   </property>
+                   <property name="keyboardTracking">
+                    <bool>false</bool>
+                   </property>
+                   <property name="suffix">
+                    <string> kWh</string>
+                   </property>
+                   <property name="toolTip">
+                    <string>Energy capacity grid increment.</string>
+                   </property>
+                   <property name="specialValueText">
+                    <string>Required</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="0">
+                  <widget class="QLabel" name="lbl_spin_opt_duration_min_hours">
+                   <property name="text">
+                    <string>Minimum duration (E/P)</string>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                   <property name="buddy">
+                    <cstring>spin_opt_duration_min_hours</cstring>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="1">
+                  <widget class="QDoubleSpinBox" name="spin_opt_duration_min_hours">
+                   <property name="decimals">
+                    <number>2</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0.01</double>
+                   </property>
+                   <property name="maximum">
+                    <double>1000.0</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.5</double>
+                   </property>
+                   <property name="value">
+                    <double>2.0</double>
+                   </property>
+                   <property name="keyboardTracking">
+                    <bool>false</bool>
+                   </property>
+                   <property name="suffix">
+                    <string> h</string>
+                   </property>
+                   <property name="toolTip">
+                    <string>Minimum permitted nameplate energy-to-power ratio, in hours.</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="7" column="0">
+                  <widget class="QLabel" name="lbl_spin_opt_duration_max_hours">
+                   <property name="text">
+                    <string>Maximum duration (E/P)</string>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                   <property name="buddy">
+                    <cstring>spin_opt_duration_max_hours</cstring>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="7" column="1">
+                  <widget class="QDoubleSpinBox" name="spin_opt_duration_max_hours">
+                   <property name="decimals">
+                    <number>2</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0.01</double>
+                   </property>
+                   <property name="maximum">
+                    <double>1000.0</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.5</double>
+                   </property>
+                   <property name="value">
+                    <double>12.0</double>
+                   </property>
+                   <property name="keyboardTracking">
+                    <bool>false</bool>
+                   </property>
+                   <property name="suffix">
+                    <string> h</string>
+                   </property>
+                   <property name="toolTip">
+                    <string>Maximum permitted nameplate energy-to-power ratio, in hours.</string>
+                   </property>
+                  </widget>
+                 </item>
                  <property name="horizontalSpacing">
-                  <number>12</number>
+                  <number>18</number>
                  </property>
                  <property name="verticalSpacing">
-                  <number>8</number>
+                  <number>10</number>
+                 </property>
+                 <property name="rowWrapPolicy">
+                  <enum>QFormLayout::RowWrapPolicy::DontWrapRows</enum>
                  </property>
                  <property name="fieldGrowthPolicy">
                   <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
                  </property>
-                 <property name="rowWrapPolicy">
-                  <enum>QFormLayout::RowWrapPolicy::WrapLongRows</enum>
-                 </property>
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="lbl_spin_gwo_population">
-                   <property name="text">
-                    <string>GWO population</string>
-                   </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="buddy">
-                    <cstring>spin_gwo_population</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QSpinBox" name="spin_gwo_population">
-                   <property name="minimum">
-                    <number>3</number>
-                   </property>
-                   <property name="maximum">
-                    <number>100000</number>
-                   </property>
-                   <property name="singleStep">
-                    <number>1</number>
-                   </property>
-                   <property name="value">
-                    <number>12</number>
-                   </property>
-                   <property name="keyboardTracking">
-                    <bool>false</bool>
-                   </property>
-                   <property name="wrapping">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="lbl_spin_gwo_iterations">
-                   <property name="text">
-                    <string>GWO iterations</string>
-                   </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="buddy">
-                    <cstring>spin_gwo_iterations</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QSpinBox" name="spin_gwo_iterations">
-                   <property name="minimum">
-                    <number>1</number>
-                   </property>
-                   <property name="maximum">
-                    <number>1000000</number>
-                   </property>
-                   <property name="singleStep">
-                    <number>1</number>
-                   </property>
-                   <property name="value">
-                    <number>20</number>
-                   </property>
-                   <property name="keyboardTracking">
-                    <bool>false</bool>
-                   </property>
-                   <property name="wrapping">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="0">
-                  <widget class="QLabel" name="lbl_spin_gwo_seed">
-                   <property name="text">
-                    <string>GWO seed</string>
-                   </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="buddy">
-                    <cstring>spin_gwo_seed</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="1">
-                  <widget class="QSpinBox" name="spin_gwo_seed">
-                   <property name="minimum">
-                    <number>0</number>
-                   </property>
-                   <property name="maximum">
-                    <number>2147483647</number>
-                   </property>
-                   <property name="singleStep">
-                    <number>1</number>
-                   </property>
-                   <property name="value">
-                    <number>42</number>
-                   </property>
-                   <property name="keyboardTracking">
-                    <bool>false</bool>
-                   </property>
-                   <property name="wrapping">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
-                 </item>
                 </layout>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="lbl_wsm_weights">
-                <property name="text">
-                 <string>Raw WSM: cost 0.50; curtailment 0.25; shedding 0.25. No objective normalization.</string>
-                </property>
-                <property name="wordWrap">
-                 <bool>true</bool>
-                </property>
                </widget>
               </item>
               <item>
                <widget class="QLabel" name="lbl_optimization_status">
                 <property name="text">
-                 <string>Min/max search integration is pending; current backend uses size lists.</string>
+                 <string>Only power/energy combinations within the configured E/P duration range are simulated.</string>
                 </property>
                 <property name="wordWrap">
                  <bool>true</bool>
+                </property>
+                <property name="visible">
+                 <bool>false</bool>
                 </property>
                </widget>
               </item>
@@ -1740,6 +1733,21 @@
                 </property>
                </spacer>
               </item>
+              <property name="leftMargin">
+               <number>12</number>
+              </property>
+              <property name="topMargin">
+               <number>12</number>
+              </property>
+              <property name="rightMargin">
+               <number>12</number>
+              </property>
+              <property name="bottomMargin">
+               <number>12</number>
+              </property>
+              <property name="spacing">
+               <number>14</number>
+              </property>
              </layout>
             </widget>
            </widget>
@@ -1781,25 +1789,36 @@
               </rect>
              </property>
              <layout class="QVBoxLayout" name="layout_contents_economics">
-              <property name="leftMargin">
-               <number>8</number>
-              </property>
-              <property name="topMargin">
-               <number>8</number>
-              </property>
-              <property name="rightMargin">
-               <number>8</number>
-              </property>
-              <property name="bottomMargin">
-               <number>8</number>
-              </property>
-              <property name="spacing">
-               <number>8</number>
-              </property>
+              <item>
+               <widget class="QLabel" name="lbl_economics_heading">
+                <property name="text">
+                 <string>Economics</string>
+                </property>
+                <property name="wordWrap">
+                 <bool>true</bool>
+                </property>
+                <property name="role" stdset="0">
+                 <string>section</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="lbl_economics_description">
+                <property name="wordWrap">
+                 <bool>true</bool>
+                </property>
+                <property name="role" stdset="0">
+                 <string>hint</string>
+                </property>
+                <property name="text">
+                 <string>Annual costs use real capital recovery, yearly maintenance and hourly energy charges.</string>
+                </property>
+               </widget>
+              </item>
               <item>
                <widget class="QGroupBox" name="group_economic_inputs">
                 <property name="title">
-                 <string>Cost coefficients supplied</string>
+                 <string>Annual economics</string>
                 </property>
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
@@ -1808,10 +1827,13 @@
                  </sizepolicy>
                 </property>
                 <property name="checkable">
-                 <bool>true</bool>
+                 <bool>false</bool>
                 </property>
                 <property name="checked">
-                 <bool>false</bool>
+                 <bool>true</bool>
+                </property>
+                <property name="toolTip">
+                 <string>Costs are annualized with CRF, O&amp;M and grid penalties. Use explicit tariff assumptions.</string>
                 </property>
                 <layout class="QFormLayout" name="group_economic_inputs_layout">
                  <property name="leftMargin">
@@ -1827,108 +1849,327 @@
                   <number>12</number>
                  </property>
                  <property name="horizontalSpacing">
-                  <number>12</number>
+                  <number>18</number>
                  </property>
                  <property name="verticalSpacing">
-                  <number>8</number>
+                  <number>10</number>
                  </property>
-                 <property name="fieldGrowthPolicy">
-                  <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
-                 </property>
-                 <property name="rowWrapPolicy">
-                  <enum>QFormLayout::RowWrapPolicy::WrapLongRows</enum>
-                 </property>
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="lbl_spin_cost_per_kwh">
+                 <item row="0" column="0" colspan="2">
+                  <widget class="QLabel" name="lbl_tariff_section">
                    <property name="text">
-                    <string>Cost per kWh</string>
+                    <string>Grid prices · required</string>
                    </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="buddy">
-                    <cstring>spin_cost_per_kwh</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QDoubleSpinBox" name="spin_cost_per_kwh">
-                   <property name="decimals">
-                    <number>2</number>
-                   </property>
-                   <property name="minimum">
-                    <double>0</double>
-                   </property>
-                   <property name="maximum">
-                    <double>1000000000</double>
-                   </property>
-                   <property name="singleStep">
-                    <double>10</double>
-                   </property>
-                   <property name="value">
-                    <double>0</double>
-                   </property>
-                   <property name="suffix">
-                    <string> /kWh</string>
-                   </property>
-                   <property name="keyboardTracking">
-                    <bool>false</bool>
-                   </property>
-                   <property name="wrapping">
-                    <bool>false</bool>
+                   <property name="role" stdset="0">
+                    <string>section</string>
                    </property>
                   </widget>
                  </item>
                  <item row="1" column="0">
-                  <widget class="QLabel" name="lbl_spin_cost_per_kw">
+                  <widget class="QLabel" name="lbl_spin_grid_import_tariff">
                    <property name="text">
-                    <string>Cost per kW</string>
-                   </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
+                    <string>Import price (USD/kWh)</string>
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>180</width>
+                     <width>205</width>
                      <height>0</height>
                     </size>
-                   </property>
-                   <property name="buddy">
-                    <cstring>spin_cost_per_kw</cstring>
                    </property>
                   </widget>
                  </item>
                  <item row="1" column="1">
-                  <widget class="QDoubleSpinBox" name="spin_cost_per_kw">
+                  <widget class="QDoubleSpinBox" name="spin_grid_import_tariff">
                    <property name="decimals">
-                    <number>2</number>
+                    <number>4</number>
                    </property>
                    <property name="minimum">
                     <double>0</double>
                    </property>
                    <property name="maximum">
-                    <double>1000000000</double>
-                   </property>
-                   <property name="singleStep">
-                    <double>10</double>
+                    <double>100000000</double>
                    </property>
                    <property name="value">
                     <double>0</double>
                    </property>
-                   <property name="suffix">
-                    <string> /kW</string>
+                   <property name="keyboardTracking">
+                    <bool>false</bool>
+                   </property>
+                   <property name="toolTip">
+                    <string>Import tariff (/kWh)</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="lbl_spin_grid_export_tariff">
+                   <property name="text">
+                    <string>Export credit (USD/kWh)</string>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget class="QDoubleSpinBox" name="spin_grid_export_tariff">
+                   <property name="decimals">
+                    <number>4</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0</double>
+                   </property>
+                   <property name="maximum">
+                    <double>100000000</double>
+                   </property>
+                   <property name="value">
+                    <double>0</double>
                    </property>
                    <property name="keyboardTracking">
                     <bool>false</bool>
                    </property>
-                   <property name="wrapping">
+                   <property name="toolTip">
+                    <string>Export credit (/kWh)</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="4" column="0" colspan="2">
+                  <widget class="QLabel" name="lbl_investment_section">
+                   <property name="text">
+                    <string>Battery investment</string>
+                   </property>
+                   <property name="role" stdset="0">
+                    <string>section</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="9" column="0">
+                  <widget class="QLabel" name="lbl_spin_bess_lifetime">
+                   <property name="text">
+                    <string>BESS useful life (years)</string>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="9" column="1">
+                  <widget class="QDoubleSpinBox" name="spin_bess_lifetime">
+                   <property name="decimals">
+                    <number>0</number>
+                   </property>
+                   <property name="minimum">
+                    <double>1</double>
+                   </property>
+                   <property name="maximum">
+                    <double>100000000</double>
+                   </property>
+                   <property name="value">
+                    <double>10</double>
+                   </property>
+                   <property name="keyboardTracking">
                     <bool>false</bool>
+                   </property>
+                   <property name="toolTip">
+                    <string>Straight-line annual capital cost = initial BESS installation cost / lifetime years; must be at least 1</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="10" column="0">
+                  <widget class="QLabel" name="lbl_spin_annual_om_percent">
+                   <property name="text">
+                    <string>Annual O&amp;M (% of BESS cost)</string>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="10" column="1">
+                  <widget class="QDoubleSpinBox" name="spin_annual_om_percent">
+                   <property name="decimals">
+                    <number>3</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0</double>
+                   </property>
+                   <property name="maximum">
+                    <double>100000000</double>
+                   </property>
+                   <property name="value">
+                    <double>2</double>
+                   </property>
+                   <property name="keyboardTracking">
+                    <bool>false</bool>
+                   </property>
+                   <property name="toolTip">
+                    <string>Annual operation and maintenance = BESS initial purchase cost × this percentage / 100</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="11" column="0" colspan="2">
+                  <widget class="QLabel" name="lbl_penalty_section">
+                   <property name="text">
+                    <string>Operating penalties</string>
+                   </property>
+                   <property name="role" stdset="0">
+                    <string>section</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="12" column="0">
+                  <widget class="QLabel" name="lbl_spin_curtailment_penalty">
+                   <property name="text">
+                    <string>Curtailment (USD/kWh)</string>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="12" column="1">
+                  <widget class="QDoubleSpinBox" name="spin_curtailment_penalty">
+                   <property name="decimals">
+                    <number>3</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0</double>
+                   </property>
+                   <property name="maximum">
+                    <double>100000000</double>
+                   </property>
+                   <property name="value">
+                    <double>0.07</double>
+                   </property>
+                   <property name="keyboardTracking">
+                    <bool>false</bool>
+                   </property>
+                   <property name="toolTip">
+                    <string>Curtailment (/kWh)</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="13" column="0">
+                  <widget class="QLabel" name="lbl_spin_shedding_penalty">
+                   <property name="text">
+                    <string>Unserved load (USD/kWh)</string>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>205</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="13" column="1">
+                  <widget class="QDoubleSpinBox" name="spin_shedding_penalty">
+                   <property name="decimals">
+                    <number>3</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0</double>
+                   </property>
+                   <property name="maximum">
+                    <double>100000000</double>
+                   </property>
+                   <property name="value">
+                    <double>12</double>
+                   </property>
+                   <property name="keyboardTracking">
+                    <bool>false</bool>
+                   </property>
+                   <property name="toolTip">
+                    <string>Load shedding (/kWh)</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="14" column="0">
+                  <widget class="QLabel" name="lbl_combo_terminal_policy">
+                   <property name="text">
+                    <string>Annual terminal energy</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="14" column="1">
+                  <widget class="QComboBox" name="combo_terminal_policy">
+                   <item>
+                    <property name="text">
+                     <string>Return to initial SOC</string>
+                    </property>
+                    <property name="userData">
+                     <string>equal_soc</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Price terminal energy difference</string>
+                    </property>
+                    <property name="userData">
+                     <string>priced_energy</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <property name="rowWrapPolicy">
+                  <enum>QFormLayout::RowWrapPolicy::DontWrapRows</enum>
+                 </property>
+                 <property name="fieldGrowthPolicy">
+                  <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
+                 </property>
+                 <item row="5" column="0">
+                  <widget class="QLabel" name="lbl_battery_energy_capex">
+                   <property name="text">
+                    <string>Battery energy CAPEX (USD/kWh)</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="1">
+                  <widget class="QDoubleSpinBox" name="spin_battery_energy_capex">
+                   <property name="minimum">
+                    <double>0.0</double>
+                   </property>
+                   <property name="maximum">
+                    <double>10000.0</double>
+                   </property>
+                   <property name="value">
+                    <double>200.0</double>
+                   </property>
+                   <property name="decimals">
+                    <number>2</number>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="0">
+                  <widget class="QLabel" name="lbl_inverter_capex">
+                   <property name="text">
+                    <string>Inverter CAPEX (USD/kVA)</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="1">
+                  <widget class="QDoubleSpinBox" name="spin_inverter_capex">
+                   <property name="minimum">
+                    <double>0.0</double>
+                   </property>
+                   <property name="maximum">
+                    <double>10000.0</double>
+                   </property>
+                   <property name="value">
+                    <double>175.0</double>
+                   </property>
+                   <property name="decimals">
+                    <number>2</number>
                    </property>
                   </widget>
                  </item>
@@ -1951,67 +2192,18 @@
                   <number>0</number>
                  </property>
                  <property name="horizontalSpacing">
-                  <number>12</number>
+                  <number>18</number>
                  </property>
                  <property name="verticalSpacing">
-                  <number>8</number>
+                  <number>10</number>
+                 </property>
+                 <property name="rowWrapPolicy">
+                  <enum>QFormLayout::RowWrapPolicy::DontWrapRows</enum>
                  </property>
                  <property name="fieldGrowthPolicy">
                   <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
                  </property>
-                 <property name="rowWrapPolicy">
-                  <enum>QFormLayout::RowWrapPolicy::WrapLongRows</enum>
-                 </property>
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="lbl_edit_currency">
-                   <property name="text">
-                    <string>Currency</string>
-                   </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="buddy">
-                    <cstring>edit_currency</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QLineEdit" name="edit_currency">
-                   <property name="text">
-                    <string>SAR</string>
-                   </property>
-                   <property name="maxLength">
-                    <number>16</number>
-                   </property>
-                  </widget>
-                 </item>
                 </layout>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="lbl_cost_formula">
-                <property name="text">
-                 <string>Investment cost = cost/kWh x battery kWh + cost/kW x battery kW</string>
-                </property>
-                <property name="wordWrap">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="lbl_cost_note">
-                <property name="text">
-                 <string>Unchecked means prices are unavailable, not free. Optimization requires both coefficients.</string>
-                </property>
-                <property name="wordWrap">
-                 <bool>true</bool>
-                </property>
                </widget>
               </item>
               <item>
@@ -2030,423 +2222,21 @@
                 </property>
                </spacer>
               </item>
-             </layout>
-            </widget>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-        <widget class="QWidget" name="page_uncertainty">
-         <layout class="QVBoxLayout" name="layout_page_uncertainty">
-          <property name="leftMargin">
-           <number>0</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
-           <number>0</number>
-          </property>
-          <property name="spacing">
-           <number>8</number>
-          </property>
-          <item>
-           <widget class="QScrollArea" name="scroll_uncertainty">
-            <property name="frameShape">
-             <enum>QFrame::Shape::NoFrame</enum>
-            </property>
-            <property name="widgetResizable">
-             <bool>true</bool>
-            </property>
-            <widget class="QWidget" name="contents_uncertainty">
-             <property name="geometry">
-              <rect>
-               <x>0</x>
-               <y>0</y>
-               <width>680</width>
-               <height>580</height>
-              </rect>
-             </property>
-             <layout class="QVBoxLayout" name="layout_contents_uncertainty">
               <property name="leftMargin">
-               <number>8</number>
+               <number>12</number>
               </property>
               <property name="topMargin">
-               <number>8</number>
+               <number>12</number>
               </property>
               <property name="rightMargin">
-               <number>8</number>
+               <number>12</number>
               </property>
               <property name="bottomMargin">
-               <number>8</number>
+               <number>12</number>
               </property>
               <property name="spacing">
-               <number>8</number>
+               <number>14</number>
               </property>
-              <item>
-               <widget class="QGroupBox" name="group_uncertainty">
-                <property name="title">
-                 <string>Use uncertainty-aware optimization</string>
-                </property>
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="checkable">
-                 <bool>true</bool>
-                </property>
-                <property name="checked">
-                 <bool>false</bool>
-                </property>
-                <layout class="QFormLayout" name="group_uncertainty_layout">
-                 <property name="leftMargin">
-                  <number>12</number>
-                 </property>
-                 <property name="topMargin">
-                  <number>12</number>
-                 </property>
-                 <property name="rightMargin">
-                  <number>12</number>
-                 </property>
-                 <property name="bottomMargin">
-                  <number>12</number>
-                 </property>
-                 <property name="horizontalSpacing">
-                  <number>12</number>
-                 </property>
-                 <property name="verticalSpacing">
-                  <number>8</number>
-                 </property>
-                 <property name="fieldGrowthPolicy">
-                  <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
-                 </property>
-                 <property name="rowWrapPolicy">
-                  <enum>QFormLayout::RowWrapPolicy::WrapLongRows</enum>
-                 </property>
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="lbl_spin_forecast_hours">
-                   <property name="text">
-                    <string>Forecast horizon</string>
-                   </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="buddy">
-                    <cstring>spin_forecast_hours</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QSpinBox" name="spin_forecast_hours">
-                   <property name="minimum">
-                    <number>2</number>
-                   </property>
-                   <property name="maximum">
-                    <number>1000000</number>
-                   </property>
-                   <property name="singleStep">
-                    <number>1</number>
-                   </property>
-                   <property name="value">
-                    <number>2160</number>
-                   </property>
-                   <property name="suffix">
-                    <string> h</string>
-                   </property>
-                   <property name="keyboardTracking">
-                    <bool>false</bool>
-                   </property>
-                   <property name="wrapping">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="lbl_spin_scenario_count">
-                   <property name="text">
-                    <string>Generated scenarios</string>
-                   </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="buddy">
-                    <cstring>spin_scenario_count</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QSpinBox" name="spin_scenario_count">
-                   <property name="minimum">
-                    <number>1</number>
-                   </property>
-                   <property name="maximum">
-                    <number>100000</number>
-                   </property>
-                   <property name="singleStep">
-                    <number>1</number>
-                   </property>
-                   <property name="value">
-                    <number>100</number>
-                   </property>
-                   <property name="keyboardTracking">
-                    <bool>false</bool>
-                   </property>
-                   <property name="wrapping">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="0">
-                  <widget class="QLabel" name="lbl_spin_best_count">
-                   <property name="text">
-                    <string>Selected best cases</string>
-                   </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="buddy">
-                    <cstring>spin_best_count</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="1">
-                  <widget class="QSpinBox" name="spin_best_count">
-                   <property name="minimum">
-                    <number>0</number>
-                   </property>
-                   <property name="maximum">
-                    <number>100000</number>
-                   </property>
-                   <property name="singleStep">
-                    <number>1</number>
-                   </property>
-                   <property name="value">
-                    <number>15</number>
-                   </property>
-                   <property name="keyboardTracking">
-                    <bool>false</bool>
-                   </property>
-                   <property name="wrapping">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="3" column="0">
-                  <widget class="QLabel" name="lbl_spin_worst_count">
-                   <property name="text">
-                    <string>Selected worst cases</string>
-                   </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="buddy">
-                    <cstring>spin_worst_count</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="3" column="1">
-                  <widget class="QSpinBox" name="spin_worst_count">
-                   <property name="minimum">
-                    <number>0</number>
-                   </property>
-                   <property name="maximum">
-                    <number>100000</number>
-                   </property>
-                   <property name="singleStep">
-                    <number>1</number>
-                   </property>
-                   <property name="value">
-                    <number>15</number>
-                   </property>
-                   <property name="keyboardTracking">
-                    <bool>false</bool>
-                   </property>
-                   <property name="wrapping">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="4" column="0">
-                  <widget class="QLabel" name="lbl_spin_random_count">
-                   <property name="text">
-                    <string>Selected random cases</string>
-                   </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="buddy">
-                    <cstring>spin_random_count</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="4" column="1">
-                  <widget class="QSpinBox" name="spin_random_count">
-                   <property name="minimum">
-                    <number>0</number>
-                   </property>
-                   <property name="maximum">
-                    <number>100000</number>
-                   </property>
-                   <property name="singleStep">
-                    <number>1</number>
-                   </property>
-                   <property name="value">
-                    <number>15</number>
-                   </property>
-                   <property name="keyboardTracking">
-                    <bool>false</bool>
-                   </property>
-                   <property name="wrapping">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="5" column="0">
-                  <widget class="QLabel" name="lbl_spin_uncertainty_seed">
-                   <property name="text">
-                    <string>Scenario generation seed</string>
-                   </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="buddy">
-                    <cstring>spin_uncertainty_seed</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="5" column="1">
-                  <widget class="QSpinBox" name="spin_uncertainty_seed">
-                   <property name="minimum">
-                    <number>0</number>
-                   </property>
-                   <property name="maximum">
-                    <number>2147483647</number>
-                   </property>
-                   <property name="singleStep">
-                    <number>1</number>
-                   </property>
-                   <property name="value">
-                    <number>42</number>
-                   </property>
-                   <property name="keyboardTracking">
-                    <bool>false</bool>
-                   </property>
-                   <property name="wrapping">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="6" column="0">
-                  <widget class="QLabel" name="lbl_spin_selection_seed">
-                   <property name="text">
-                    <string>Scenario selection seed</string>
-                   </property>
-                   <property name="wordWrap">
-                    <bool>true</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>180</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                   <property name="buddy">
-                    <cstring>spin_selection_seed</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="6" column="1">
-                  <widget class="QSpinBox" name="spin_selection_seed">
-                   <property name="minimum">
-                    <number>0</number>
-                   </property>
-                   <property name="maximum">
-                    <number>2147483647</number>
-                   </property>
-                   <property name="singleStep">
-                    <number>1</number>
-                   </property>
-                   <property name="value">
-                    <number>42</number>
-                   </property>
-                   <property name="keyboardTracking">
-                    <bool>false</bool>
-                   </property>
-                   <property name="wrapping">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="lbl_uncertainty_note">
-                <property name="text">
-                 <string>Selected cases are a stress portfolio, not probability-preserving reduction. Synthetic history does not validate real forecast skill.</string>
-                </property>
-                <property name="wordWrap">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <spacer name="spacer_uncertainty">
-                <property name="orientation">
-                 <enum>Qt::Orientation::Vertical</enum>
-                </property>
-                <property name="sizeType">
-                 <enum>QSizePolicy::Policy::Expanding</enum>
-                </property>
-                <property name="sizeHint">
-                 <size>
-                  <width>20</width>
-                  <height>20</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
              </layout>
             </widget>
            </widget>
@@ -2459,9 +2249,28 @@
     </widget>
    </item>
    <item>
-    <widget class="QLabel" name="lbl_settings_validation">
+    <widget class="QLabel" name="lbl_compute_status">
      <property name="text">
-      <string>Settings have not been applied</string>
+      <string />
+     </property>
+     <property name="visible">
+      <bool>false</bool>
+     </property>
+     <property name="role" stdset="0">
+      <string>status</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="lbl_settings_validation">
+     <property name="role" stdset="0">
+      <string>status</string>
+     </property>
+     <property name="text">
+      <string>Changes take effect when you choose Apply or Save settings.</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
@@ -2484,6 +2293,21 @@
      </property>
     </widget>
    </item>
+   <property name="leftMargin">
+    <number>18</number>
+   </property>
+   <property name="topMargin">
+    <number>18</number>
+   </property>
+   <property name="rightMargin">
+    <number>18</number>
+   </property>
+   <property name="bottomMargin">
+    <number>18</number>
+   </property>
+   <property name="spacing">
+    <number>12</number>
+   </property>
   </layout>
  </widget>
  <tabstops>
@@ -2494,12 +2318,8 @@
   <tabstop>spin_soc_min_percent</tabstop>
   <tabstop>spin_soc_max_percent</tabstop>
   <tabstop>spin_soc_initial_percent</tabstop>
-  <tabstop>spin_eta_charge_percent</tabstop>
-  <tabstop>spin_eta_discharge_percent</tabstop>
   <tabstop>spin_voltage_min_pu</tabstop>
   <tabstop>spin_voltage_max_pu</tabstop>
-  <tabstop>spin_reserve_percent</tabstop>
-  <tabstop>spin_reserve_hours</tabstop>
   <tabstop>spin_import_limit_kw</tabstop>
   <tabstop>spin_export_limit_kw</tabstop>
   <tabstop>chk_allow_curtailment</tabstop>
@@ -2509,20 +2329,10 @@
   <tabstop>spin_opt_power_max_kw</tabstop>
   <tabstop>spin_opt_energy_min_kwh</tabstop>
   <tabstop>spin_opt_energy_max_kwh</tabstop>
-  <tabstop>spin_gwo_population</tabstop>
-  <tabstop>spin_gwo_iterations</tabstop>
-  <tabstop>spin_gwo_seed</tabstop>
-  <tabstop>spin_cost_per_kwh</tabstop>
-  <tabstop>spin_cost_per_kw</tabstop>
-  <tabstop>edit_currency</tabstop>
-  <tabstop>spin_forecast_hours</tabstop>
-  <tabstop>spin_scenario_count</tabstop>
-  <tabstop>spin_best_count</tabstop>
-  <tabstop>spin_worst_count</tabstop>
-  <tabstop>spin_random_count</tabstop>
-  <tabstop>spin_uncertainty_seed</tabstop>
-  <tabstop>spin_selection_seed</tabstop>
   <tabstop>buttons_settings</tabstop>
+  <tabstop>spin_ga_population</tabstop>
+  <tabstop>spin_max_generations</tabstop>
+  <tabstop>spin_parallel_workers</tabstop>
  </tabstops>
  <resources />
  <connections>
@@ -2531,12 +2341,6 @@
    <signal>currentRowChanged(int)</signal>
    <receiver>stack_settings_pages</receiver>
    <slot>setCurrentIndex(int)</slot>
-  </connection>
-  <connection>
-   <sender>buttons_settings</sender>
-   <signal>rejected()</signal>
-   <receiver>SettingsDialog</receiver>
-   <slot>reject()</slot>
   </connection>
  </connections>
 </ui>

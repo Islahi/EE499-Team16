@@ -20,7 +20,7 @@ class NetworkLayout:
 
 
 def build_layout(network: NetworkModel, branch_sides=None, *, show_properties=False,
-                 show_results=False, bess_bus=None) -> NetworkLayout:
+                 show_results=False, bess_bus=None, fleet_buses=()) -> NetworkLayout:
     """Place longest spines first; reserve entire subtree envelopes on each side.
 
     Overrides are keyed by a lateral's child bus, with 'above'/'below' values
@@ -41,8 +41,8 @@ def build_layout(network: NetworkModel, branch_sides=None, *, show_properties=Fa
     for unit in network.pv_units:
         if "pv" not in devices[unit.bus_id]:
             devices[unit.bus_id].append("pv")
-    if bess_bus in devices:
-        devices[bess_bus].append("bess")
+    for bus in {*fleet_buses, bess_bus} & devices.keys():
+        devices[bus].append("bess")
     device_counts = {}
     children_sorted = {}
     for bus in reversed(forward):

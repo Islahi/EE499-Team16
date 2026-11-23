@@ -1,0 +1,134 @@
+"""EE499 v2: unit tests requiring no Qt or network access."""
+import math
+import sys
+import unittest
+from datetime import datetime
+from pathlib import Path
+from types import SimpleNamespace as NS
+import numpy as np
+import pandas as pd
+
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT))
+from src.approved_methodology import normalize_settings, methodology_record
+from src.metrics import EconomicConfig, evaluate_results
+from src.network_model import Bus, Line, Load, NetworkModel
+from src.single_bess_search import screen_buses
+from src.simulation import SimulationConfig
+from src.forecast_accuracy import compare_forecast
+from src.data_loader import ProfileData
+from src.fbs import OperatingPoint, FBSConfig, run_fbs
+
+class DirectEnergyTests(unittest.TestCase):
+    def test_legacy_assumptions_are_removed(self):
+        original={'spin_discount_rate':6,'spin_annual_om_percent':2,'spin_bess_lifetime':10,
+                  'spin_fixed_cost':123,'group_reserve':True,'spin_reserve_percent':10,
+                  'terminal_policy':'priced_energy','optimizer_algorithm':'GA','spin_grid_import_tariff':.1}
+        result=normalize_settings(original,cpu_total=8)
+        for field in ('spin_discount_rate','spin_annual_om_percent','spin_bess_lifetime',
+                      'spin_fixed_cost','group_reserve','spin_reserve_percent','terminal_policy'):
+            self.assertNotIn(field,result)
+        self.assertEqual(result['optimizer_algorithm'],'GWO')
+        self.assertEqual(result['search_mode'],'standard')
+        self.assertEqual(result['spin_grid_import_tariff'],.1)
+        self.assertIn('weakest',methodology_record()['candidate_screening'])
+        for field in ('discount_rate','lifetime_years','annual_om_fraction','fixed_installation_cost'):
+            self.assertNotIn(field,EconomicConfig.__dataclass_fields__)
+        self.assertNotIn('reserve_fraction',SimulationConfig.__dataclass_fields__)
+
+    def test_33bus_weakest_third_instead_of_fixed_shortlist(self):
+        network=NS(buses=[Bus(i,f'B{i}',12.66,i==1) for i in range(1,34)],slack_bus_id=lambda:1)
+        eligible=range(2,34)
+        steps=[]
+        for hour in range(4):
+            pre={i:(1.0 if i==2 else .95-(i-2)*.001) for i in range(1,34)}
+            steps.append(NS(pre_control_voltage_pu=pre,shedding_by_bus_kw={}))
+        base=NS(steps=steps,dt_hours=1.)
+        sites,ranking,probes=screen_buses(network,base,eligible,SimulationConfig())
+        self.assertEqual(len(sites),11)
+        self.assertNotIn(2,sites)
+        self.assertIn(33,sites)
+        self.assertEqual(probes,0)
+        self.assertEqual(ranking[0]['bus'],33)
+        self.assertEqual({row['bus'] for row in ranking if row['retained']},set(sites))
+        bad=NS(steps=[NS(pre_control_voltage_pu={},shedding_by_bus_kw={})],dt_hours=1.)
+        with self.assertRaisesRegex(ValueError,'Pre-correction voltage'):
+            screen_buses(network,bad,eligible,SimulationConfig())
+
+    def test_direct_annual_objective_no_capex_ownership(self):
+        hours=pd.date_range('2021-01-01',periods=8760,freq='h')
+        steps=[]
+        for when in hours:
+            op=NS(p_load_kw={1:0.,2:196.},p_pv_kw={1:0.,2:50.})
+            flow=NS(converged=True,slack_p_kw=100.,total_loss_p_kw=1.,voltage_mag_pu={1:1.,2:.96})
+            steps.append(NS(timestamp=when,operating_point=op,power_flow=flow,bess_step=None,
+                            voltage_violations={},feasible=True,curtailment_kw=3.,shedding_kw=4.,requested_point=None))
+        sim=NS(steps=steps,dt_hours=1.,completed=True,converged=True,feasible=True)
+        econ=EconomicConfig(grid_import_tariff_per_kwh=.1,grid_export_tariff_per_kwh=0.,
+                            shedding_penalty_per_kwh=12.,curtailment_penalty_per_kwh=.07)
+        result=evaluate_results(sim,econ)
+        self.assertAlmostEqual(result.requested_load_energy_kwh,(196+4)*8760)
+        self.assertAlmostEqual(result.available_pv_energy_kwh,(50+3)*8760)
+        self.assertAlmostEqual(result.annual_grid_cost,100*8760*.1)
+        self.assertAlmostEqual(result.annual_shedding_cost,4*8760*12.)
+        self.assertAlmostEqual(result.annual_curtailment_cost,3*8760*.07)
+        self.assertAlmostEqual(result.annual_total_cost,(100*.1+4*12+3*.07)*8760)
+        self.assertNotIn('annualized_bess_cost',result.__dataclass_fields__)
+
+    def test_forecasting_scores_only_on_post_training_matched_actuals(self):
+        ts=pd.date_range('2021-01-01',periods=48,freq='h')
+        hist=ProfileData.from_arrays(ts,{1:[0]*48,2:[10]*48},
+             {1:[0]*48,2:[0]*48},{1:[0]*48,2:[6]*48},{1:[0]*48,2:[0]*48})
+        future=ProfileData.from_arrays(ts,{1:[0]*48,2:[12]*48},
+             {1:[0]*48,2:[0]*48},{1:[0]*48,2:[7]*48},{1:[0]*48,2:[0]*48})
+        scores,series=compare_forecast(hist,future,{2:'residential'},'2020-12-31 23:00')
+        residential=next(x for x in scores if x['category']=='residential')
+        self.assertEqual(residential['hours'],48)
+        self.assertAlmostEqual(residential['mae_kw'],2.)
+        self.assertAlmostEqual(residential['rmse_kw'],2.)
+        self.assertAlmostEqual(residential['wape_percent'],20.)
+        self.assertEqual(len(series),48*4)
+        with self.assertRaisesRegex(ValueError,'training'):
+            compare_forecast(hist,future,{2:'residential'},'2021-01-01')
+        missing=ProfileData.from_arrays(pd.date_range('2022-01-01',periods=48,freq='h'),
+              future.load_p_kw,future.load_q_kvar,future.pv_p_kw,future.pv_q_kvar)
+        scores,series=compare_forecast(hist,missing,{2:'residential'},'2021-12-31')
+        self.assertEqual((scores,series),([],[]))
+
+    def test_numba_fbs_unchanged(self):
+        buses=[Bus(1,'Slack',12.66,True),Bus(2,'L1',12.66),Bus(3,'L2',12.66)]
+        net=NetworkModel(buses,[Line('a',1,2,.1,.06),Line('b',2,3,.15,.09)],
+                         [Load('load2',2,100,50),Load('load3',3,50,25)],[],100000,60)
+        op=OperatingPoint({1:0,2:100,3:50},{1:0,2:50,3:25},
+                          {1:0,2:0,3:0},{1:0,2:0,3:0},{1:0,2:0,3:0},{1:0,2:0,3:0})
+        result=run_fbs(net,op,FBSConfig())
+        self.assertTrue(result.converged,result.message)
+        self.assertGreater(result.voltage_mag_pu[2],result.voltage_mag_pu[3])
+
+    def test_deprecated_qt_inputs_not_visible(self):
+        source=(ROOT/'src/ui.py').read_text(encoding='utf-8')
+        for control in ('spin_bess_lifetime', 'spin_annual_om_percent',
+                        'combo_optimizer_algorithm', 'spin_discount_rate'):
+            self.assertIn(control,source)
+        self.assertIn('"spin_bess_lifetime", "spin_annual_om_percent",', source)
+        self.assertIn('ga = False', source)
+
+    def test_direct_energy_has_no_representative_day_weights(self):
+        for field in ('annual_day_weights', 'annualization_basis', 'annual_hours'):
+            self.assertNotIn(field,EconomicConfig.__dataclass_fields__)
+        ts=pd.date_range('2021-01-01',periods=8760,freq='h')
+        from src.metrics import validate_annual_inputs
+        econ=EconomicConfig(grid_import_tariff_per_kwh=.1,grid_export_tariff_per_kwh=0)
+        self.assertTrue(validate_annual_inputs(ts,econ))
+        with self.assertRaisesRegex(ValueError,'8760/8784'):
+            validate_annual_inputs(ts[1:],econ)
+
+    def test_offline_dashboard_only_three_sections(self):
+        html=(ROOT/'src/assets/dashboard.html').read_text(encoding='utf-8')
+        script=(ROOT/'src/assets/dashboard.js').read_text(encoding='utf-8')
+        self.assertIn('Annual study results',html)
+        self.assertIn("'Summary','Charts','Forecast accuracy'",script)
+        self.assertIn('forecast_errors',script)
+        self.assertNotIn('annualized_bess_ownership',script)
+
+if __name__=='__main__':unittest.main()

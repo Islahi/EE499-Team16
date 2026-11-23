@@ -8,8 +8,8 @@ IMPLEMENTATION = Path(__file__).resolve().parent
 REPOSITORY = IMPLEMENTATION.parent
 sys.path.insert(0, str(IMPLEMENTATION))
 
-from src_accelerated.fbs import FBSConfig, OperatingPoint, run_fbs
-from src_accelerated.network_loader import load_network
+from src.fbs import FBSConfig, OperatingPoint, run_fbs
+from src.network_loader import load_network
 
 
 def base_operating_point(network):

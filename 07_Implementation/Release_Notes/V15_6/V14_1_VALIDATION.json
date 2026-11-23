@@ -1,0 +1,24 @@
+{
+  "version": "V14.1 experimental",
+  "source": "User-uploaded V14 source and V13/V14 2026-11-22 results",
+  "unit_tests_passed": 102,
+  "unit_tests_failed": 0,
+  "dashboard_tests": {
+    "v13": {
+      "original_html_bytes": 88039386,
+      "reproduced_html_bytes": 4644312,
+      "wall_seconds_linux": 4.7,
+      "has_8760_hours_for_both_scenarios": true
+    },
+    "v14": {
+      "original_html_bytes": 44294480,
+      "reproduced_html_bytes": 2420617,
+      "wall_seconds_linux": 3.72,
+      "has_8760_hours_for_baseline": true
+    }
+  },
+  "full_year_reoptimization_performed": false,
+  "windows_gui_tested": false,
+  "github_pushed": false,
+  "notes": "Report payload drops ONLY data unused by the simplified 3-tab UI; all canonical original CSV/JSON remain unchanged."
+}

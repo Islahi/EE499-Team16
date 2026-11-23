@@ -1,0 +1,40 @@
+{
+  "baseline": "Uploaded BESS_Planning_Karve_Multi_v15_Sindi_SESS_Backend.zip",
+  "version": "V15.3 strict static Sindi adaptation",
+  "automated_tests": {
+    "pytest_passed": 116,
+    "warnings": 2,
+    "subtests_passed": 21
+  },
+  "real_network": {
+    "buses": 33,
+    "input_hours": 8760,
+    "smoke_hours": 48,
+    "no_bess_completed": true,
+    "no_bess_feasible": true,
+    "one_bess_bus18_completed": true,
+    "one_bess_bus18_feasible": true,
+    "one_bess_q_when_p_zero_hours": 0,
+    "one_bess_daily_soc_restored": true,
+    "two_bess_bus18_bus30_completed": true,
+    "two_bess_feasible": false,
+    "two_bess_soc_restored": true
+  },
+  "dashboard": {
+    "original_saved_Sess_backend_annual_regenerated": true,
+    "html_bytes": 4539383,
+    "rebuild_seconds_approx": 4.04,
+    "integrity_manifest_verified": true,
+    "ui_windows_completion_verified": false
+  },
+  "costing_smoke": {
+    "single_bess_upfront_capex_usd": 910526.32,
+    "real_crf_approx": 0.123048
+  },
+  "limitations": [
+    "No full-year strict optimized multi-BESS run",
+    "No live Windows Qt GUI test",
+    "Static adaptation, not complete original mobile-GRG paper",
+    "Offline perfect foresight input profiles"
+  ]
+}

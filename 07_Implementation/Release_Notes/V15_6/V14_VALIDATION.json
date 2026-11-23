@@ -1,0 +1,69 @@
+{
+  "version": "14.0",
+  "source": "User-uploaded V13 ZIP",
+  "status": "Implementation and local unit/smoke tests; no annual numerical optimization",
+  "duration_constraint": {
+    "type": "nameplate E/P in hours",
+    "minimum_hours": 2.0,
+    "maximum_hours": 12.0,
+    "power_range_kw": [
+      250,
+      2500,
+      50
+    ],
+    "energy_range_kwh": [
+      250,
+      15000,
+      50
+    ],
+    "power_catalog_count": 46,
+    "energy_catalog_count": 296,
+    "unconstrained_pairs_per_bus": 13616,
+    "feasible_pairs_per_bus": 8796,
+    "pruned_percentage": 35.4
+  },
+  "checks": {
+    "test_command": "python -m unittest discover -s tests -p test_*.py -q",
+    "test_count": 97,
+    "test_result": "PASS",
+    "parallel_spawn_workers": 2,
+    "parallel_spawn_result": "PASS",
+    "Qt_ui_xml": "parsed",
+    "windows_gui_runtime": "not tested; PySide6 not available on host",
+    "8760_hour_optimization": "not run; external data and significant compute required"
+  },
+  "examples": [
+    {
+      "power_kw": 5000,
+      "energy_kwh": 5250,
+      "duration_h": 1.05,
+      "allowed": false
+    },
+    {
+      "power_kw": 3000,
+      "energy_kwh": 250,
+      "duration_h": 0.08333333333333333,
+      "allowed": false
+    },
+    {
+      "power_kw": 250,
+      "energy_kwh": 500,
+      "duration_h": 2,
+      "allowed": true
+    },
+    {
+      "power_kw": 1000,
+      "energy_kwh": 8000,
+      "duration_h": 8,
+      "allowed": true
+    },
+    {
+      "power_kw": 250,
+      "energy_kwh": 50000,
+      "duration_h": 200,
+      "allowed": false
+    }
+  ],
+  "github_reference": "https://github.com/Islahi/EE499-Team16.git",
+  "github_updated": false
+}

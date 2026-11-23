@@ -1,8 +1,8 @@
 """GA population/generation sizing and offspring count verification."""
 import pytest
-from src_accelerated.optimizer import (BESSCandidate, CandidateEvaluation,
+from src.optimizer import (BESSCandidate, CandidateEvaluation,
     OptimizationBounds, OptimizerConfig, genetic_optimize)
-from src_accelerated.network_model import NetworkModel, Bus, Line, Load
+from src.network_model import NetworkModel, Bus, Line, Load
 
 
 @pytest.mark.parametrize('population', [3, 4, 5, 6])

@@ -84,7 +84,7 @@ def main():
     parser.add_argument("--hours", type=int, default=24, help="Number of hours (minimum 2)")
     parser.add_argument("--cost-per-kwh", type=float, help="BESS energy investment coefficient")
     parser.add_argument("--cost-per-kw", type=float, help="BESS power investment coefficient")
-    parser.add_argument("--currency", default="SAR", help="Currency label for both coefficients")
+    parser.add_argument("--currency", default="USD", choices=("USD",), help="Currency for both cost coefficients")
     parser.add_argument("--grid-import-limit-kw", type=float, help="Optional upstream import cap")
     parser.add_argument("--grid-export-limit-kw", type=float, help="Optional upstream export cap")
     parser.add_argument("--pv-rating-kw", type=float, help="Override the demo's bus-4 PV rating")

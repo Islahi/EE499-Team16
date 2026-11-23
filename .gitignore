@@ -14,6 +14,7 @@ __pycache__/
 venv/
 .env
 .env.*
+.venv-neural/
 tools/VideoTranscriber/API_key.txt
 
 # MATLAB / common generated files
@@ -43,7 +44,9 @@ dist/
 # Generated simulation, optimization and scenario-session outputs.
 # Existing tracked reference results remain versioned.
 07_Implementation/Results/*/
-07_Implementation/src_accelerated/Results/*/
+/07_Implementation/src/Results/
+/07_Implementation/src/app_startup_error.txt
+/07_Implementation/windows_gui_check.txt
 
 # Reproducible external source data retained locally, not in Git.
 07_Implementation/Data/Raw/

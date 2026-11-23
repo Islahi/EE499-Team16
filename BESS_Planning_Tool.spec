@@ -1,47 +1,61 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_all
+from pathlib import Path
 
-datas = [('07_Implementation/src_accelerated/assets', 'src_accelerated/assets')]
-binaries = []
-hiddenimports = []
-tmp_ret = collect_all('statsmodels')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
-tmp_ret = collect_all('openpyxl')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, copy_metadata
 
+implementation = Path(SPECPATH) / "07_Implementation"
+package = implementation / "src"
+assets = package / "assets"
 
-a = Analysis(
-    ['07_Implementation/src_accelerated/app.pyw'],
-    pathex=['07_Implementation'],
-    binaries=binaries,
+datas = [
+    (str(assets), "src/assets"),
+    # Numba uses the source path to locate its cache in a frozen application.
+    (str(package / "fbs.py"), "src"),
+]
+datas += collect_data_files("xgboost", includes=["VERSION"])
+for distribution in ("numba", "llvmlite", "numpy", "scikit-learn", "xgboost", "lightgbm"):
+    datas += copy_metadata(distribution)
+
+analysis = Analysis(
+    [str(package / "app.pyw")],
+    pathex=[str(implementation)],
+    binaries=collect_dynamic_libs("xgboost"),
     datas=datas,
-    hiddenimports=hiddenimports,
-    hookspath=[],
-    hooksconfig={},
-    runtime_hooks=[],
-    excludes=[],
-    noarchive=False,
-    optimize=0,
+    hiddenimports=["PySide6.QtSvg"],
+    excludes=[
+        "IPython", "matplotlib", "pytest", "statsmodels", "tkinter",
+        "cupy", "dask", "distributed", "jax", "polars", "pyarrow", "tensorflow", "torch",
+    ],
 )
-pyz = PYZ(a.pure)
+# Optional GPU adapters pulled in by scientific-library hooks can introduce
+# hundreds of megabytes of CUDA DLLs on development PCs. The app uses CPU arrays.
+gpu_components = {"cuda", "cupy", "cupy_backends", "cupyx", "nvidia"}
+# Qt imports the Windows ICU ABI. A development tool's separate ICU DLL on
+# PATH can shadow the system copy if the dependency scanner collects it.
+shadowing_icu = {"icuuc.dll", "icudt78.dll"}
 
+
+def cpu_entries(entries):
+    return [
+        entry for entry in entries
+        if entry[0].replace("\\", "/").split("/")[0].split(".")[0] not in gpu_components
+        and entry[0].lower() not in shadowing_icu
+    ]
+
+
+archive = PYZ(cpu_entries(analysis.pure))
 exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.datas,
+    archive,
+    analysis.scripts,
     [],
-    name='BESS_Planning_Tool',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
+    exclude_binaries=True,
+    name="BESS_Planning_Tool",
     console=False,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
+    icon=str(assets / "icons" / "bess.ico"),
+    upx=False,
+)
+distribution = COLLECT(
+    exe, cpu_entries(analysis.binaries), cpu_entries(analysis.datas),
+    name="BESS_Planning_Tool",
+    upx=False,
 )

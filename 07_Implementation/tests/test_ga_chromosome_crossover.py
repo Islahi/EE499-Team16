@@ -1,6 +1,6 @@
 """Standard two-offspring single-point crossover regression tests."""
 import pytest
-from src_accelerated.optimizer import _one_point_crossover
+from src.optimizer import _one_point_crossover
 
 
 class FixedRNG:

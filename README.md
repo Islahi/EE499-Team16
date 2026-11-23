@@ -20,6 +20,9 @@ Student IDs remain in the original official/submitted documents and are intentio
 
 ## Current state
 
+The current BESS Planning Tool is V15.6 in
+[`07_Implementation/src`](07_Implementation/README.md).
+
 As of **2026-09-26**, the team is in **Term 2 implementation/validation**.
 
 Data acquisition and preprocessing are complete, and the implementation baseline is finalized. The immediate work is to implement the predefined software design beginning with the module skeleton, 5-bus `NetworkModel`, one-step FBS, data-profile loader and BESS model. Ethics work runs in parallel.

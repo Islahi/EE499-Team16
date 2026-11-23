@@ -1,0 +1,173 @@
+{
+  "version": "v12.0",
+  "project_reference": "https://github.com/Islahi/EE499-Team16.git",
+  "source_reference": "local V11; not pulled from GitHub",
+  "pv_scenario": "50pct_nominal_demand_capacity_ieee33_2021",
+  "nominal_load_kw": 3715.0,
+  "pv_installed_kw": 1857.5,
+  "pv_per_site_kw": 371.5,
+  "pv_buses": [
+    6,
+    12,
+    18,
+    25,
+    30
+  ],
+  "available_pv_energy_percent_of_requested_annual_load": 7.276430248686963,
+  "fixed_bess": {
+    "bus": 17,
+    "power_kw": 500.0,
+    "energy_kwh": 50000.0,
+    "soc_initial": 0.5,
+    "soc_min": 0.2,
+    "soc_max": 1.0,
+    "eta_charge": 0.9,
+    "eta_discharge": 0.9
+  },
+  "grid_import_limit_kw": 7500.0,
+  "grid_export_limit_kw": 0.0,
+  "regression_tests_passed": 81,
+  "synthetic_8760h_sequential_gwo": {
+    "status": "passed",
+    "full_year_finalists": 3,
+    "accepted_units": 1,
+    "runtime_seconds": 23.5
+  },
+  "full_year_control_comparison": {
+    "source_folder": "/mnt/data/IEEE33_PV_50pct_Nominal_Demand_2021",
+    "hours_requested": 8760,
+    "offset": 0,
+    "controller_comparison": [
+      "predictive_v11",
+      "predictive"
+    ],
+    "bess_units": [
+      {
+        "bus": 17,
+        "power_kw": 500.0,
+        "energy_kwh": 50000.0
+      }
+    ],
+    "warnings": [
+      "The future PV/load series in the supplied dataset are treated as perfect forecasts; do not equate results with uncertain forecast operation."
+    ],
+    "predictive_v11": {
+      "elapsed_seconds": 123.64096184299706,
+      "annual_coverage": {
+        "expected_hours": 8760,
+        "processed_hours": 8760,
+        "coverage_percent": 100.0,
+        "complete": true,
+        "status": "complete_annual",
+        "converged": true,
+        "feasible": true,
+        "first_timestamp": "2021-01-01 00:00:00",
+        "last_timestamp": "2021-12-31 23:00:00"
+      },
+      "simulation_feasible": true,
+      "shed_kwh": 5615345.137158175,
+      "pre_shedding_voltage_deficit_pu_hours": 3816.0383185437163,
+      "charged_ac_kwh": 65772.95584093778,
+      "discharged_ac_kwh": 66776.09423115963,
+      "minimum_soc_hours_by_bus": {
+        "17": 7297
+      },
+      "ending_soc_by_bus": {
+        "17": 0.2
+      },
+      "annual_total_cost_usd": 72310512.50229205,
+      "dispatch_diagnostics": {
+        "fleet_dispatch_mode": "predictive_v11",
+        "predictive_lp_calls": 365,
+        "predictive_lp_failures": 0,
+        "predictive_last_fallback_reason": null,
+        "predictive_lp_seconds": 3.0506153559836093,
+        "predictive_forecast_fbs_calls": 8760,
+        "predictive_forecast_cache_hits": 0,
+        "predictive_forecast_fbs_seconds": 1.3232986661932955,
+        "predictive_days_planned": 365,
+        "predictive_planned_absolute_kwh_in_overlapping_horizons": 2211103.651077096,
+        "predictive_lookahead_source": "future hourly load/PV in supplied profile (offline perfect foresight)",
+        "predictive_horizon_hours": 24,
+        "predictive_replan_interval_hours": 24,
+        "predictive_shedding_aware": false,
+        "predictive_estimated_shedding_kwh_in_overlapping_horizons": 0.0,
+        "predictive_predicted_reserve_shortfall_kwh_in_overlapping_horizons": 5473307.311725324,
+        "predictive_simultaneous_charge_discharge_kw_in_overlapping_horizons": 0.0,
+        "predictive_overlap_note": "72h replans overlap; predictions are not annual energy totals",
+        "fbs_calls": 65919,
+        "fbs_seconds": 11.87073196345591,
+        "correction_seconds": 109.84160185702058,
+        "correction_fbs_trials": 29546,
+        "correction_hours": 7945,
+        "correction_unresolved_hours": 0,
+        "elapsed_seconds": 123.39534194400039
+      }
+    },
+    "predictive": {
+      "elapsed_seconds": 161.1623937539989,
+      "annual_coverage": {
+        "expected_hours": 8760,
+        "processed_hours": 8760,
+        "coverage_percent": 100.0,
+        "complete": true,
+        "status": "complete_annual",
+        "converged": true,
+        "feasible": true,
+        "first_timestamp": "2021-01-01 00:00:00",
+        "last_timestamp": "2021-12-31 23:00:00"
+      },
+      "simulation_feasible": true,
+      "shed_kwh": 5588976.565824702,
+      "pre_shedding_voltage_deficit_pu_hours": 3805.3834471265345,
+      "charged_ac_kwh": 64049.261258834755,
+      "discharged_ac_kwh": 65379.901619656186,
+      "minimum_soc_hours_by_bus": {
+        "17": 6213
+      },
+      "ending_soc_by_bus": {
+        "17": 0.2
+      },
+      "annual_total_cost_usd": 71996788.40928456,
+      "dispatch_diagnostics": {
+        "fleet_dispatch_mode": "predictive",
+        "predictive_lp_calls": 365,
+        "predictive_lp_failures": 0,
+        "predictive_last_fallback_reason": null,
+        "predictive_lp_seconds": 14.698922650997702,
+        "predictive_forecast_fbs_calls": 8760,
+        "predictive_forecast_cache_hits": 17448,
+        "predictive_forecast_fbs_seconds": 1.350484117076121,
+        "predictive_days_planned": 365,
+        "predictive_planned_absolute_kwh_in_overlapping_horizons": 3837788.376015865,
+        "predictive_lookahead_source": "future hourly load/PV in supplied profile (offline perfect foresight)",
+        "predictive_horizon_hours": 72,
+        "predictive_replan_interval_hours": 24,
+        "predictive_shedding_aware": true,
+        "predictive_estimated_shedding_kwh_in_overlapping_horizons": 25109128.050400514,
+        "predictive_predicted_reserve_shortfall_kwh_in_overlapping_horizons": 5469313.150646838,
+        "predictive_simultaneous_charge_discharge_kw_in_overlapping_horizons": 0.0,
+        "predictive_overlap_note": "72h replans overlap; predictions are not annual energy totals",
+        "fbs_calls": 71275,
+        "fbs_seconds": 12.610603001117852,
+        "correction_seconds": 128.13675732993943,
+        "correction_fbs_trials": 29631,
+        "correction_hours": 7966,
+        "correction_unresolved_hours": 0,
+        "elapsed_seconds": 160.86957554900073
+      }
+    }
+  },
+  "shedding_reduction_v12_vs_v11_kwh": 26368.571333472617,
+  "shedding_reduction_percent": 0.46958059904430516,
+  "min_soc_hours_reduced": 1084,
+  "annual_cost_reduction_usd": 313724.09300749004,
+  "remaining_limitations": [
+    "Full IEEE 33-bus GWO run not executed",
+    "V12 initial SOC proxy approximate; final FBS authoritative",
+    "Low-PV case still often empty; physical charging constraints remain",
+    "Perfect foresight of CSV in offline MPC",
+    "GUI/Windows startup not tested in Linux build",
+    "LP is relaxed w.r.t. charge/discharge exclusivity; monitored and diagnosed"
+  ]
+}

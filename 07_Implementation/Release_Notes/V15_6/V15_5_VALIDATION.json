@@ -1,0 +1,20 @@
+{
+  "release": "V15.5",
+  "based_on": "V15.4 strict Sindi SESS",
+  "unit_tests": 127,
+  "subtests": 21,
+  "syntax_python": "passed",
+  "syntax_dashboard_js": "passed",
+  "smoke": {
+    "duration_hours": 48,
+    "system": "synthetic four-bus radial feeder",
+    "strict_milp_days": 2,
+    "daily_soc_restoration": "passed",
+    "pf_violation_hours": 0,
+    "export": "passed",
+    "dashboard_html": "passed"
+  },
+  "windows_gui": "not run - PySide6 unavailable",
+  "8760h": "not run - must be verified on target platform",
+  "annual_runtime_improvement": "not benchmarked; reduced expected finalist count"
+}
