@@ -18,15 +18,18 @@ from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QDateTimeEdit, QDialog, QDialogButtonBox,
     QDoubleSpinBox, QFileDialog, QFormLayout, QGraphicsScene, QHeaderView, QAbstractItemView,
-    QGroupBox, QInputDialog, QLabel, QLineEdit, QListWidgetItem, QTextEdit, QMainWindow, QMenu, QMessageBox,
+    QGroupBox, QInputDialog, QLabel, QLineEdit, QListWidgetItem, QPlainTextEdit, QTextEdit, QMainWindow, QMenu, QMessageBox,
     QPushButton, QSizePolicy, QSpinBox, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
-from .bess import BESSConfig
+from .electrical_details import battery_ratings
+from .manual_fleet import manual_rows, positive, row_number, validate_manual_fleet
 from .app_log import configure_desktop_log, desktop_log
 from .fbs import FBSConfig, warm_numba
+from .ga_fleet_policy import ga_fleet_limit
 from .metrics import EconomicConfig, validate_annual_inputs
 from .model_information import model_information, settings_information, study_information
+from .information_provenance import display_detail, provenance_records
 from .network_diagram import NetworkScene, NetworkView
 from .network_loader import load_network
 from .optimizer import BESSParameters, OptimizationBounds, OptimizationResult
@@ -567,6 +570,9 @@ class SettingsDialog(QDialog):
         load_form(self, "settings_dialog.ui")
         self.network = None
         self.tariffs_confirmed = False
+        policy = widget(self, "combo_corrective_actions")
+        for label, value in (("Enabled", "controlled"), ("Disabled", "uncontrolled"), ("Compare both", "compare")):
+            policy.addItem(label, value)
         worker_control = widget(self, "spin_parallel_workers")
         worker_control.setMaximum(desktop_worker_limit())
         defaults = joint_search_policy(0)
@@ -574,6 +580,7 @@ class SettingsDialog(QDialog):
         self.population_automatic = True
         widget(self, "spin_ga_population").setValue(defaults.population)
         self.connect_designer_settings()
+        self.restore_manual_rows(manual_rows({}))
         self.committed = self.capture_values()
         buttons = widget(self, "buttons_settings")
         buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Save settings")
@@ -599,13 +606,21 @@ class SettingsDialog(QDialog):
         widget(self, "btn_select_all_buses").clicked.connect(self.select_all_allowed_buses)
         widget(self, "btn_clear_allowed_buses").clicked.connect(self.clear_allowed_buses)
         widget(self, "list_allowed_buses").itemSelectionChanged.connect(self.update_allowed_bus_count)
-        for name in ("group_manual_bess", "group_import_limit", "group_export_limit"):
+        table = widget(self, "table_manual_bess")
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        table.itemChanged.connect(self.update_manual_row)
+        table.model().rowsRemoved.connect(self.update_manual_summary)
+        widget(self, "chk_experimental_multi_bess").toggled.connect(self.update_optional_controls)
+        widget(self, "btn_manual_bess_add").clicked.connect(lambda: self.add_manual_row())
+        widget(self, "btn_manual_bess_remove").clicked.connect(self.remove_manual_rows)
+        widget(self, "btn_manual_bess_clear").clicked.connect(lambda: table.setRowCount(0))
+        for name in ("group_manual_bess", "group_import_limit", "group_export_limit", "group_experimental_ga"):
             widget(self, name).toggled.connect(self.update_optional_controls)
         for name in ("spin_grid_import_tariff", "spin_grid_export_tariff"):
             widget(self, name).valueChanged.connect(self.mark_tariff_changed)
 
     def update_optional_controls(self, *args):
-        for name in ("group_manual_bess", "group_import_limit", "group_export_limit"):
+        for name in ("group_manual_bess", "group_import_limit", "group_export_limit", "group_experimental_ga"):
             group = widget(self, name)
             enabled = group.isChecked()
             form = group.layout()
@@ -614,6 +629,71 @@ class SettingsDialog(QDialog):
             group.setProperty("collapsed", not enabled)
             group.style().unpolish(group)
             group.style().polish(group)
+        experimental = widget(self, "chk_experimental_multi_bess").isChecked()
+        widget(self, "spin_bess_units").setEnabled(not experimental)
+        self.update_allowed_bus_count()
+        widget(self, "group_experimental_ga").setTitle(
+            "Advanced optimization · Experimental enabled" if experimental else "Advanced optimization")
+
+    def eligible_manual_buses(self):
+        return sorted(bus.bus_id for bus in self.network.buses if not bus.is_slack) if self.network else []
+
+    def restore_manual_rows(self, rows):
+        table = widget(self, "table_manual_bess")
+        table.setRowCount(0)
+        for row in rows:
+            self.add_manual_row(row)
+
+    def add_manual_row(self, row=None):
+        table = widget(self, "table_manual_bess")
+        index = table.rowCount()
+        row = row or {"enabled": True, "bus_id": None, "power_kw": "", "energy_kwh": ""}
+        eligible = self.eligible_manual_buses()
+        table.insertRow(index)
+        checked = QTableWidgetItem()
+        checked.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsUserCheckable)
+        checked.setCheckState(Qt.CheckState.Checked if row["enabled"] else Qt.CheckState.Unchecked)
+        table.setItem(index, 0, checked)
+        bus = QComboBox(table)
+        bus.setAccessibleName(f"Installation bus for manual battery {index + 1}")
+        bus.addItem("Select bus", None)
+        for bus_id in eligible:
+            bus.addItem(f"B{bus_id}", bus_id)
+        selected = row.get("bus_id")
+        if selected is not None and selected not in eligible:
+            bus.addItem(f"B{selected} (unavailable)", selected)
+        bus.setCurrentIndex(bus.findData(selected))
+        table.setCellWidget(index, 1, bus)
+        for column, key in ((2, "power_kw"), (3, "energy_kwh")):
+            table.setItem(index, column, QTableWidgetItem(str(row.get(key, ""))))
+        duration = QTableWidgetItem()
+        duration.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+        table.setItem(index, 4, duration)
+        self.update_manual_row(table.item(index, 3))
+
+    def remove_manual_rows(self):
+        table = widget(self, "table_manual_bess")
+        for index in sorted({item.row() for item in table.selectedIndexes()}, reverse=True):
+            table.removeRow(index)
+
+    def update_manual_row(self, item):
+        table = item.tableWidget()
+        power, energy, duration = (table.item(item.row(), col) for col in (2, 3, 4))
+        if item.column() in (2, 3) and power is not None and energy is not None and duration is not None:
+            p, e = positive(power.text()), positive(energy.text())
+            hours = e / p if p and e else None
+            duration.setText(f"{hours:.4g}" if hours is not None else "—")
+        if item.column() != 4:
+            self.update_manual_summary()
+
+    def update_manual_summary(self, *_):
+        table = widget(self, "table_manual_bess")
+        rows = [i for i in range(table.rowCount()) if table.item(i, 0) is not None
+                and table.item(i, 0).checkState() == Qt.CheckState.Checked]
+        totals = [sum(positive(item.text()) or 0 for i in rows if (item := table.item(i, col)) is not None)
+                  for col in (2, 3)]
+        widget(self, "lbl_manual_fleet_summary").setText(
+            f"{len(rows)} enabled BESS  |  {totals[0]:,.3f} kW  |  {totals[1]:,.3f} kWh")
 
     def select_all_allowed_buses(self):
         choices = widget(self, "list_allowed_buses")
@@ -627,8 +707,16 @@ class SettingsDialog(QDialog):
 
     def update_allowed_bus_count(self):
         choices = widget(self, "list_allowed_buses")
+        selected = len(choices.selectedItems())
         widget(self, "lbl_allowed_bus_count").setText(
-            f"{len(choices.selectedItems())} of {choices.count()} eligible buses selected")
+            f"{selected} of {choices.count()} eligible buses selected")
+        maximum = widget(self, "spin_experimental_bess_units")
+        minimum = maximum.minimum()
+        enough_buses = selected >= minimum
+        maximum.setMaximum(max(minimum, selected))
+        maximum.setEnabled(enough_buses and widget(self, "chk_experimental_multi_bess").isChecked())
+        maximum.setToolTip(f"Maximum allowed by selected non-slack buses: {selected}" if enough_buses
+                           else f"Select at least {minimum} eligible non-slack buses.")
 
     def update_compute_status(self):
         widget(self,"lbl_compute_status").setVisible(True)
@@ -653,6 +741,7 @@ class SettingsDialog(QDialog):
 
     def capture_values(self):
         values = dict(FIXED_WIDGET_SETTINGS)
+        values["simulation_control_mode"] = widget(self, "combo_corrective_actions").currentData()
         for cls in (QSpinBox, QDoubleSpinBox, QCheckBox):
             for control in self.findChildren(cls):
                 name = control.objectName()
@@ -661,7 +750,22 @@ class SettingsDialog(QDialog):
         for group in self.findChildren(QGroupBox):
             if group.isCheckable():
                 values[group.objectName()] = group.isChecked()
-        values["bess_bus"] = widget(self, "combo_bess_bus").currentData()
+        table = widget(self, "table_manual_bess")
+        rows = [{
+            "enabled": table.item(i, 0).checkState() == Qt.CheckState.Checked,
+            "bus_id": table.cellWidget(i, 1).currentData(),
+            "power_kw": row_number(table.item(i, 2).text()),
+            "energy_kwh": row_number(table.item(i, 3).text()),
+        } for i in range(table.rowCount())]
+        values["manual_bess_rows"] = rows
+        primary = next((row for row in rows if row["enabled"]), {})
+        values["bess_bus"] = primary.get("bus_id")
+        values["spin_bess_power_kw"] = positive(primary.get("power_kw")) or 0
+        values["spin_bess_energy_kwh"] = positive(primary.get("energy_kwh")) or 0
+        experimental = values["chk_experimental_multi_bess"]
+        values["experimental_enabled"] = experimental
+        values["optimization_mode"] = "experimental_4_plus" if experimental else "standard_1_to_3"
+        values["requested_max_units"] = values["spin_experimental_bess_units" if experimental else "spin_bess_units"]
         choices = widget(self, "list_allowed_buses")
         values["allowed_buses"] = tuple(item.data(Qt.ItemDataRole.UserRole) for item in choices.selectedItems())
         values.update(
@@ -678,14 +782,17 @@ class SettingsDialog(QDialog):
 
     def restore_values(self):
         for name, value in self.committed.items():
+            if name == "spin_experimental_bess_units":
+                continue
             control = self.findChild(QWidget, name)
             if isinstance(control, (QSpinBox, QDoubleSpinBox)):
                 control.setValue(value)
             elif isinstance(control, (QGroupBox, QCheckBox)):
                 control.setChecked(value)
         self.tariffs_confirmed = self.committed.get("chk_tariffs_confirmed") is True
-        combo = widget(self, "combo_bess_bus")
-        combo.setCurrentIndex(combo.findData(self.committed.get("bess_bus")))
+        mode = widget(self, "combo_corrective_actions")
+        mode.setCurrentIndex(max(0, mode.findData(self.committed.get("simulation_control_mode", "controlled"))))
+        self.restore_manual_rows(manual_rows(self.committed))
         choices = widget(self, "list_allowed_buses")
         selected = self.committed.get("allowed_buses", ())
         for index in range(choices.count()):
@@ -693,6 +800,8 @@ class SettingsDialog(QDialog):
             item.setSelected(item.data(Qt.ItemDataRole.UserRole) in selected)
         self.population_automatic = self.committed.get("population_automatic", True)
         self.update_optional_controls()
+        maximum = widget(self, "spin_experimental_bess_units")
+        maximum.setValue(self.committed.get("spin_experimental_bess_units", maximum.minimum()))
         self.update_compute_status()
 
     def set_network(self, network):
@@ -705,16 +814,11 @@ class SettingsDialog(QDialog):
             self.committed["allowed_buses"] = tuple(sorted(eligible))
             if self.committed.get("population_automatic", True):
                 self.committed["spin_ga_population"] = joint_search_policy(len(eligible)).population
-        if self.committed["bess_bus"] not in eligible:
-            self.committed["bess_bus"] = None
-        combo = widget(self, "combo_bess_bus")
         choices = widget(self, "list_allowed_buses")
-        combo.clear()
         choices.clear()
         for bus in sorted(network.buses, key=lambda item: item.bus_id):
             if bus.is_slack:
                 continue
-            combo.addItem(f"B{bus.bus_id}", bus.bus_id)
             item = QListWidgetItem(f"B{bus.bus_id}")
             item.setData(Qt.ItemDataRole.UserRole, bus.bus_id)
             choices.addItem(item)
@@ -723,6 +827,9 @@ class SettingsDialog(QDialog):
 
     def read_settings(self, optimization=False, *, values=None, require_ready=True, validate_manual=True):
         values = self.capture_values() if values is None else values
+        mode = "controlled" if optimization else values.get("simulation_control_mode", "controlled")
+        if mode not in ("controlled", "uncontrolled", "compare"):
+            raise ValueError("Choose Enabled, Disabled, or Compare both for corrective actions")
         effective_joint_search(values)
         if require_ready and not self.engine_ready:
             raise ValueError("Mandatory Numba solver is not ready: "+widget(self,"lbl_compute_status").text())
@@ -731,6 +838,7 @@ class SettingsDialog(QDialog):
             grid_import_limit_kw=values["spin_import_limit_kw"] if values["group_import_limit"] else None,
             grid_export_limit_kw=values["spin_export_limit_kw"] if values["group_export_limit"] else None,
             allow_pv_curtailment=values["chk_allow_curtailment"], allow_load_shedding=values["chk_allow_shedding"],
+            corrective_actions=mode != "uncontrolled",
             shedding_policy=values["shedding_policy"],
             fleet_dispatch_mode=values["fleet_dispatch_mode"],
             minimum_discharge_pf=values["minimum_discharge_pf"],
@@ -743,26 +851,14 @@ class SettingsDialog(QDialog):
         parameters = BESSParameters(values["charge_efficiency"], values["discharge_efficiency"],
                                     values["spin_soc_min_percent"] / 100, values["spin_soc_max_percent"] / 100,
                                     values["spin_soc_initial_percent"] / 100)
-        battery = None
-        if values["group_manual_bess"] and not optimization and validate_manual:
-            if self.network is None or values["bess_bus"] not in {bus.bus_id for bus in self.network.buses if not bus.is_slack}:
-                raise ValueError("Choose a non-slack installation bus from the loaded network")
-            if values["spin_bess_power_kw"] <= 0 or values["spin_bess_energy_kwh"] <= 0:
-                raise ValueError("Manual battery kW and kWh must be positive")
-            duration = values["spin_bess_energy_kwh"] / values["spin_bess_power_kw"]
-            low = values["spin_opt_duration_min_hours"]
-            high = values["spin_opt_duration_max_hours"]
-            if not low <= duration <= high:
-                raise ValueError(f"Manual BESS duration {duration:.3g} h is outside the "
-                                 f"configured {low:g}–{high:g} h battery-duration range")
-            battery = BESSConfig(values["bess_bus"], values["spin_bess_energy_kwh"], values["spin_bess_power_kw"],
-                                 parameters.soc_min, parameters.soc_max, parameters.soc_initial,
-                                 parameters.eta_charge, parameters.eta_discharge)
+        units = validate_manual_fleet(values, self.eligible_manual_buses(), parameters) if not optimization and validate_manual else ()
         if optimization:
             if not values["chk_tariffs_confirmed"]:
                 raise ValueError("Save and explicitly acknowledge the grid import/export tariffs before optimizing")
             if not values["allowed_buses"]:
                 raise ValueError("Select eligible installation buses in Settings")
+            allowed = set(self.eligible_manual_buses()).intersection(values["allowed_buses"])
+            ga_fleet_limit(values, allowed, simulation.fleet_dispatch_mode)
             catalogs = []
             for quantity, unit in (("power", "kw"), ("energy", "kwh")):
                 try:
@@ -773,7 +869,8 @@ class SettingsDialog(QDialog):
             OptimizationBounds(tuple(values["allowed_buses"]), *catalogs,
                                min_duration_hours=values["spin_opt_duration_min_hours"],
                                max_duration_hours=values["spin_opt_duration_max_hours"])
-        return RunSettings(simulation, economics, battery, values, managed_search=True)
+        return RunSettings(simulation, economics, units[0] if len(units) == 1 else None, values,
+                           managed_search=True, manual_bess_fleet=units, compare_corrective_actions=mode == "compare")
 
     @staticmethod
     def economic_config(values, simulation):
@@ -1010,15 +1107,38 @@ class InformationDialog(QDialog):
         self.context_picker.setCurrentIndex(selected)
         self.context_picker.currentIndexChanged.connect(self.show_context)
         widget(self, "btn_information_archive").clicked.connect(self.open_archive)
+        widget(self, "btn_information_provenance").clicked.connect(self.open_provenance)
         widget(self, "buttons_information").rejected.connect(self.reject)
         self.show_context(selected)
 
     def show_context(self, index):
         _, metadata, snapshot = self.contexts[index]
+        widget(self, "btn_information_provenance").setEnabled(bool(provenance_records(metadata, snapshot)))
         sections = model_information(metadata, snapshot)
         for name, section in (("parameters", "Current parameters"), ("equations", "Mathematical equations"),
                               ("assumptions", "Model assumptions")):
             widget(self, f"information_{name}").setHtml(sections[section])
+
+    def open_provenance(self):
+        label, metadata, snapshot = self.contexts[self.context_picker.currentIndex()]
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Source files and integrity")
+        layout = QVBoxLayout(dialog)
+        context_label = QLabel(label)
+        context_label.setTextFormat(Qt.TextFormat.PlainText)
+        context_label.setWordWrap(True)
+        layout.addWidget(context_label)
+        text = QPlainTextEdit(display_detail(provenance_records(metadata, snapshot)), dialog)
+        text.setReadOnly(True)
+        text.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
+        layout.addWidget(text)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        copy = buttons.addButton("Copy all", QDialogButtonBox.ButtonRole.ActionRole)
+        copy.clicked.connect(lambda: QApplication.clipboard().setText(text.toPlainText()))
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        dialog.resize(self.size())
+        dialog.exec()
 
     def open_archive(self):
         from .dashboard import read_saved_run
@@ -1098,7 +1218,9 @@ class MainWindow(QMainWindow):
         browser = menu.addAction("Open latest report in browser", lambda: self.open_dashboard("browser"))
         menu.addAction("Open saved report / compare runs", lambda: self.open_dashboard("saved"))
         menu.addAction("Regenerate saved report", lambda: self.open_dashboard("regenerate"))
+        menu.addAction("Save offline HTML copy", lambda: self.open_dashboard("save_html"))
         menu.addAction("Export portable ZIP", lambda: self.open_dashboard("package"))
+        menu.addAction("Export portable ZIP with layout or charts", lambda: self.open_dashboard("package_exports"))
         def refresh():
             available = self.dashboard_folder is not None and (self.dashboard_folder / "dashboard.html").is_file()
             embedded.setEnabled(available)
@@ -1107,8 +1229,8 @@ class MainWindow(QMainWindow):
         control.setMenu(menu)
 
     def open_dashboard(self, action):
-        from .dashboard import HTML_FILE, package_dashboard
-        if self.dashboard_runner.busy and action in ("regenerate", "package"):
+        from .dashboard import HTML_FILE, copy_dashboard, package_dashboard
+        if self.dashboard_runner.busy and action in ("regenerate", "save_html", "package", "package_exports"):
             QMessageBox.information(self, "Results dashboard", "A dashboard is being built. Please use the saved numeric results or open an existing report.")
             return
         folder = self.dashboard_folder
@@ -1120,12 +1242,26 @@ class MainWindow(QMainWindow):
             folder = Path(selected)
         try:
             path = folder / HTML_FILE
-            if action == "package":
+            if action == "save_html":
+                target, _ = QFileDialog.getSaveFileName(
+                    self, "Save offline HTML", str(folder / (folder.name + "_dashboard.html")), "HTML reports (*.html)")
+                if target:
+                    copy_dashboard(folder, target)
+                    self.statusBar().showMessage(f"Saved offline HTML to {target}", 7000)
+                return
+            if action in ("package", "package_exports"):
+                attachments = ()
+                if action == "package_exports":
+                    attachments, _ = QFileDialog.getOpenFileNames(
+                        self, "Select exported layout, charts or PDF", str(folder),
+                        "Dashboard exports (*.json *.png *.pdf)")
+                    if not attachments:
+                        return
                 target, _ = QFileDialog.getSaveFileName(self, "Export portable report",
                                                        str(folder / "dashboard.zip"), "ZIP archives (*.zip)")
                 if not target:
                     return
-                package_dashboard(folder, target)
+                package_dashboard(folder, target, attachments=attachments)
                 self.statusBar().showMessage(f"Portable report saved to {target}", 7000)
                 return
             if action == "regenerate" or not path.is_file():
@@ -1335,23 +1471,27 @@ class MainWindow(QMainWindow):
         if self.study is None:
             return
         values = self.settings_dialog.committed
-        bess_bus = values["bess_bus"] if values["group_manual_bess"] else None
-        bess_ratings = (values["spin_bess_power_kw"], values["spin_bess_energy_kwh"]) if bess_bus is not None else None
         fleet_ratings = {}
-        if self.report and isinstance(self.report.result, OptimizationResult):
-            result = self.report.result
-            bess_bus = None
-            bess_ratings = None
-            fleet_ratings = {unit["bus_id"]: (unit["power_rating_kw"], unit["energy_capacity_kwh"])
-                             for unit in result.metadata.get("fleet", ())}
-            if not fleet_ratings and result.best_candidate is not None:
-                candidate = result.best_candidate
-                fleet_ratings[candidate.bus_id] = (candidate.power_rating_kw, candidate.energy_capacity_kwh)
+        if self.report:
+            fleet_ratings = {bus: rating[:2] for bus, rating in battery_ratings(self.report.context).items()}
+            if not fleet_ratings and isinstance(self.report.result, OptimizationResult):
+                fleet_ratings = {unit["bus_id"]: (unit["power_rating_kw"], unit["energy_capacity_kwh"])
+                                 for unit in self.report.result.metadata.get("fleet", ())}
+                candidate = self.report.result.best_candidate
+                if not fleet_ratings and candidate is not None:
+                    fleet_ratings[candidate.bus_id] = (candidate.power_rating_kw, candidate.energy_capacity_kwh)
+        elif values["group_manual_bess"]:
+            eligible = self.settings_dialog.eligible_manual_buses()
+            for row in manual_rows(values):
+                bus = row.get("bus_id")
+                power, energy = positive(row.get("power_kw")), positive(row.get("energy_kwh"))
+                if row.get("enabled") and bus in eligible and power and energy:
+                    fleet_ratings[bus] = (power, energy)
         step = self.selected_step() if widget(self, "chk_network_results").isChecked() else None
         self.scene.draw_network(
             self.study.network, bounds=(values["spin_voltage_min_pu"], values["spin_voltage_max_pu"]),
-            bess_bus=bess_bus, show_properties=widget(self, "chk_network_properties").isChecked(),
-            step=step, bess_ratings=bess_ratings, fleet_ratings=fleet_ratings)
+            show_properties=widget(self, "chk_network_properties").isChecked(),
+            step=step, fleet_ratings=fleet_ratings)
         if step is None:
             self.diagram_status.setText("Result labels hidden" if self.simulation_steps() else "No retained network results")
         else:
@@ -1509,11 +1649,7 @@ class MainWindow(QMainWindow):
                     "Upper voltage limit (pu)": values["spin_voltage_max_pu"],
                 }
                 if values["group_manual_bess"]:
-                    context["Unvalidated inputs"].update({
-                        "Manual BESS bus": values["bess_bus"],
-                        "Manual BESS power (kW)": values["spin_bess_power_kw"],
-                        "Manual BESS energy (kWh)": values["spin_bess_energy_kwh"],
-                    })
+                    context["Unvalidated inputs"]["Manual BESS rows"] = manual_rows(values)
             else:
                 context = settings_information(self.study, settings)
             if pending and not values["chk_tariffs_confirmed"]:
@@ -1553,6 +1689,15 @@ class MainWindow(QMainWindow):
         self.settings_dialog.set_network(study.network)
         if controls is not None:
             previous = {"spin_ga_stall_generations": 6, **controls}
+            previous["manual_bess_rows"] = manual_rows(previous)
+            previous.setdefault("chk_experimental_multi_bess", False)
+            previous.setdefault("simulation_control_mode", "controlled")
+            previous["group_experimental_ga"] = bool(previous.get("group_experimental_ga") or
+                                                      previous["chk_experimental_multi_bess"])
+            if previous.get("spin_bess_units", 3) > 3:
+                self.append_log("Saved standard GA maximum adjusted to three units. Larger fleets require experimental opt-in.",
+                                level="WARNING")
+                previous["spin_bess_units"] = 3
             if "spin_ga_population" in previous:
                 previous.setdefault("population_automatic", False)
             self.settings_dialog.committed.update(previous)
@@ -1922,7 +2067,8 @@ class MainWindow(QMainWindow):
                 # Start report building on its own worker after Qt has updated the GUI.
                 completed_folder = Path(self.pending_run_output) if self.pending_run_output else None
                 if completed_folder and (completed_folder / "dashboard_run.json").is_file():
-                    QTimer.singleShot(0, lambda folder=completed_folder: self.start_dashboard_build(folder))
+                    QTimer.singleShot(0, lambda folder=completed_folder: self.start_dashboard_build(
+                        folder, open_when_ready="browser"))
             except Exception as error:
                 self.finish_run_clock()
                 self.append_log(f"GUI completion handler failed after numerical run was saved: {type(error).__name__}: {error}")
@@ -1949,9 +2095,14 @@ class MainWindow(QMainWindow):
         self.append_log(f"Dashboard available: {path}")
         self.dashboard_job_folder = None
         if self.dashboard_open_after_build:
+            preference = self.dashboard_open_after_build
             self.dashboard_open_after_build = False
-            from .dashboard_viewer import show_dashboard
-            show_dashboard(self, path)
+            if preference == "browser":
+                if not QDesktopServices.openUrl(QUrl.fromLocalFile(str(path))):
+                    self.append_log(f"Could not open the browser. Open the report from the Dashboard menu: {path}")
+            else:
+                from .dashboard_viewer import show_dashboard
+                show_dashboard(self, path)
         if self.dashboard_folder == Path(path).parent:
             self.statusBar().showMessage("Saved results dashboard ready", 9000)
 
@@ -2016,7 +2167,7 @@ class MainWindow(QMainWindow):
     def show_bus(self, bus_id):
         if self.study is None:
             return
-        from .electrical_details import battery_ratings, bus_readings
+        from .electrical_details import bus_readings
         network = self.study.network
         bus = next(item for item in network.buses if item.bus_id == bus_id)
         rating = sum(unit.p_rated_kw for unit in network.pv_units if unit.bus_id == bus_id)

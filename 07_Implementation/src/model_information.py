@@ -1,7 +1,10 @@
 """Run snapshots and a shared, offline model reference for Qt and HTML."""
 from dataclasses import asdict
 from html import escape
+from math import isfinite
 
+from .equation_rendering import EQUATION_VERSION, equation_html, equation_records
+from .information_provenance import (display_detail, provenance_records, pv_details, source_name, value_html)
 from .metrics import annual_capital_recovery_factor
 from .planning_policy import effective_joint_search
 from .saved_schema import upgrade_saved_fields
@@ -36,8 +39,8 @@ def study_information(study, *, static=False):
         if not static:
             data["Source files"].update(
                 load=str(request.dataset_folder or request.load_path or request.load_source),
-                solar=str(study.context.get("PV source provenance") or request.pv_path or
-                          study.context.get("PV source") or request.pv_source))
+                solar=study.context.get("PV source provenance") or (
+                    str(request.pv_path) if request.pv_path else study.context.get("PV source") or request.pv_source))
             data["Forecast model"] = study.forecast_info if study.input_mode == "forecast" else None
             data["PV conversion (W/m2)"] = study.context.get("PV conversion (W/m2)")
     return data
@@ -64,13 +67,19 @@ def settings_information(study, settings, kind=None):
             "Settings controls": dict(settings.values),
         })
         context.update(dispatch_information(settings.simulation))
-        if settings.manual_bess:
-            context["Manual BESS"] = dict(vars(settings.manual_bess))
-        if kind == "simulation" and settings.manual_bess is None:
-            context["Fleet count"] = 0
+        if kind != "optimization":
+            context["Control mode"] = ("compare" if settings.compare_corrective_actions else
+                                      "controlled" if settings.simulation.corrective_actions else "uncontrolled")
+        if settings.manual_units or kind == "simulation":
+            from .manual_fleet import manual_context
+            context.update(manual_context(settings.manual_units))
         if kind in (None, "optimization") and settings.managed_search:
             from .fleet_ga_optimizer import FleetGAConfig
             context["Optimizer algorithm"] = "Joint GA"
+            experimental = settings.values.get("chk_experimental_multi_bess") is True
+            context["Optimization mode"] = "experimental_4_plus" if experimental else "standard_1_to_3"
+            limit_control = "spin_experimental_bess_units" if experimental else "spin_bess_units"
+            context["Maximum BESS units"] = settings.values.get(limit_control, 4 if experimental else 3)
             context["Effective Joint GA settings"] = asdict(effective_joint_search(settings.values))
             context["Effective Joint GA settings"]["elite_count"] = FleetGAConfig().elite_count
     context["Model reference"] = model_reference(context, kind=kind)
@@ -84,7 +93,9 @@ def model_reference(context, optimizer=None, *, kind=None):
     timing = context.get("Dispatch timing") or {}
     mode = timing.get("fleet_dispatch_mode", simulation.get("fleet_dispatch_mode"))
     static = kind == "base case" or bool(context.get("Case definition"))
-    daily = mode == DAILY_MODE and not static
+    uncontrolled = simulation.get("corrective_actions") is False
+    comparison = context.get("Control mode") == "compare"
+    daily = mode == DAILY_MODE and not static and not uncontrolled
     joint_ga = context.get("Optimizer algorithm") == "Joint GA" or bool(
         (optimizer or {}).get("fleet_ga_optimizer"))
     equations, assumptions, references = [], [], []
@@ -97,7 +108,16 @@ def model_reference(context, optimizer=None, *, kind=None):
         assumptions.append("Balanced radial feeder with fixed topology, one slack bus and one nominal voltage level.")
     if static:
         assumptions.append("Static FBS uses workbook base loads and installed PV ratings, with zero battery power. Hourly dispatch and annual economics do not apply.")
-    if mode and not static:
+    if uncontrolled or comparison:
+        equations.append(("Uncontrolled operating point",
+            "P_load = P_requested     Q_load = Q_requested\nP_PV = P_available     Q_PV = Q_available\n"
+            "P_BESS = Q_BESS = 0     E_final = E_initial",
+            "The configured limits are checked on the raw FBS solution. Installed batteries remain idle. "
+            "Convergence with a violation is diagnostic evidence of an infeasible operating point."))
+    if comparison:
+        assumptions.append("Both scenarios share the same input profiles, limits and initial battery states. "
+                           "Battery dispatch is idle in the uncontrolled scenario and follows the configured policy in the controlled scenario.")
+    if mode and not static and not uncontrolled:
         equations.append(("Battery energy and SOC",
             "P_BESS = P_dis − P_ch\nEₜ₊₁ = Eₜ + (η_ch P_ch − P_dis / η_dis) Δt\n"
             "SOCₜ = Eₜ / E_rated     SOC_min ≤ SOCₜ ≤ SOC_max",
@@ -107,6 +127,7 @@ def model_reference(context, optimizer=None, *, kind=None):
             "Q_served = Q_requested × P_served / P_requested   (for P_requested > 0)\n"
             "P_PV,used = P_PV,available − P_curt     0 ≤ P_curt ≤ P_PV,available",
             "The controller evaluates voltage in pu, configured grid limits in kW, and enabled branch ampacity in A. Progressive shedding can assign greater weights to higher fractions of load shed. Reported energy uses the final verified hourly powers."))
+        assumptions.append("Corrective actions follow the configured permissions. A converged result can remain infeasible when available actions cannot resolve a limit violation.")
     if daily:
         equations.extend([
             ("Daily restoration and operating mode",
@@ -146,7 +167,7 @@ def model_reference(context, optimizer=None, *, kind=None):
         equations.extend([
             ("Battery investment and annual ownership", capex + "\n" + crf +
              "\nC_capital = CRF × C_CAPEX     C_O&M = f_O&M × C_CAPEX",
-             f"{capex_note} Lifetime n is in years and the annual ownership terms are in USD/year."),
+             f"{capex_note} Lifetime n is in years, π is the inflation rate, and the annual ownership terms are in USD/year."),
             ("Chronological annual operating cost",
              "C_operating = Σₜ Δt (c_import P_import − c_export P_export + c_shed P_shed + c_curt P_curt) + C_inventory\n"
              "C_inventory = Σ_b c_import max(E_initial − E_final, 0) / η_ch\n"
@@ -154,7 +175,8 @@ def model_reference(context, optimizer=None, *, kind=None):
              "Grid import and export are nonnegative directional kW. Tariffs and penalties are in USD/kWh. The chronological inventory ledger charges deficits only. An annual cost requires a complete hourly calendar year and the recorded tariff assumptions."),
         ])
         assumptions.append("Tariffs, penalties and investment assumptions are configured inputs. Changing them changes the estimated annual cost.")
-    return {"version": 1, "equations": equations, "assumptions": assumptions, "references": references}
+    return {"version": EQUATION_VERSION, "equations": equation_records(equations, economics),
+            "assumptions": assumptions, "references": references}
 
 
 def _value(value):
@@ -167,13 +189,32 @@ def _value(value):
     return str(value)
 
 
-def _table(title, rows):
-    content = "".join(f"<tr><th scope='row'>{escape(name)}</th><td>{escape(_value(value))}</td></tr>"
+def _dashboard_value(value):
+    if isinstance(value, float):
+        if not isfinite(value):
+            return MISSING
+        if value == 0:
+            return "0"
+        if 0 < abs(value) < .0005:
+            return "≈−0" if value < 0 else "≈0"
+        return f"{value:,.3f}".rstrip("0").rstrip(".").replace("-", "−")
+    if isinstance(value, (list, tuple)):
+        return ", ".join(map(_dashboard_value, value)) if value else "None"
+    return _value(value)
+
+
+def _table(title, rows, display=_value, *, dashboard=False):
+    def render(name, value):
+        if "tolerance" in name.casefold() and isinstance(value, float) and 0 < abs(value) < .001:
+            return escape(f"{value:.2e}")
+        return value_html(value, display, dashboard=dashboard)
+
+    content = "".join(f"<tr><th scope='row'>{escape(name)}</th><td>{render(name, value)}</td></tr>"
                       for name, value in rows)
     return f"<h3>{escape(title)}</h3><table class='model-values' cellspacing='0' cellpadding='5'>{content}</table>"
 
 
-def model_information(metadata, input_snapshot=None):
+def model_information(metadata, input_snapshot=None, *, dashboard=False):
     """Render only saved values or explicitly supplied preview values."""
     metadata = upgrade_saved_fields(metadata)
     if metadata.get("legacy"):
@@ -189,6 +230,8 @@ def model_information(metadata, input_snapshot=None):
     controls = context.get("Settings controls") or {}
     economics = context.get("Economic inputs") or optimizer.get("economic_configuration") or {}
     source = context.get("Source files") or {}
+    if not isinstance(source, dict):
+        source = {}
     window = context.get("Simulation interval") or snapshot.get("window") or {}
     system = context.get("Network settings") or {}
     topology = metadata.get("topology") or {}
@@ -207,6 +250,10 @@ def model_information(metadata, input_snapshot=None):
     currency = economics.get("currency")
     basis = economics.get("power_cost_basis")
     unit = {"kw": "kW", "kva": "kVA"}.get(basis)
+    display = _dashboard_value if dashboard else _value
+
+    def table(title, rows):
+        return _table(title, rows, display, dashboard=dashboard)
 
     def optional_limit(key):
         if key in simulation and simulation[key] is None:
@@ -216,24 +263,45 @@ def model_information(metadata, input_snapshot=None):
     def bounds(prefix):
         minimum, maximum, step = (controls.get(f"{prefix}_{name}_{'kw' if prefix.endswith('power') else 'kwh'}")
                                   for name in ("min", "max", "step"))
-        return f"{minimum}–{maximum}, step {step}" if None not in (minimum, maximum, step) else None
+        return f"{display(minimum)}-{display(maximum)}, step {display(step)}" if None not in (minimum, maximum, step) else None
 
     def scale(value):
-        return f"{value} {currency}" if value is not None and currency else value
+        return f"{display(value)} {currency}" if value is not None and currency else value
 
-    parameters = _table("Study and data", [
+    pv_name, pv_rows, pv_raw = pv_details(context, source, snapshot) if not static else (None, [], {})
+    demand_path = source.get("load")
+    demand_name = source_name(demand_path) or context.get("Demand")
+    if isinstance(demand_path, str) and ("goiener" in demand_path.casefold() or
+            context.get("Active input source") == "distributed"):
+        demand_name = "GoiEner distributed load" if "goiener" in demand_path.casefold() else "Distributed load profiles"
+    study_rows = [
         ("Run ID", metadata.get("run_id", context.get("Run ID"))), ("Study type", metadata.get("kind")),
         ("Network", context.get("Network")), ("Input mode", context.get("Active input source")),
-        ("Network workbook", source.get("network")), ("Demand source", source.get("load") or context.get("Demand")),
-        ("PV source", source.get("solar") or context.get("PV source")),
+        ("Network workbook", source_name(source.get("network"))), ("Demand source", demand_name),
+        ("PV source", pv_name),
         ("Study start", window.get("start")), ("Study end (exclusive)", window.get("end_exclusive")),
         ("Hours", window.get("hours")), ("Time step (h)", context.get("Time step hours", snapshot.get("dt_hours"))),
         ("Clock", context.get("Clock", snapshot.get("clock"))),
-        ("PV conversion (W/m²)", context.get("PV conversion (W/m2)")),
+        ("PV conversion (W/m²)", None if pv_rows else context.get("PV conversion (W/m2)")),
         ("Forecast method", (context.get("Forecast model") or {}).get("method")
          if isinstance(context.get("Forecast model"), dict) else context.get("Forecast model")),
-    ]) + _table("Solver and network", [
+    ]
+    optional_labels = {"Run ID", "Network", "Input mode", "Hours", "Time step (h)", "PV conversion (W/m²)", "Forecast method"}
+    parameters = table("Study and data", [(label, value) for label, value in study_rows
+                                          if label not in optional_labels or value is not None])
+    if pv_rows:
+        parameters += table("PV provenance", pv_rows)
+    if dashboard:
+        recorded = provenance_records(metadata, snapshot)
+        if pv_raw:
+            recorded = {"PV provenance": pv_raw, **recorded}
+        if recorded:
+            parameters += ("<details class='provenance-appendix'><summary>Source files &amp; integrity</summary>"
+                           "<pre>" + escape(display_detail(recorded)) + "</pre></details>")
+    parameters += table("Solver and network", [
         ("FBS backend", solver.get("backend") or (metadata.get("solver") or {}).get("name")),
+        ("Corrective actions", None if static else {"compare": "Compare both", "uncontrolled": "Disabled",
+         "controlled": "Enabled"}.get(context.get("Control mode"))),
         ("Maximum FBS iterations", solver.get("max_iterations")), ("FBS tolerance (pu)", solver.get("voltage_tolerance_pu")),
         ("Buses", system.get("buses", len(topology["buses"]) if "buses" in topology else None)),
         ("Branches", system.get("branches", len(topology["lines"]) if "lines" in topology else None)),
@@ -258,7 +326,7 @@ def model_information(metadata, input_snapshot=None):
         ("Allow PV curtailment", simulation.get("allow_pv_curtailment")),
     ])
     if not static and metadata.get("kind") != "simulation":
-        parameters += _table("Optimizer", [
+        parameters += table("Optimizer", [
             ("Method", context.get("Optimizer algorithm") or optimizer.get("algorithm")),
             ("Population", handled.get("population")), ("Maximum generations", handled.get("generations")),
             ("Configured GA workers", handled.get("workers")),
@@ -273,7 +341,9 @@ def model_information(metadata, input_snapshot=None):
             ("Representative-day method", representative.get("method")),
             ("Representative days", representative.get("cluster_count")),
             ("Independent stress days", optimizer.get("independent_stress_days")),
-            ("Maximum fleet size", optimizer.get("maximum_bess_units", controls.get("spin_bess_units"))),
+            ("Optimization mode", optimizer.get("optimization_mode") or context.get("Optimization mode")),
+            ("Maximum fleet size", optimizer.get("maximum_bess_units",
+                                                 context.get("Maximum BESS units", controls.get("spin_bess_units")))),
             ("Eligible buses", optimizer.get("eligible_bus_ids", controls.get("allowed_buses"))),
             ("Candidate power (kW)", bounds("spin_opt_power")), ("Candidate energy (kWh)", bounds("spin_opt_energy")),
             ("Minimum duration (h)", (optimizer.get("bess_duration_constraint") or {}).get("minimum_hours", controls.get("spin_opt_duration_min_hours"))),
@@ -281,20 +351,21 @@ def model_information(metadata, input_snapshot=None):
         ])
     manual = context.get("Manual BESS")
     fleet = optimizer.get("fleet", context.get("Selected BESS fleet"))
-    units = [manual] if manual else fleet or []
-    battery_params = context.get("Fleet battery parameters") or manual or {}
+    manual_units = context.get("Manual BESS Fleet") or ([manual] if manual else [])
+    units = manual_units or fleet or []
+    battery_params = context.get("Fleet battery parameters") or (manual_units[0] if manual_units else {})
 
     def control_soc(key):
         value = controls.get(f"spin_soc_{key}_percent")
         return value / 100 if value is not None else None
     if not static:
-        parameters += _table("Battery and dispatch", [
-            ("Installed units", len(units) if manual or fleet is not None else context.get("Fleet count")),
-            ("Dispatch", context.get("Dispatch") or simulation.get("fleet_dispatch_mode")),
+        parameters += table("Battery and dispatch", [
+            ("Installed units", len(units) if manual_units or fleet is not None else context.get("Fleet count")),
+            ("Dispatch", context.get("Dispatch") or ("Idle" if simulation.get("corrective_actions") is False else simulation.get("fleet_dispatch_mode"))),
             ("Look-ahead (h)", simulation.get("dispatch_horizon_hours")),
             ("Minimum discharge PF", simulation.get("minimum_discharge_pf")),
             ("Daily SOC tolerance (kWh)", simulation.get("daily_soc_tolerance_kwh")),
-            ("SOC min / max / initial (fraction)", " / ".join(_value(battery_params.get(f"soc_{key}", control_soc(key)))
+            ("SOC min / max / initial (fraction)", " / ".join(display(battery_params.get(f"soc_{key}", control_soc(key)))
                                                               for key in ("min", "max", "initial"))),
             ("Charge efficiency (fraction)", battery_params.get("eta_charge", controls.get("charge_efficiency"))),
             ("Discharge efficiency (fraction)", battery_params.get("eta_discharge", controls.get("discharge_efficiency"))),
@@ -315,13 +386,13 @@ def model_information(metadata, input_snapshot=None):
             rated = item.get("inverter_rating_kva")
             if rated is None and power is not None and ratio is not None:
                 rated = power * ratio
-            parameters += _table(f"Battery at bus {_value(item.get('bus_id'))}", [
+            parameters += table(f"Battery at bus {_value(item.get('bus_id'))}", [
                 ("Rated power (kW)", power), ("Rated energy (kWh)", item.get("energy_capacity_kwh")),
                 ("Inverter nameplate (kVA)", rated),
                 ("Maximum charge (kW)", item.get("max_charge_kw")), ("Maximum discharge (kW)", item.get("max_discharge_kw")),
             ])
     if not static:
-        parameters += _table("Economics", [
+        parameters += table("Economics", [
             ("Currency", currency), ("Energy CAPEX (per kWh)", scale(economics.get("cost_per_kwh"))),
             (f"Inverter CAPEX (per {unit})" if basis == "kva" else "Power CAPEX (per kW)" if unit else "Power CAPEX basis",
              scale(economics.get("cost_per_kw")) if unit else None),
@@ -339,19 +410,31 @@ def model_information(metadata, input_snapshot=None):
         ])
     if "Proposed tariffs" in context:
         proposed_import, proposed_export = context["Proposed tariffs"]
-        parameters += _table("Pending tariff edits (awaiting confirmation)", [
+        parameters += table("Pending tariff edits (awaiting confirmation)", [
             ("Proposed import tariff (per kWh)", scale(proposed_import)),
             ("Proposed export tariff (per kWh)", scale(proposed_export)),
         ])
     if context.get("Preview note"):
-        inputs = _table("Entered values", context["Unvalidated inputs"].items())
+        inputs = table("Entered values", context["Unvalidated inputs"].items())
         parameters = f"<p>{escape(context['Preview note'])}</p>" + inputs + parameters
 
-    reference = context.get("Model reference") or model_reference(
+    current = model_reference(
         {**context, "Simulation settings": simulation, "FBS settings": solver, "Economic inputs": economics},
         optimizer, kind=metadata.get("kind"))
-    equations = "".join(f"<h3>{escape(title)}</h3><p class='model-equation'>{escape(formula).replace(chr(10), '<br>')}</p>"
-                        f"<p>{escape(note)}</p>" for title, formula, note in reference.get("equations", ()))
+    reference = context.get("Model reference") or current
+    version = reference.get("version", 1)
+    known = {(item["title"], item["text"]): item for item in current["equations"]}
+    rendered = []
+    for record in reference.get("equations", ()):
+        exact_match = None
+        if version == 1 and isinstance(record, (list, tuple)) and len(record) == 3:
+            title, formula, note = record
+            if isinstance(title, str) and isinstance(formula, str):
+                exact_match = known.get((title, formula))
+            if exact_match is not None:
+                record = {**exact_match, "note": str(note)}
+        rendered.append(equation_html(record, reference_version=version, archived=exact_match is not None))
+    equations = "".join(rendered)
     assumptions = list(reference.get("assumptions", ()))
     assumptions.extend(context[key] for key in ("PV history validation", "Classification disclaimer", "Historical irradiance override")
                        if isinstance(context.get(key), str) and context[key])

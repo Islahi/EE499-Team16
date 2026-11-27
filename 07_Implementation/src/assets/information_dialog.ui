@@ -13,7 +13,7 @@
     </layout>
    </item>
    <item><widget class="QTabWidget" name="tabs_information">
-    <widget class="QWidget" name="page_information_parameters"><attribute name="title"><string>Parameters</string></attribute><layout class="QVBoxLayout" name="parameters_layout"><item><widget class="QTextBrowser" name="information_parameters"/></item></layout></widget>
+    <widget class="QWidget" name="page_information_parameters"><attribute name="title"><string>Parameters</string></attribute><layout class="QVBoxLayout" name="parameters_layout"><item><widget class="QPushButton" name="btn_information_provenance"><property name="text"><string>View full provenance…</string></property></widget></item><item><widget class="QTextBrowser" name="information_parameters"/></item></layout></widget>
     <widget class="QWidget" name="page_information_equations"><attribute name="title"><string>Equations</string></attribute><layout class="QVBoxLayout" name="equations_layout"><item><widget class="QTextBrowser" name="information_equations"/></item></layout></widget>
     <widget class="QWidget" name="page_information_assumptions"><attribute name="title"><string>Assumptions</string></attribute><layout class="QVBoxLayout" name="assumptions_layout"><item><widget class="QTextBrowser" name="information_assumptions"/></item></layout></widget>
    </widget></item>

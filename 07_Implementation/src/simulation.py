@@ -74,6 +74,7 @@ class SimulationConfig:
     daily_soc_tolerance_kwh: float = 0.05
     shedding_tier_edges: tuple[float, float] = (0.50, 0.80)
     shedding_tier_weights: tuple[float, float, float] = (1., 3., 10.)
+    corrective_actions: bool = True
 
     @classmethod
     def from_saved_settings(cls, values):
@@ -93,6 +94,8 @@ class SimulationConfig:
         return self.opf_bess_kva_multiplier
 
     def __post_init__(self):
+        if type(self.corrective_actions) is not bool:
+            raise ValueError("Corrective actions must be enabled or disabled")
         from .saved_schema import canonical_dispatch_mode
 
         self.fleet_dispatch_mode = canonical_dispatch_mode(self.fleet_dispatch_mode)
@@ -315,6 +318,27 @@ def simulate_step(network: NetworkModel, profile_slice: ProfileSlice,
     Remaining voltage or grid-limit violations mark the result infeasible.
     """
     settings = simulation_config if simulation_config is not None else SimulationConfig()
+    if not settings.corrective_actions:
+        from .uncontrolled import uncontrolled_step, idle_states
+        if (bess_config is None) != (bess_state is None):
+            raise ValueError("Supply bess_config and bess_state together")
+        if bess_request_kw != 0:
+            raise ValueError("Uncontrolled simulation holds batteries idle and does not accept a dispatch request")
+        states = idle_states(network, (bess_config,)) if bess_config else {}
+        if bess_state is not None:
+            _check_number(bess_state.energy_kwh, "Uncontrolled battery energy")
+            if (not bess_config.soc_min <= bess_state.soc <= bess_config.soc_max
+                    or abs(bess_state.energy_kwh - bess_state.soc * bess_config.energy_capacity_kwh) > 1e-6):
+                raise ValueError("Uncontrolled battery state is outside its equipment limits")
+            states[bess_config.bus_id] = bess_state
+        if solve_fbs is None:
+            network.validate()
+            solve_fbs = prepare_fbs(network, fbs_config)
+        step = uncontrolled_step(network, profile_slice, settings, states, solve_fbs, capture_dispatch)
+        if bess_config:
+            step.bess_state = copy(bess_state)
+            step.bess_step = step.fleet_steps[bess_config.bus_id]
+        return step
     if solve_fbs is None:
         network.validate()
         solve_fbs = prepare_fbs(network, fbs_config)
@@ -520,7 +544,7 @@ def simulate_timeseries(network: NetworkModel, profiles: ProfileData,
     for engineering validation and receives its own copy of the battery state.
     completed describes processing coverage; feasible includes all constraints.
     """
-    if (bess_fleet is not None or simulation_config.fleet_dispatch_mode == 'daily_milp_dispatch'
+    if (not simulation_config.corrective_actions or bess_fleet is not None or simulation_config.fleet_dispatch_mode == 'daily_milp_dispatch'
             or (bess_config is None and simulation_config.fleet_dispatch_mode == 'opf')):
         from .multi_bess import simulate_timeseries_fleet
         fleet = tuple(bess_fleet) if bess_fleet is not None else ((bess_config,) if bess_config is not None else ())

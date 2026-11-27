@@ -66,13 +66,14 @@ class DashboardRegressions(unittest.TestCase):
                 for timestamp, vals in [('2021-01-01 00:00:00',(1,.98)),
                                         ('2021-01-01 01:00:00',(1,.95))]:
                     w.writerow({'timestamp':timestamp,'bus_id':2,'voltage_pu':vals[1]})
-            # Simulate a large irrelevant canonical event log that the HTML
-            # builder must not parse or embed in the simplified 3-tab report.
+            # The larger viewer is embedded once. Unused raw logs must not be
+            # included in the report payload.
+            baseline_size = regenerate_dashboard(folder).stat().st_size
             (folder/'dispatch_events.jsonl').write_text('not JSON\n'*20000, encoding='utf-8')
             (folder/'branches.csv').write_text('line_id,current_a\nL1,3.14\n', encoding='utf-8')
             output=regenerate_dashboard(folder)
             html=output.read_text(encoding='utf-8')
-            self.assertLess(len(html), 40000)
+            self.assertLess(output.stat().st_size - baseline_size, 2000)
             manifest=json.loads((folder/'dashboard_manifest.json').read_text())
             self.assertEqual(manifest['html_sha256'], hashlib.sha256(output.read_bytes()).hexdigest())
             match=re.search(r'<script id="report-data"[^>]*>([^<]+)</script>',html)

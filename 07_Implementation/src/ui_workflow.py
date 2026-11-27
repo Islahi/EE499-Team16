@@ -13,6 +13,8 @@ from uuid import uuid4
 import pandas as pd
 
 from .bess import BESSConfig
+from .ga_fleet_policy import ga_fleet_limit
+from .manual_fleet import manual_context
 from .data_loader import ProfileData
 from .fbs import OperatingPoint, run_fbs
 from .forecasting import generate_forecast
@@ -30,7 +32,8 @@ from .simulation import ConstraintAwareDispatch, SimulationConfig, simulate_time
 from .single_bess_search import optimize_fast_verified
 from .progress import ProgressEvent, format_duration
 from .approved_methodology import methodology_record, resolve_solar_location
-from .planning_policy import DEFAULT_DISPATCH_EFFICIENCY, desktop_worker_limit, effective_joint_search
+from .planning_policy import (DEFAULT_DISPATCH_EFFICIENCY, MAX_JOINT_ANNUAL_FINALISTS,
+                              desktop_worker_limit, effective_joint_search)
 from .model_information import dispatch_information, model_reference, study_information
 
 
@@ -96,6 +99,12 @@ class RunSettings:
     values: dict
     dispatch: object | None = field(default_factory=ConstraintAwareDispatch)
     managed_search: bool = False
+    manual_bess_fleet: tuple[BESSConfig, ...] = ()
+    compare_corrective_actions: bool = False
+
+    @property
+    def manual_units(self):
+        return self.manual_bess_fleet or ((self.manual_bess,) if self.manual_bess else ())
 
 
 def select_default_history(study):
@@ -128,6 +137,7 @@ class RunReport:
     dashboard_path: Path | None = None
     persistence_warning: str | None = None
     saved: bool = False
+    scenario_contexts: dict = field(default_factory=dict)
 
     def summary(self, detailed=False):
         context = self.context if detailed else {
@@ -494,7 +504,8 @@ def _prepare_distributed(request, network, stage):
 def finish_report(result, metrics, context, started, started_clock):
     elapsed = perf_counter() - started
     simulation = context.get("Simulation settings", {})
-    context["Approved fixed methodology"] = methodology_record(simulation.get("fleet_dispatch_mode"))
+    if simulation.get("corrective_actions", True):
+        context["Approved fixed methodology"] = methodology_record(simulation.get("fleet_dispatch_mode"))
     context["Model reference"] = model_reference(context, getattr(result, "metadata", None))
     context["Run started (device clock)"] = started_clock
     context["Run finished (device clock)"] = datetime.now().astimezone().isoformat(timespec="seconds")
@@ -503,13 +514,60 @@ def finish_report(result, metrics, context, started, started_clock):
     return RunReport(result, metrics, context)
 
 
+CORRECTIVE_SCENARIOS = {"uncontrolled": "Without corrective actions", "controlled": "With corrective actions"}
+
+
+def corrective_descriptor(study, report):
+    config = report.context["Simulation settings"]
+    series = report.result
+    mode = report.context["Control mode"]
+    return {
+        "control_mode": mode, "dispatch_mode": series.dispatch_timing.get("fleet_dispatch_mode", config["fleet_dispatch_mode"]),
+        "installed_fleet": report.context.get("Manual BESS Fleet", []),
+        "limits": {key: config[key] for key in ("voltage_min_pu", "voltage_max_pu",
+                    "grid_import_limit_kw", "grid_export_limit_kw", "enforce_line_ampacity",
+                    "allow_load_shedding", "allow_pv_curtailment")},
+        "clock": report.context.get("Clock"), "expected_hours": len(study.profiles.timestamps),
+        "processed_hours": len(series.steps), "converged_hours": sum(s.power_flow.converged for s in series.steps),
+        "completed": series.completed, "converged": series.converged, "feasible": series.feasible,
+        "status": series.message,
+    }
+
+
+def run_corrective_comparison(study, settings, stage, progress, started, started_clock):
+    scenarios = {}
+    for index, (key, label) in enumerate(CORRECTIVE_SCENARIOS.items()):
+        stage(label)
+        scenario_settings = replace(settings, compare_corrective_actions=False,
+                                    simulation=replace(settings.simulation, corrective_actions=key == "controlled"))
+
+        def report_progress(event):
+            if event.phase == "Simulation":
+                total = len(study.profiles.timestamps)
+                event = replace(event, completed=index * total + event.completed, total=2 * total,
+                                detail=f"{label} · {event.detail}")
+            progress(event)
+
+        scenarios[key] = run_study(study, scenario_settings, stage=stage,
+                                   progress=report_progress if progress else None)
+    controlled = scenarios["controlled"]
+    context = {**controlled.context, "Control mode": "compare",
+               "Scenario descriptors": {key: corrective_descriptor(study, scenario) for key, scenario in scenarios.items()}}
+    report = finish_report(controlled.result, controlled.metrics, context, started, started_clock)
+    report.alternatives = {key: (scenario.result, scenario.metrics) for key, scenario in scenarios.items()}
+    report.scenario_contexts = {key: scenario.context for key, scenario in scenarios.items()}
+    return report
+
+
 def effective_simulation(study, settings, optimization):
     simulation = replace(settings.simulation,
                          shedding_penalty_per_kwh=settings.economics.shedding_penalty_per_kwh,
                          curtailment_penalty_per_kwh=settings.economics.curtailment_penalty_per_kwh)
     if optimization:
-        return with_terminal_policy(simulation, settings.economics)
-    if settings.manual_bess:
+        return with_terminal_policy(replace(simulation, corrective_actions=True), settings.economics)
+    if not simulation.corrective_actions:
+        return replace(simulation, stop_on_power_flow_failure=False)
+    if settings.manual_units:
         try:
             validate_annual_inputs(study.profiles.timestamps, settings.economics, study.profiles.dt_hours)
         except ValueError:
@@ -524,6 +582,8 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
     started_clock = datetime.now().astimezone().isoformat(timespec="seconds")
     if progress is None:
         progress = getattr(stage, "progress", None)
+    if settings.compare_corrective_actions and not optimization:
+        return run_corrective_comparison(study, settings, stage, progress, started, started_clock)
     context = dict(study.context)
     context.update(study_information(study))
     context["Forecast model"] = study.forecast_info if study.input_mode == "forecast" else None
@@ -550,26 +610,37 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
     context["Settings controls"] = dict(settings.values)
     if not optimization:
         stage(f"Simulation started: {len(study.profiles.timestamps):,} hourly steps")
-        dispatch = dispatch if settings.manual_bess else None
-        if settings.manual_bess is None:
+        units = settings.manual_units
+        dispatch = dispatch if units else None
+        context.update(manual_context(units))
+        context["Control mode"] = "controlled" if simulation.corrective_actions else "uncontrolled"
+        if not simulation.corrective_actions:
+            context["Dispatch"] = "Uncontrolled FBS with prescribed load and PV; installed batteries are idle"
+            context["Dispatch policy"] = {"mode": "idle", "corrective_actions": False}
+            dispatch = None
+        elif not units:
             context["Dispatch"] = "No BESS installed; configured dispatch is not applied"
-            context["Fleet count"] = 0
         elif simulation.fleet_dispatch_mode == "daily_milp_dispatch":
             context["Dispatch"] = (
                 f"Manual BESS · daily MILP dispatch {simulation.dispatch_horizon_hours} h look-ahead, "
                 "daily SOC restoration and discharge-linked reactive power"
             )
-        result = simulate_timeseries(study.network, study.profiles, simulation,
-                                     settings.manual_bess, dispatch, progress=progress)
-        metrics = evaluate_results(result, settings.economics, settings.manual_bess) if result.completed and result.converged else None
+        if len(units) > 1:
+            result = simulate_timeseries(study.network, study.profiles, simulation,
+                                         dispatch_policy=dispatch, bess_fleet=units, progress=progress)
+        else:
+            result = simulate_timeseries(study.network, study.profiles, simulation,
+                                         units[0] if units else None, dispatch, progress=progress)
+        metric_bess = units if len(units) > 1 else units[0] if units else None
+        metrics = evaluate_results(result, settings.economics, metric_bess) if result.completed and result.converged else None
         stage(f"Simulation {'completed' if result.completed else 'ended early'}: "
               f"{len(result.steps):,}/{len(study.profiles.timestamps):,} hours in {perf_counter() - started:.2f} s")
         if metrics is not None and metrics.annual_total_cost is not None:
             stage("Annual economics calculated")
-        if settings.manual_bess:
-            context["Manual BESS"] = vars(settings.manual_bess)
         context["Dispatch timing"] = result.dispatch_timing
-        if result.dispatch_timing:
+        if not simulation.corrective_actions:
+            stage(f"Uncontrolled FBS attempted {len(result.steps):,} hours with no automatic corrective action")
+        elif result.dispatch_timing:
             timing = result.dispatch_timing
             plan_time = timing.get('planning_seconds', timing.get('daily_milp_seconds',
                                                timing.get('predictive_lp_seconds', 0.0)))
@@ -581,7 +652,9 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
                   f"{timing.get('correction_hours',0)} hours; "
                   f"{timing.get('correction_fbs_trials',0)} FBS calls, "
                   f"{timing.get('correction_unresolved_hours',0)} unresolved hours")
-        return finish_report(result, metrics, context, started, started_clock)
+        report = finish_report(result, metrics, context, started, started_clock)
+        context["Scenario descriptors"] = {".": corrective_descriptor(study, report)}
+        return report
     validate_annual_inputs(study.profiles.timestamps, settings.economics, study.profiles.dt_hours)
     values = settings.values
     if dispatch is None:
@@ -602,6 +675,11 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
                                 min_duration_hours=values.get("spin_opt_duration_min_hours", 2.0),
                                 max_duration_hours=values.get("spin_opt_duration_max_hours", 12.0))
     bounds.validate_network(study.network)
+    maximum_units = ga_fleet_limit(values, bounds.allowed_bus_ids, simulation.fleet_dispatch_mode)
+    experimental = maximum_units > 3
+    if maximum_units:
+        context["Optimization mode"] = "experimental_4_plus" if experimental else "standard_1_to_3"
+        context["Maximum BESS units"] = maximum_units
     evaluator = SimulationEvaluator(settings.economics, parameters, dispatch, settings.simulation)
     evaluator.progress = progress
     profiles = study.profiles
@@ -611,12 +689,12 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
     context["Search catalogs"] = (f"Power {bounds.power_ratings_kw}; energy {bounds.energy_capacities_kwh}; "
                                   f"duration {bounds.min_duration_hours:g}–{bounds.max_duration_hours:g} h; "
                                   f"{bounds.feasible_design_count()} feasible power/energy pairs per eligible bus")
-    joint_sess = (values.get("spin_bess_units", 3) >= 1
+    joint_sess = (maximum_units >= 1
                   and settings.simulation.fleet_dispatch_mode in ("opf", "daily_milp_dispatch"))
     algorithm = "GA" if joint_sess else values.get("optimizer_algorithm", "GWO")
     context["Optimizer algorithm"] = "Joint GA" if joint_sess else algorithm
     context["Compute backend"] = (f"{settings.simulation.fbs_config.backend}; "
-                                  + ("Joint fleet genetic algorithm" if values.get("spin_bess_units", 3) >= 1
+                                  + ("Joint fleet genetic algorithm" if maximum_units >= 1
                                      and settings.simulation.fleet_dispatch_mode in ("opf", "daily_milp_dispatch")
                                      else algorithm))
     if settings.managed_search and joint_sess:
@@ -645,20 +723,21 @@ def run_study(study: PreparedStudy, settings: RunSettings, optimization=False,
             seed=values["spin_gwo_seed"],
             workers=values["spin_cpu_workers"] if joint_sess or algorithm == "GWO" else 1)
         annual_workers = values["spin_annual_workers"]
-        annual_fallbacks = int(values.get("spin_lateral_annual_finalists", 3))
+        annual_fallbacks = int(values.get(
+            "spin_lateral_annual_finalists", MAX_JOINT_ANNUAL_FINALISTS if joint_sess else 3))
         crossover = float(values.get("spin_ga_crossover", 0.80))
         mutation = float(values.get("spin_ga_mutation", 0.20))
-    if values.get("spin_bess_units", 3) >= 1:
+    if maximum_units >= 1:
         from .sequential_multi import optimize_sequential_multi
         from .feeder_aware import ImprovementRules
         from .optimizer import BESSCandidate
-        maximum_units = int(values.get("spin_bess_units", 3))
-        stage((f"Running Joint GA for up to {maximum_units} BESS units"
+        stage((f"Running {'experimental ' if experimental else ''}Joint GA for up to {maximum_units} BESS units"
                if settings.simulation.fleet_dispatch_mode in ('opf','daily_milp_dispatch')
                else f"Running sequential GWO for up to {maximum_units} BESS units"))
         result, baseline_result, selected_series = optimize_sequential_multi(
             study.network, profiles, bounds, evaluator, config,
             max_units=maximum_units, stage=stage, progress=progress,
+            experimental_multi_bess=experimental,
             annual_workers=annual_workers, finalists_per_stage=annual_fallbacks,
             ga_crossover_rate=crossover, ga_mutation_rate=mutation,
             improvement_rules=ImprovementRules(
@@ -890,7 +969,8 @@ def _save_dashboard(output, study, settings, report, kind, stage, *, defer_html=
             save_comparison(output, study.historical_profiles, study.profiles,
                             study.assignments,
                             training_end=(study.forecast_info or {}).get('training_ends'))
-        write_run_metadata(output, study.network, kind, report.context, settings.simulation, **kwargs)
+        if not getattr(report, "scenario_contexts", None):
+            write_run_metadata(output, study.network, kind, report.context, settings.simulation, **kwargs)
         if defer_html:
             # Persist metadata immediately; a dedicated GUI worker builds the
             # HTML after the simulation has been committed and the GUI is usable.
@@ -922,19 +1002,39 @@ def _save_numerical_run(study, report, optimization, output, network_snapshot, s
 
 
 def _write_numerical_files(study, report, optimization, output, network_snapshot):
-    label = "Manual BESS" if "Manual BESS" in report.context else "No BESS"
+    count = len(report.context.get("Manual BESS Fleet", ())) or int("Manual BESS" in report.context)
+    label = f"Manual BESS ({count} units)" if count > 1 else "Manual BESS" if count else "No BESS"
+    if report.context.get("Control mode") == "uncontrolled":
+        label = f"{label} · Without corrective actions"
     config = report.context.get("Simulation settings") or {}
     bounds = (config["voltage_min_pu"], config["voltage_max_pu"]) if "voltage_min_pu" in config else None
-    export_results(report.result, output, metrics=report.metrics, context={**report.context, "Alternative": label} if not optimization else report.context,
-                   network=study.network, voltage_bounds=bounds,
-                   input_snapshot={"profiles": study.profiles, "workbook": network_snapshot or getattr(study.request, "network_path", None),
+    inputs = {"profiles": study.profiles, "workbook": network_snapshot or getattr(study.request, "network_path", None),
                                    "metadata": {"clock": study.context.get("Clock"),
                                                 "selected_network_sha256": study.context.get("Network SHA256"),
                                                 "distributor_network_sha256": study.context.get("Distributor network SHA256"),
                                                 "dt_hours": study.profiles.dt_hours,
                                                 "window": study.simulation_window,
                                                 "assignments": study.assignments, "site": study.dataset_metadata.get("site"),
-                                                "clock_status":study.dataset_metadata.get("clock_status") or study.dataset_metadata.get("clock_provenance")}})
+                                                "load_bus_ids": sorted(study.profiles.load_p_kw),
+                                                "manual_bess_fleet": report.context.get("Manual BESS Fleet"),
+                                                "clock_status":study.dataset_metadata.get("clock_status") or study.dataset_metadata.get("clock_provenance")}}
+    if report.scenario_contexts:
+        from .dashboard import write_run_metadata
+        from .study_session import write_input_snapshot
+
+        output.mkdir()
+        write_input_snapshot(output, **inputs)
+        for name, (series, metrics) in report.alternatives.items():
+            context = {**report.scenario_contexts[name], "Run ID": report.context["Run ID"],
+                       "Alternative": CORRECTIVE_SCENARIOS[name]}
+            export_results(series, output / name, metrics=metrics, context=context,
+                           network=study.network, voltage_bounds=bounds)
+        write_run_metadata(output, study.network, "simulation", report.context,
+                           SimulationConfig.from_saved_settings(config), scenarios=CORRECTIVE_SCENARIOS)
+    else:
+        export_results(report.result, output, metrics=report.metrics,
+                       context={**report.context, "Alternative": label} if not optimization else report.context,
+                       network=study.network, voltage_bounds=bounds, input_snapshot=inputs)
     if study.input_mode == "historical":
         weather = pd.DataFrame(index=pd.DatetimeIndex(study.profiles.timestamps, name="timestamp"))
         if study.source_irradiance is not None:
@@ -944,7 +1044,7 @@ def _write_numerical_files(study, report, optimization, output, network_snapshot
             weather["reference_pv_kw"] = pd.Series(ref.p_kw, index=ref.timestamps).reindex(weather.index)
         if len(weather.columns):
             weather.to_csv(output / "inputs" / "solar_reference.csv")
-    scenarios = {".": label}
+    scenarios = CORRECTIVE_SCENARIOS if report.scenario_contexts else {".": label}
     if optimization:
         scenarios = {}
         baseline_series = report.alternatives["no_bess"][0]

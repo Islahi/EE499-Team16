@@ -69,11 +69,11 @@ def _target_kw(flow, point, settings, configs, states):
 
 
 def simulate_timeseries_fleet(network, profiles, settings, configs, *, progress=None,
-                              capture_dispatch=True):
+                              capture_dispatch=True, representative_day=None):
     """Dispatch distinct batteries and run a single coupled feeder solve per trial."""
     started = perf_counter()
     configs = tuple(configs)
-    if not configs and settings.fleet_dispatch_mode not in ('opf', 'daily_milp_dispatch'):
+    if settings.corrective_actions and not configs and settings.fleet_dispatch_mode not in ('opf', 'daily_milp_dispatch'):
         from .simulation import simulate_timeseries
         return simulate_timeseries(network, profiles, settings, dispatch_policy=None,
                                    progress=progress, capture_dispatch=capture_dispatch)
@@ -93,6 +93,9 @@ def simulate_timeseries_fleet(network, profiles, settings, configs, *, progress=
     for name in ('load_p_kw','load_q_kvar','pv_p_kw','pv_q_kvar'):
         if any(len(values) != n for values in getattr(profiles, name).values()):
             raise ValueError(f'Incomplete {name} profile in fleet study')
+    if not settings.corrective_actions:
+        from .uncontrolled import simulate_uncontrolled
+        return simulate_uncontrolled(network, profiles, settings, configs, progress, capture_dispatch)
     states = {c.bus_id: BESSState(c.energy_capacity_kwh * c.soc_initial,c.soc_initial) for c in configs}
     solve = prepare_fbs(network, settings.fbs_config)
     counter = [0, 0.0]
@@ -144,7 +147,8 @@ def simulate_timeseries_fleet(network, profiles, settings, configs, *, progress=
         total_target = sum(requests.values())
         if opf_controller is not None:
             served, flow, actions, correction, opf_audit = opf_controller.dispatch(
-                point, raw, configs, states, requests, q_requests=q_requests)
+                point, raw, configs, states, requests, q_requests=q_requests,
+                timestamp=timestamp, representative_day=representative_day)
             before_correction = opf_controller.last_reference_point
             reference_flow = opf_controller.last_reference_flow
             accepted = (before_correction, reference_flow, actions)

@@ -49,11 +49,19 @@ def compact_summary(report):
             lines.append(f"Algorithm              {algorithm}")
     else:
         lines.extend([
-            "Manual BESS simulation" if context.get("Manual BESS") else "No-BESS simulation",
+            "Manual BESS simulation" if context.get("Manual BESS Fleet") or context.get("Manual BESS") else "No-BESS simulation",
             "Status                 " + ("Completed" if result.completed else "Incomplete"),
             "Power flow             " + ("Converged" if result.converged else "Not converged"),
             f"Simulation hours       {_number(len(result.steps) * result.dt_hours, 'h')}",
         ])
+        if context.get("Control mode") == "compare":
+            for name, label in (("uncontrolled", "Without corrective actions"), ("controlled", "With corrective actions")):
+                reading = context["Scenario descriptors"][name]
+                lines.append(f"{label}   {reading['converged_hours']}/{reading['expected_hours']} h converged"
+                             f"  ·  {'Feasible' if reading['feasible'] else 'Infeasible'}")
+            lines.append("The desktop displays the controlled scenario. Open the dashboard to compare both.")
+        elif context.get("Control mode") == "uncontrolled":
+            lines.append("Corrective actions disabled. Installed batteries are idle and operating costs are diagnostic.")
     if metrics is not None:
         lines.extend([
             "", "PERFORMANCE", "",

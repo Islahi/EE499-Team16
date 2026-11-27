@@ -30,6 +30,9 @@ def main():
         sys.path.insert(0, str(implementation_folder))
     if len(sys.argv) == 3 and sys.argv[1] == "--check-runtime":
         return check_runtime(Path(sys.argv[2]))
+    if len(sys.argv) == 3 and sys.argv[1] == "--check-academic-release":
+        from src.release_checks import run_release_check
+        return run_release_check(Path(sys.argv[2]))
     from src.ui import main as run_application
     return run_application()
 

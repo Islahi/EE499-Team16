@@ -6,7 +6,7 @@ from dataclasses import asdict
 from gzip import compress
 from hashlib import file_digest, sha256
 import json
-from math import isfinite
+from math import fsum, isfinite
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryFile
 from uuid import uuid4
@@ -20,7 +20,8 @@ ASSETS = Path(__file__).parent / "assets"
 RUN_FILE = "dashboard_run.json"
 MANIFEST_FILE = "dashboard_manifest.json"
 HTML_FILE = "dashboard.html"
-SCHEMA = 4
+GA_FILE = "ga_diagnostics.json"
+SCHEMA = 7
 CHUNK_HOURS = 168
 TABLES = ("hourly.csv", "buses.csv", "branches.csv", "metrics.csv", "evaluations.csv", "service_by_bus.csv",
           "convergence.csv", "economic_comparison.csv", "comparison.csv", "bus_ranking_by_stage.csv",
@@ -70,6 +71,15 @@ def write_run_metadata(folder, network, kind, context, simulation, *, optimizer=
                        snapshot=None, scenarios=None):
     """Save immutable run identity, original settings and schematic geometry."""
     folder = Path(folder)
+    if optimizer and "academic_ga_diagnostics" in optimizer:
+        optimizer = dict(optimizer)
+        diagnostic = optimizer.pop("academic_ga_diagnostics")
+        if diagnostic is not None:
+            try:
+                _atomic_write(folder / GA_FILE, _json(diagnostic))
+                optimizer["academic_ga_diagnostics_status"] = diagnostic.get("status")
+            except (OSError, ValueError, TypeError):
+                optimizer["academic_ga_diagnostics_status"] = "write_failed"
     layout = build_layout(network)
     topology = {"buses": [asdict(bus) for bus in sorted(network.buses, key=lambda bus: bus.bus_id)],
                 "lines": [asdict(line) for line in sorted(network.lines, key=lambda line: line.line_id)],
@@ -143,7 +153,7 @@ def _entity_trace(path, key, time_indices, value_key):
 
 def _scenario(folder, label, static):
     """Read compact dashboard traces and leave full ledgers in canonical exports."""
-    hourly = list(_rows(folder / "hourly.csv"))
+    hourly = [{**row, "timestamp": row.get("timestamp") or ""} for row in _rows(folder / "hourly.csv")]
     if not hourly and static is not None:
         hourly = [static]
     if not hourly and (folder / "bus_voltages.csv").is_file():
@@ -193,8 +203,10 @@ def _source_files(folder, scenarios):
 
 
 def _scenario_folder(folder, name):
+    if name not in (".", "no_bess", "best_bess", "uncontrolled", "controlled"):
+        raise ValueError("Unexpected report scenario path")
     directory = (folder / name).resolve()
-    if name not in (".", "no_bess", "best_bess") or not directory.is_relative_to(folder):
+    if not directory.is_relative_to(folder):
         raise ValueError("Unexpected report scenario path")
     return directory
 
@@ -239,6 +251,64 @@ def _scenario_blocks(scenario, add):
     }
 
 
+def _comparison_evidence(hours, snapshot, simulation, topology, descriptor):
+    """Derive Summary-only coverage and limits from canonical retained readings."""
+    window = snapshot.get("window") or {}
+    expected = (descriptor or {}).get("expected_hours", window.get("hours"))
+    converged = [row for row in hours if row.get("converged") is True]
+    failed = [row for row in hours if row.get("converged") is False]
+    result = {"expected_hours": expected, "processed_hours": len(hours),
+              "converged_hours": len(converged) if converged or failed else None,
+              "failed_hours": len(failed) if converged or failed else None}
+    complete = bool(hours) and len(converged) == len(hours) and expected in (None, len(hours))
+    dt = snapshot.get("dt_hours")
+    timed = all(isinstance(row.get("dt_hours", dt), (int, float)) for row in hours)
+    if not complete or not timed:
+        return result
+
+    def series(field):
+        data = [row.get(field) for row in hours]
+        return data if all(isinstance(value, (int, float)) and isfinite(value) for value in data) else None
+
+    def affected(values):
+        return fsum(row.get("dt_hours", dt) for row, value in zip(hours, values) if value > 0)
+
+    low, high = simulation.get("voltage_min_pu"), simulation.get("voltage_max_pu")
+    final_min, final_max = series("voltage_min_pu"), series("voltage_max_pu")
+    raw_min, raw_max = series("uncontrolled_voltage_min_pu"), series("uncontrolled_voltage_max_pu")
+    if raw_min and raw_max:
+        result.update(raw_minimum_pu=min(raw_min), raw_maximum_pu=max(raw_max))
+    if low is not None and high is not None:
+        for phase, minima, maxima in (("final", final_min, final_max), ("raw", raw_min, raw_max)):
+            if minima and maxima:
+                excesses = [max(0., low - a, b - high) for a, b in zip(minima, maxima)]
+                result[f"{phase}_voltage_violation_hours"] = affected(excesses)
+                result[f"{phase}_maximum_voltage_violation_pu"] = max(excesses)
+    monitored = simulation.get("enforce_line_ampacity", True) and any(
+        line.get("ampacity_a") is not None for line in topology.get("lines", ()))
+    overload = series("overloaded_line_count")
+    if monitored and overload:
+        result["overload_hours"] = affected(overload)
+    for direction in ("import", "export"):
+        if simulation.get(f"grid_{direction}_limit_kw") is not None:
+            values = series(f"grid_{direction}_violation_kw")
+            if values is not None:
+                result[f"{direction}_violation_hours"] = affected(values)
+    for field in ("grid_purchase_cost", "grid_export_credit", "shedding_cost", "curtailment_cost"):
+        data = series(field)
+        if data is not None:
+            result[f"study_{field}"] = fsum(data)
+    if all(f"study_{field}" in result for field in
+           ("grid_purchase_cost", "grid_export_credit", "shedding_cost", "curtailment_cost")):
+        result["study_operating_cost"] = (result["study_grid_purchase_cost"] - result["study_grid_export_credit"]
+                                          + result["study_shedding_cost"] + result["study_curtailment_cost"])
+    reactive_loss = series("loss_q_kvar")
+    if reactive_loss is not None:
+        result["reactive_loss_energy_kvarh"] = fsum(
+            value * row.get("dt_hours", dt) for row, value in zip(hours, reactive_loss))
+    return result
+
+
 def read_saved_run(folder):
     """Read run metadata and the input snapshot, including legacy exports."""
     folder = Path(folder)
@@ -274,8 +344,10 @@ def regenerate_dashboard(run_folder):
         if files.get(name) != digest:
             raise ValueError(f"Canonical result file changed or is missing: {name}")
     run_id = metadata.get("run_id") or "archive-" + sha256(_json(files).encode("utf-8")).hexdigest()
-    hours = next((scenario["hours"] for scenario in trace_data.values() if scenario["hours"]), [])
     context = metadata.get("context", {})
+    descriptors = context.get("Scenario descriptors", {})
+    primary = trace_data.get("controlled") or trace_data.get("best_bess") or next(iter(trace_data.values()))
+    hours = primary["hours"]
     prices = context.get("Economic inputs")
     input_hashes = {f"inputs/{name}": _hash(folder / "inputs" / name)
                     for name in ("network.xlsx", "load_profile.csv", "pv_profile.csv", "input_snapshot.json")
@@ -299,9 +371,9 @@ def regenerate_dashboard(run_folder):
         "source": context.get("Active input source"), "forecast": context.get("Forecast model"),
         "dispatch": context.get("Dispatch policy"), "provenance": context.get("Runtime provenance"),
         "input_hashes": input_hashes,
+        "scenario_descriptors": descriptors,
         "files": files,
-        "summary": (list(_rows(folder / "metrics.csv")) or
-                    next((scenario["metrics"] for scenario in trace_data.values() if scenario["metrics"]), [])),
+        "summary": list(_rows(folder / "metrics.csv")) or primary["metrics"],
     }
     with TemporaryFile(mode="w+", encoding="ascii", dir=folder) as spool:
         block_count = 0
@@ -330,19 +402,35 @@ def regenerate_dashboard(run_folder):
                    "forecast_errors": list(_rows(folder / "forecast_errors.csv")),
                    "forecast_comparison_block": add(list(_rows(folder / "forecast_comparison.csv")))
                       if (folder / "forecast_comparison.csv").is_file() else None}
+        try:
+            ga = _read_json(folder / GA_FILE)
+        except (OSError, ValueError):
+            ga = {"schema": 1, "status": "capture_failed"}
+        if ga is not None:
+            payload["ga_diagnostics_block"] = add(ga)
         from .dashboard_series import catalogue
         inputs_cache = {}
         for key, trace in trace_data.items():
+            payload["scenarios"][key]["descriptor"] = descriptors.get(key)
+            if metadata.get("kind") != "base case":
+                payload["scenarios"][key]["comparison"] = _comparison_evidence(
+                    trace["hours"], snapshot, metadata.get("simulation") or {}, metadata.get("topology") or {},
+                    descriptors.get(key))
             payload["scenarios"][key]["gallery"] = catalogue(_scenario_folder(folder, key), trace["hours"], add,
                 root=folder, snapshot=snapshot, inputs_cache=inputs_cache,
+                simulation=metadata.get("simulation"), topology=metadata.get("topology"),
+                economics=prices, descriptor=descriptors.get(key),
                 static=metadata.get("kind") == "base case" or (folder / "bus_voltages.csv").is_file())
         payload["input_info"] = snapshot
         raw_size, packed = _pack(payload)
         template = (ASSETS / "dashboard.html").read_text(encoding="utf-8")
         styles = (ASSETS / "dashboard.css").read_text(encoding="utf-8")
+        styles += (ASSETS / "dashboard_workspace.css").read_text(encoding="utf-8")
         if not metadata.get("legacy"):
             styles += (ASSETS / "model_information.css").read_text(encoding="utf-8")
-        scripts = (ASSETS / "dashboard_gallery.js").read_text(encoding="utf-8") + "\n" + (ASSETS / "dashboard.js").read_text(encoding="utf-8")
+        scripts = "\n".join((ASSETS / name).read_text(encoding="utf-8") for name in (
+            "dashboard_gallery.js", "dashboard_layout.js", "dashboard_workspace.js", "dashboard_health.js",
+            "dashboard_academic.js", "dashboard_academic_topics.js", "dashboard_publication.js", "dashboard.js"))
         # Compress the offline viewer too, so small and historical reports stay compact.
         script_source = b64encode(compress(scripts.encode("utf-8"), mtime=0)).decode("ascii")
         bootstrap = ("(async()=>{const b=Uint8Array.from(atob('" + script_source +
@@ -357,7 +445,7 @@ def regenerate_dashboard(run_folder):
             "<!-- TOTAL_SIZE -->": str(raw_size + total_size),
             "<!-- MODEL_INFORMATION -->": "".join(
                 f"<section><h2>{title}</h2>{content}</section>"
-                for title, content in model_information(metadata, snapshot).items()),
+                for title, content in model_information(metadata, snapshot, dashboard=True).items()),
         }
         for marker, value in replacements.items():
             template = template.replace(marker, value)
@@ -376,7 +464,7 @@ def regenerate_dashboard(run_folder):
     return folder / HTML_FILE
 
 
-def package_dashboard(run_folder, destination):
+def package_dashboard(run_folder, destination, *, attachments=()):
     """Package canonical files verbatim. The browser can read the stored HTML entry."""
     folder = Path(run_folder).resolve(strict=True)
     target = Path(destination).resolve()
@@ -394,13 +482,24 @@ def package_dashboard(run_folder, destination):
         sources.append((source, name))
     if target in {source for source, _ in sources} or target in (folder / HTML_FILE, folder / MANIFEST_FILE):
         raise ValueError("Choose a separate ZIP destination")
+    selected = []
+    names = set()
+    for name in attachments:
+        source = Path(name).resolve(strict=True)
+        if not source.is_file() or source.suffix.lower() not in (".png", ".pdf", ".json", ".svg", ".csv", ".xlsx", ".tex", ".zip"):
+            raise ValueError(f"Choose a supported academic or layout export: {source.name}")
+        entry = "report_exports/" + source.name
+        if entry.casefold() in names:
+            raise ValueError(f"Two selected exports have the same filename: {source.name}")
+        names.add(entry.casefold())
+        selected.append((source, entry))
     with NamedTemporaryFile(dir=target.parent, delete=False) as temporary:
         path = Path(temporary.name)
     try:
         with ZipFile(path, "w", compression=ZIP_DEFLATED) as package:
             package.write(folder / HTML_FILE, HTML_FILE, compress_type=ZIP_STORED)
             package.write(folder / MANIFEST_FILE, MANIFEST_FILE)
-            for source, name in sources:
+            for source, name in (*sources, *selected):
                 package.write(source, name)
         path.replace(target)
     finally:
@@ -408,14 +507,45 @@ def package_dashboard(run_folder, destination):
     return target
 
 
+def copy_dashboard(run_folder, destination):
+    """Save an exact portable copy without modifying the canonical report."""
+    from shutil import copyfile
+
+    folder = Path(run_folder).resolve(strict=True)
+    source = folder / HTML_FILE
+    target = Path(destination).resolve()
+    if source == target:
+        raise ValueError("Choose a separate destination for the HTML copy")
+    manifest = _read_json(folder / MANIFEST_FILE)
+    if not source.is_file() or manifest is None:
+        regenerate_dashboard(folder)
+        manifest = _read_json(folder / MANIFEST_FILE)
+    if manifest.get("html_sha256") != _hash(source):
+        raise ValueError("The HTML dashboard changed. Regenerate it from the canonical run files before copying.")
+    if target in {folder / name for name in manifest["files"]} or target == folder / MANIFEST_FILE:
+        raise ValueError("Choose a destination outside the canonical result files")
+    with NamedTemporaryFile(dir=target.parent, delete=False) as temporary:
+        scratch = Path(temporary.name)
+    try:
+        copyfile(source, scratch)
+        scratch.replace(target)
+    finally:
+        scratch.unlink(missing_ok=True)
+    return target
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("run_folder", type=Path, help="Saved results directory")
     parser.add_argument("--zip", type=Path, help="Optional portable ZIP destination")
+    parser.add_argument("--include", type=Path, nargs="+", default=(),
+                        help="Optional layout JSON, PNG and PDF exports to include in the ZIP")
     args = parser.parse_args()
+    if args.include and args.zip is None:
+        parser.error("--include requires --zip")
     print(regenerate_dashboard(args.run_folder))
     if args.zip:
-        print(package_dashboard(args.run_folder, args.zip))
+        print(package_dashboard(args.run_folder, args.zip, attachments=args.include))
 
 
 if __name__ == "__main__":

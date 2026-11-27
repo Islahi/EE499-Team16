@@ -21,6 +21,7 @@ from time import perf_counter
 
 from .bess import BESSConfig
 from .fbs import warm_numba
+from .ga_observations import GAObservations
 from .metrics import evaluate_results, with_terminal_policy, annual_capital_recovery_factor
 from .multi_bess import simulate_timeseries_fleet
 from .optimizer import BESSCandidate, OptimizationBounds, _without_progress
@@ -226,6 +227,8 @@ def evaluate_fleet_on_scenarios(
             settings,
             configs,
             capture_dispatch=False,
+            representative_day={"day_index": rep_day.day_index, "cluster_id": rep_day.cluster_id,
+                                "start": str(rep_day.start_timestamp)},
         )
         if not sim.completed or not sim.converged or not sim.feasible:
             return FleetEvaluation(
@@ -338,6 +341,7 @@ def run_joint_fleet_ga(
     seed_fleets: tuple[tuple[BESSCandidate, ...], ...] = (),
     bus_order: tuple[int, ...] | None = None,
     progress=None,
+    diagnostics_level: str | None = None,
 ):
     """Run Joint Multi-BESS GA on representative scenarios."""
     cfg = ga_config or FleetGAConfig()
@@ -349,6 +353,8 @@ def run_joint_fleet_ga(
     population: list[tuple[BESSCandidate, ...]] = [()]
     randomized_seeds = list(seed_fleets)
     rng.shuffle(randomized_seeds)
+    if max_units > 3:
+        randomized_seeds.sort(key=lambda fleet: len(fleet) != max_units)
     for sf in randomized_seeds:
         if len(population) >= cfg.population_size:
             break
@@ -369,6 +375,7 @@ def run_joint_fleet_ga(
     best_significant = inf
     stall_count = 0
     stop_reason = "max_generations"
+    observations = GAObservations.start(diagnostics_level)
 
     workers = min(max(1, cfg.workers), cfg.population_size)
     worker_eval = _without_progress(evaluator) if workers > 1 else evaluator
@@ -383,6 +390,7 @@ def run_joint_fleet_ga(
                 initargs=((network, scenarios, worker_eval),),
             )
         for gen in range(cfg.max_generations):
+            generation_started = perf_counter() if observations is not None else None
             if progress is not None:
                 progress(
                     ProgressEvent(
@@ -419,6 +427,10 @@ def run_joint_fleet_ga(
                 else:
                     stall_count += 1
 
+            if observations is not None:
+                observations.generation(gen, population, pending, ranked, len(cache), best_now,
+                                        best_significant, stall_count, perf_counter() - generation_started)
+
             if progress is not None:
                 progress(
                     ProgressEvent(
@@ -446,6 +458,8 @@ def run_joint_fleet_ga(
                 for child in (ca, cb):
                     mutated = _gaussian_mutate(child, bounds, max_units, cfg.mutation_rate, rng, ordered_buses)
                     next_pop.append(mutated)
+                    if observations is not None and observations.level == "detail":
+                        observations.offspring(gen, len(next_pop), (pa, pb), child, mutated)
                     if len(next_pop) >= cfg.population_size:
                         break
             population = next_pop
@@ -466,4 +480,5 @@ def run_joint_fleet_ga(
         "stop_reason": stop_reason,
         "elapsed_seconds": perf_counter() - started,
         "config": asdict(cfg),
+        "academic_diagnostics": observations.report(all_ranked, workers) if observations is not None else None,
     }

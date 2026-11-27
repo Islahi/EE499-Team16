@@ -5,4 +5,13 @@
 .model-values th{width:40%;font-weight:500;text-align:left}
 .model-values td{text-align:left;overflow-wrap:anywhere}
 .model-equation{font:1rem/1.65 'Segoe UI',sans-serif;background:#f5f8fa;padding:9px 12px;overflow-wrap:anywhere}
+.math-line{margin:7px 0;overflow-x:auto;line-height:1.2}.math-line img{display:block;max-width:100%;height:auto;background:#fff;padding:3px;border-radius:4px}
+.model-values{width:100%;margin-bottom:10px}
+.model-values td{min-width:0;word-break:normal}
+.value-detail,.provenance-appendix{margin:0;min-width:0}
+.provenance-appendix{padding:8px 0}
+.value-detail summary,.provenance-appendix summary{cursor:pointer;overflow-wrap:anywhere}
+.value-detail pre,.provenance-appendix pre{overflow:auto;max-height:24rem;max-width:100%;padding:10px;border:1px solid var(--line);border-radius:6px}
+@media screen and (max-width:560px){.model-information .model-values tr{display:grid;grid-template-columns:minmax(0,1fr)}.model-information .model-values th{width:auto}}
+@media print{.value-detail pre,.provenance-appendix pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:none}}
 @media print{.model-values tr,.model-equation{break-inside:avoid}}

@@ -1,4 +1,5 @@
 // Interactive views over immutable, time-indexed report blocks.
+const recordedNumber = value => typeof value==='number' && Number.isFinite(value);
 const focusState = Object.fromEntries(new URLSearchParams(location.hash.slice(1)));
 const galleryState = {group: focusState.group || 'load input', entity: focusState.entity || 'Total',
   field: '', hour: 0, first: 0, span: 168, mode: 'Time series', overlay: '', scenario: focusState.scenario || ''};
@@ -6,6 +7,7 @@ let galleryVersion = 0;
 const groupsFor = {
   'Study inputs':['load input','PV input','solar source'],
   'Network':['bus','line','system'],
+  'Network records':['bus','line','system'],
   'Demand & PV':['system','bus','load input','PV input'],
   'BESS':['battery','battery daily audit','bus','system'],
   'Economics':['system','bus'],
@@ -108,101 +110,336 @@ function drawTrace(ctx,data,x,y,pixels) {
   let started=false;ctx.beginPath();
   for(let i=0;i<data.length;i+=stride){
     let min=-1,max=-1;
+    function flush() {
+      if(min<0)return;
+      const first=Math.min(min,max),last=Math.max(min,max);
+      if(started)ctx.lineTo(x(first),y(data[first]));else{ctx.moveTo(x(first),y(data[first]));started=true;}
+      if(last!==first)ctx.lineTo(x(last),y(data[last]));
+      if(data.length===1)ctx.fillRect(x(first)-2,y(data[first])-2,4,4);
+      min=-1;max=-1;
+    }
     for(let j=i;j<Math.min(i+stride,data.length);j++){
-      if(!Number.isFinite(data[j]))continue;
+      if(!Number.isFinite(data[j])){flush();started=false;continue;}
       if(min<0||data[j]<data[min])min=j;
       if(max<0||data[j]>data[max])max=j;
     }
-    if(min<0){started=false;continue;}
-    for(const j of [...new Set([Math.min(min,max),Math.max(min,max)])]){
-      if(started)ctx.lineTo(x(j),y(data[j]));else{ctx.moveTo(x(j),y(data[j]));started=true;}
-      if(data.length===1)ctx.fillRect(x(j)-2,y(data[j])-2,4,4);
-    }
+    flush();
   }
   ctx.stroke();
 }
+function timeCoordinate(stamp) {
+  if(typeof stamp!=='string'||!/^\d{4}-\d\d-\d\d(?:[T ]\d\d:\d\d(?::\d\d(?:\.\d+)?)?(?:Z|[+-]\d\d:\d\d)?)?$/.test(stamp))return NaN;
+  const iso=stamp.replace(' ','T');
+  return Date.parse(iso.length===10||/(?:Z|[+-]\d\d:\d\d)$/.test(iso)?iso:iso+'Z');
+}
+function timeViewport(axis,range) {
+  const coords=axis.map(timeCoordinate);
+  if(!coords.length||coords.some((value,i)=>!Number.isFinite(value)||i>0&&value<=coords[i-1]))return null;
+  const low=coords[0],high=coords.at(-1),full=high-low;
+  let start=low,end=high;
+  const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+  function nearest(value){
+    const j=rangeIndex(coords,value);
+    if(j===0||j===coords.length)return Math.min(j,coords.length-1);
+    return value-coords[j-1]<=coords[j]-value?j-1:j;
+  }
+  function bounds(a,b){
+    const width=Math.min(b-a,full);
+    start=clamp(a,low,high-width);end=start+width;
+    const first=rangeIndex(coords,start),last=rangeIndex(coords,end,true);
+    if(last-first<2&&coords.length>1){
+      const i=nearest((start+end)/2);
+      const before=Math.max(0,i-1),after=Math.min(coords.length-1,i+1);
+      const left=before!==i&&(after===i||coords[i]-coords[before]<=coords[after]-coords[i])?before:i;
+      start=Math.min(start,coords[left]);end=Math.max(end,coords[left+1]);
+    }
+  }
+  const set=(a,b)=>bounds(coords[a],coords[b-1]);
+  if(range)set(...range);
+  return {
+    coords,low,high,full,nearest,bounds,set,
+    get range(){return [rangeIndex(coords,start),rangeIndex(coords,end,true)];},
+    get limits(){return [start,end];},
+    fraction:i=>(coords[i]-start)/(end-start||1),
+    index:f=>nearest(start+clamp(f,0,1)*(end-start)),
+    zoom(factor,fraction){
+      const f=clamp(fraction,0,1),width=Math.min(full,(end-start)*factor),anchor=start+f*(end-start);
+      bounds(anchor-f*width,anchor+(1-f)*width);
+    },
+    pan(fraction,initial=[start,end]){
+      const delta=fraction*(initial[1]-initial[0]);
+      bounds(initial[0]+delta,initial[1]+delta);
+    }
+  };
+}
+function seriesLimits(all,displayed,bars,stack,zeroLine,size) {
+  const limits={left:[Infinity,-Infinity],right:[Infinity,-Infinity]};
+  function extent(side,value){
+    limits[side][0]=Math.min(limits[side][0],value);
+    limits[side][1]=Math.max(limits[side][1],value);
+  }
+  for(const s of all){
+    const side=s.axis==='right'?'right':'left';
+    if(s.style==='bar'||bars||zeroLine)extent(side,0);
+    for(const value of s.data)if(recordedNumber(value))extent(side,value);
+  }
+  if(stack)for(let i=0;i<size;i++){
+    let pos=0,neg=0;
+    for(const s of displayed){const v=s.data[i];if(recordedNumber(v)){pos+=Math.max(v,0);neg+=Math.min(v,0);}}
+    extent('left',pos);extent('left',neg);
+  }
+  return limits;
+}
 function interactiveChart(root,title,axis,series,unit,options={}) {
   const panel=elem('div',undefined,'chart explorer-chart'),cv=elem('canvas'),tip=elem('output'),legend=elem('div',undefined,'legend');
-  cv.tabIndex=0;cv.setAttribute('aria-label',title);panel.append(elem('h3',title),cv,tip,legend);root.append(panel);
-  let left=0,right=axis.length,drag=null;
-  const active=series.map(()=>true);
+  cv.tabIndex=0;cv.setAttribute('aria-label',title);
+  if(!options.compact)panel.append(elem('h3',title));
+  const surface=elem('div',undefined,'canvas-surface'),marker=elem('span',undefined,'hover-cursor');
+  marker.setAttribute('aria-hidden','true');marker.hidden=true;
+  surface.append(cv,marker);panel.append(surface,tip,legend);root.append(panel);
+  let [left,right]=options.range||[0,axis.length],drag=null,cursor=options.cursor,paintPending=false,fullPaint=false;
+  const active=series.map(s=>s.visible!==false);
   const heat=options.mode==='Heatmap',stack=options.mode==='Stack elements',bars=options.mode==='Selected hour';
+  const color=(s,i)=>s.color||palette[i%palette.length];
   const visible=()=>series.filter((s,i)=>active[i]);
-  function px(){return Math.max(1,cv.clientWidth-84);}
-  const xpos=i=>65+(i-left)*px()/Math.max(1,right-left-1);
-  function draw() {
-    if(!cv.isConnected)return;
-    const w=Math.max(240,cv.clientWidth),h=heat?Math.min(650,Math.max(240,series.length*15+60)):300,dpr=window.devicePixelRatio||1;
+  const margin=73, endMargin=series.some(s=>s.axis==='right')?73:17;
+  const px=()=>Math.max(1,cv.clientWidth-margin-endMargin);
+  const time=options.categorical||bars?null:timeViewport(axis,options.range);
+  if(time){
+    if(options.timeBounds)time.bounds(...options.timeBounds);
+    [left,right]=time.range;
+    if(time.full)cv.title='Wheel to zoom. Drag to pan. Shift + arrows to inspect.';
+  }
+  const coordinates=options.coordinates;
+  const fraction=i=>coordinates?(coordinates[i]-coordinates[left])/
+    (coordinates[right-1]-coordinates[left]||1):(i-left)/Math.max(1,right-left-1);
+  const xpos=i=>margin+px()*(time?time.fraction(i):fraction(i));
+  const limitsFor=()=>seriesLimits(options.scaleSeries||visible(),visible(),bars,stack,options.zeroLine,axis.length);
+  let limits=limitsFor();
+  const plotBottom=()=>cv.clientHeight-49;
+  const isPlot=e=>e.offsetX>=margin&&e.offsetX<=margin+px()&&e.offsetY>=37&&e.offsetY<=plotBottom();
+  function draw(exporting=false){
+    if(!cv.isConnected||!axis.length)return;
+    const w=Math.max(250,cv.clientWidth),h=heat?Math.min(650,Math.max(255,series.length*15+78)):(options.height||275);
+    const dpr=Math.max(1.75,window.devicePixelRatio||1);
     cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);cv.style.height=h+'px';
     const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);
-    ctx.font='12px Segoe UI';let low=Infinity,high=-Infinity;
-    for(const s of visible())for(let i=left;i<right;i++)if(Number.isFinite(s.data[i])){low=Math.min(low,s.data[i]);high=Math.max(high,s.data[i]);}
-    if(!Number.isFinite(low)){ctx.fillStyle='#435c64';ctx.fillText('No recorded values in this selection',25,48);return;}
-    if(stack){
-      low=high=0;
-      for(let i=left;i<right;i++){
-        let pos=0,neg=0;
-        for(const s of visible()){const v=s.data[i];if(Number.isFinite(v)){pos+=Math.max(v,0);neg+=Math.min(v,0);}}
-        high=Math.max(high,pos);low=Math.min(low,neg);
-      }
+    ctx.font='600 12px Segoe UI';ctx.fillStyle='#1d3440';
+    ctx.fillText(title,9,15,w-18);ctx.font='11px Segoe UI';
+    const displayed=visible();
+    if(!displayed.length||Object.values(limits).every(([low])=>low===Infinity)){
+      ctx.fillText('No recorded values in this selection',25,64);return;
     }
-    if(heat) {
-      const rows=visible(),dy=(h-50)/Math.max(1,rows.length),stride=Math.max(1,Math.ceil((right-left)/px()));
-      rows.forEach((s,r)=>{
-        if(rows.length<27||r%4===0){ctx.fillStyle='#345260';ctx.fillText(s.label.slice(0,9),3,16+(r+.55)*dy);}
+    const upper=37,lower=h-49;
+    if(heat){
+      const [low,high]=limits.left,dy=(lower-upper)/Math.max(1,displayed.length),stride=Math.max(1,Math.ceil((right-left)/px()));
+      displayed.forEach((s,r)=>{
+        if(displayed.length<27||r%4===0){ctx.fillStyle='#345260';ctx.fillText(s.label.slice(0,10),4,upper+(r+.65)*dy);}
         for(let i=left;i<right;i+=stride){
-          const bins=s.data.slice(i,Math.min(i+stride,right)).filter(Number.isFinite);
+          const bins=s.data.slice(i,Math.min(i+stride,right)).filter(recordedNumber);
           if(!bins.length)continue;
-          // Use the lowest voltage or highest magnitude in each bin, as appropriate.
-          const v=options.field==='voltage_pu'?Math.min(...bins):Math.max(...bins);
-          const z=(v-low)/(high-low||1);ctx.fillStyle='hsl('+(205-175*z)+' 58% '+(78-34*z)+'%)';
-          ctx.fillRect(xpos(i),12+r*dy,Math.max(1,stride*px()/Math.max(1,right-left-1)),dy);
+          const v=options.field==='voltage_pu'?Math.min(...bins):Math.max(...bins), z=(v-low)/(high-low||1);
+          ctx.fillStyle='hsl('+(205-175*z)+' 58% '+(78-34*z)+'%)';
+          ctx.fillRect(xpos(i),upper+r*dy,Math.max(1,stride*px()/Math.max(1,right-left-1)),dy);
         }
       });
-      ctx.fillStyle='#345260';ctx.fillText(fmt(low,4)+' – '+fmt(high,4)+' '+unit,65,h-4);
-    } else {
-      if(bars){low=Math.min(0,low);high=Math.max(0,high);}
-      if(low===high){const pad=Math.abs(low)*.03||1;low-=pad;high+=pad;}
-      const y=v=>h-44-(v-low)/(high-low)*(h-70);
-      for(let j=0;j<=4;j++){const v=low+(high-low)*j/4;ctx.fillStyle='#415866';ctx.fillText(fmt(v,4),1,y(v)+4);
-        ctx.strokeStyle='#dee5e6';ctx.beginPath();ctx.moveTo(64,y(v));ctx.lineTo(w-12,y(v));ctx.stroke();}
-      const positive=new Float64Array(right-left), negative=new Float64Array(right-left);
-      series.forEach((s,j)=>{if(!active[j])return;ctx.strokeStyle=ctx.fillStyle=palette[j%palette.length];ctx.lineWidth=2;
+      ctx.fillStyle='#345260';ctx.fillText(fmt(low)+' – '+fmt(high)+' '+unit,margin,h-28);
+    }else{
+      const scales={};
+      for(const side of ['left','right']){
+        let [low,high]=limits[side];
+        if(low===Infinity)continue;
+        if(low===high){const pad=Math.abs(low)*.03||1;low-=pad;high+=pad;}
+        const y=v=>lower-(v-low)/(high-low)*(lower-upper);
+        scales[side]=y;
+        const label=displayed.find(s=>(s.axis||'left')===side)?.unit||unit;
+        ctx.fillStyle='#345260';
+        ctx.fillText(label||'Value',side==='left'?7:w-endMargin+6,30,endMargin+38);
+        for(let j=0;j<=4;j++){
+          const v=low+(high-low)*j/4;ctx.fillStyle='#415866';
+          ctx.fillText(fmt(v),side==='left'?4:w-endMargin+6,y(v)+4,margin-8);
+          if(side==='left'||!scales.left){ctx.strokeStyle='#dfe7ec';ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(margin,y(v));ctx.lineTo(w-endMargin,y(v));ctx.stroke();}
+        }
+        if(options.zeroLine){
+          ctx.strokeStyle='#6c8491';ctx.setLineDash([4,3]);ctx.beginPath();
+          ctx.moveTo(margin,y(0));ctx.lineTo(w-endMargin,y(0));ctx.stroke();ctx.setLineDash([]);
+        }
+      }
+      const positive=stack?new Float64Array(right-left):null,negative=stack?new Float64Array(right-left):null;
+      const partialComposition=stack&&displayed.every(s=>s.category)?
+        Array.from({length:right-left},(_,i)=>displayed.some(s=>!recordedNumber(s.data[left+i]))):null;
+      const renderedBars=displayed.filter(s=>bars||s.style==='bar'),stride=Math.max(1,Math.ceil((right-left)/px()));
+      series.forEach((s,j)=>{
+        if(!active[j])return;
+        ctx.strokeStyle=ctx.fillStyle=color(s,j);ctx.lineWidth=2;ctx.setLineDash(s.dash==='dashed'?[5,4]:[]);
+        const y=scales[(s.axis||'left')];
+        if(!y)return;
         if(stack){
-          const width=Math.max(1,px()/Math.max(1,right-left)*.85);
+          const width=Math.max(1,px()/Math.max(1,right-left)*.75);
           for(let i=left;i<right;i++){
-            const v=s.data[i];if(!Number.isFinite(v)||v===0)continue;
-            const sums=v>0?positive:negative,start=sums[i-left];
-            sums[i-left]+=v;
+            const v=s.data[i];if(partialComposition?.[i-left]||!recordedNumber(v)||v===0)continue;
+            const sums=v>0?positive:negative,start=sums[i-left];sums[i-left]+=v;
             ctx.fillRect(xpos(i)-width/2,Math.min(y(start),y(start+v)),width,Math.abs(y(start+v)-y(start)));
           }
-        } else if(bars){for(let i=left;i<right;i++)if(Number.isFinite(s.data[i]))ctx.fillRect(xpos(i)-2,Math.min(y(0),y(s.data[i])),Math.max(2,px()/(right-left)*.60),Math.max(1,Math.abs(y(0)-y(s.data[i]))));}
-        else drawTrace(ctx,s.data.slice(left,right),i=>xpos(i+left),y,px());
+        }else if(bars||s.style==='bar'){
+          const width=Math.max(1,px()*stride/Math.max(1,right-left)*.78/renderedBars.length);
+          const offset=(renderedBars.indexOf(s)-(renderedBars.length-1)/2)*width;
+          for(let i=left;i<right;i+=stride){
+            let min=0,max=0;
+            for(let k=i;k<Math.min(right,i+stride);k++){const v=s.data[k];if(recordedNumber(v)){min=Math.min(min,v);max=Math.max(max,v);}}
+            if(min||max)ctx.fillRect(xpos(i)+offset-width/2,y(max),width,Math.abs(y(min)-y(max)));
+          }
+        }else {
+          if(s.style!=='points')drawTrace(ctx,s.data.slice(left,right),i=>xpos(i+left),y,px());
+          if(options.markers||s.style==='points'){
+            for(let i=left;i<right;i++){
+              if(!recordedNumber(s.data[i]))continue;
+              ctx.beginPath();ctx.arc(xpos(i),y(s.data[i]),2.7,0,2*Math.PI);ctx.fill();
+            }
+          }
+        }
       });
-      if(options.cursor>=left&&options.cursor<right){ctx.strokeStyle='#74818a';ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(xpos(options.cursor),18);ctx.lineTo(xpos(options.cursor),h-40);ctx.stroke();}
+      ctx.setLineDash([]);
+      if(!exporting&&cursor>=left&&cursor<right){
+        ctx.strokeStyle='#526470';ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(xpos(cursor),upper);
+        ctx.lineTo(xpos(cursor),lower);ctx.stroke();ctx.setLineDash([]);
+      }
     }
-    ctx.fillStyle='#39535b';ctx.fillText(axis[left]||'',65,h-22);const end=axis[right-1]||'';ctx.fillText(end,w-12-ctx.measureText(end).width,h-22);
+    ctx.fillStyle='#39535b';
+    if(options.categorical&&options.axisLabel){
+      const count=Math.min(right-left,Math.max(2,Math.floor(px()/65)));
+      for(let j=0;j<count;j++){
+        const i=left+Math.round(j*(right-left-1)/Math.max(1,count-1));
+        ctx.textAlign=j===0?'left':j===count-1?'right':'center';
+        const label=typeof axis[i]==='number'?fmt(axis[i]):String(axis[i]??'');
+        ctx.fillText(label,xpos(i),h-32,65);
+      }
+      ctx.textAlign='center';ctx.fillText(options.axisLabel,margin+px()/2,h-19,px());ctx.textAlign='left';
+    }else{
+      ctx.fillText(String(axis[left]??''),margin,h-30,(w-margin-endMargin)/2);
+      const end=String(axis[right-1]??'');
+      if(right-left>1){ctx.textAlign='right';ctx.fillText(end,w-endMargin,h-30,(w-margin-endMargin)/2);ctx.textAlign='left';}
+    }
+    let x=8;
+    for(const s of displayed){
+      if(x+16>=w)break;
+      ctx.fillStyle=color(s,series.indexOf(s));ctx.fillRect(x,h-16,9,4);
+      ctx.fillStyle='#344d59';const max=Math.min(155,w-x-16);
+      ctx.fillText(s.label,x+12,h-10,max);x+=16+Math.min(max,ctx.measureText(s.label).width);
+    }
+    updateCursor();
   }
-  series.forEach((s,i)=>{const b=button(legend,s.label,()=>{active[i]=!active[i];b.setAttribute('aria-pressed',active[i]);draw();});
-    b.style.borderBottom='3px solid '+palette[i%palette.length];b.setAttribute('aria-pressed','true');});
-  function index(e){return Math.max(left,Math.min(right-1,left+Math.round((e.offsetX-65)/px()*Math.max(1,right-left-1))));}
-  cv.onpointermove=e=>{const i=index(e);let a=visible();
-    if(heat){const id=Math.floor((e.offsetY-12)/(cv.clientHeight-50)*a.length);a=a.slice(Math.max(0,id),Math.max(0,id)+1);}
-    tip.textContent=[axis[i],...a.map(s=>s.label+' '+(s.data[i]==null?'Not recorded':String(s.data[i])+' '+unit))].join(' · ');};
-  cv.onpointerdown=e=>{drag=index(e);cv.setPointerCapture(e.pointerId);};
-  cv.onpointerup=e=>{const i=index(e);if(drag!=null&&Math.abs(i-drag)>1){[left,right]=[Math.min(i,drag),Math.max(i,drag)+1];draw();}
-    else if(options.pick)options.pick(i);drag=null;};
-  cv.ondblclick=()=>{left=0;right=axis.length;draw();};
-  const actions=selectionPanel(panel);
-  button(actions,'Reset zoom',()=>{left=0;right=axis.length;draw();});
-  button(actions,'Pan left',()=>{const n=Math.min(left,Math.ceil((right-left)/2));left-=n;right-=n;draw();});
-  button(actions,'Pan right',()=>{const n=Math.min(axis.length-right,Math.ceil((right-left)/2));left+=n;right+=n;draw();});
-  button(actions,'Save PNG',()=>cv.toBlob(blob=>saveBlob(blob,'chart.png')));
-  button(actions,'Save CSV',()=>saveRows(['axis',...visible().map(s=>s.label+(unit?' ['+unit+']':''))],
-    axis.slice(left,right).map((v,j)=>[v,...visible().map(s=>s.data[j+left])]),'chart.csv'));
-  redraw.push(draw);draw();return draw;
+  function updateCursor(){
+    marker.hidden=!Number.isFinite(cursor)||cursor<left||cursor>=right;
+    if(!marker.hidden)marker.style.left=xpos(cursor)+'px';
+  }
+  function schedule(paint=false){
+    fullPaint ||= paint;
+    if(paintPending)return;
+    paintPending=true;requestAnimationFrame(()=>{
+      const repaint=fullPaint;paintPending=false;fullPaint=false;
+      if(repaint)draw();else updateCursor();
+    });
+  }
+  function choose(i,notify=true) {
+    if(i<0||i>=axis.length)return;
+    tip.textContent=[axis[i],...visible().map(s=>s.label+' · '+(recordedNumber(s.data[i])?fmt(s.data[i])+' '+(s.unit||unit):'Not recorded'))].join('  |  ');
+    if(notify&&options.hover)options.hover(i);
+  }
+  function setRange(begin,end,notify=true){
+    if(!axis.length)return;
+    left=Math.max(0,Math.min(begin,axis.length-1));right=Math.max(left+1,Math.min(end,axis.length));
+    if(time)time.set(left,right);
+    changed(notify);
+  }
+  function changed(notify=true){
+    if(time)[left,right]=time.range;
+    schedule(true);
+    if(notify&&options.onZoom)options.onZoom(left,right,time?.limits);
+  }
+  series.forEach((s,i)=>{
+    const item=button(legend,s.label,()=>{active[i]=!active[i];item.setAttribute('aria-pressed',active[i]);
+      options.toggle?.(s,active[i]);limits=limitsFor();schedule(true);});
+    item.style.borderBottom='3px solid '+color(s,i);item.setAttribute('aria-pressed',active[i]);
+  });
+  function index(e){
+    const point=(e.offsetX-margin)/px();
+    if(time)return Math.min(right-1,Math.max(left,time.index(point)));
+    if(!coordinates)return Math.max(left,Math.min(right-1,left+Math.round(point*Math.max(1,right-left-1))));
+    let lo=left,hi=right-1;
+    while(lo<hi){
+      const mid=(lo+hi)>>1;
+      if(fraction(mid)<point)lo=mid+1;
+      else hi=mid;
+    }
+    return lo>left&&Math.abs(fraction(lo-1)-point)<Math.abs(fraction(lo)-point)?lo-1:lo;
+  }
+  cv.onpointermove=e=>{
+    if(drag&&time){
+      const dx=e.clientX-drag.x;
+      drag.moved ||= Math.abs(dx)>4||Math.abs(e.clientY-drag.y)>4;
+      if(drag.moved){time.pan(-dx/px(),drag.initial);changed();}
+    }else if(isPlot(e))choose(index(e));
+  };
+  cv.onpointerdown=e=>{
+    if(e.button!==0||!isPlot(e))return;
+    if(e.pointerType==='touch')return;
+    drag={x:e.clientX,y:e.clientY,initial:time?.limits,moved:false};
+    cv.focus({preventScroll:true});cv.setPointerCapture(e.pointerId);
+    if(time)e.preventDefault();
+  };
+  cv.onpointerup=e=>{
+    if((drag&&!drag.moved||e.pointerType==='touch'&&isPlot(e))&&options.pick)options.pick(index(e));
+    drag=null;
+  };
+  cv.onpointercancel=cv.onlostpointercapture=()=>{drag=null;};
+  cv.ondragstart=e=>e.preventDefault();
+  if(time&&time.full)cv.addEventListener('wheel',e=>{
+    if(!isPlot(e)||e.ctrlKey||e.metaKey||!e.deltaY)return;
+    e.preventDefault();
+    const delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?220:1);
+    time.zoom(Math.exp(Math.max(-.75,Math.min(.75,delta*.0023))),(e.offsetX-margin)/px());
+    changed();
+  },{passive:false});
+  cv.onkeydown=e=>{
+    let i=cursor??left;
+    if(time&&(e.key==='+'||e.key==='='||e.key==='-')){
+      e.preventDefault();time.zoom(e.key==='-'?1.25:.8,.5);changed();
+    }else if(time&&!e.shiftKey&&(e.key==='ArrowRight'||e.key==='ArrowLeft')){
+      e.preventDefault();time.pan(e.key==='ArrowRight'?.2:-.2);changed();
+    }else if(e.key==='ArrowRight'||e.key==='ArrowLeft'){
+      e.preventDefault();cursor=Math.max(left,Math.min(right-1,i+(e.key==='ArrowRight'?1:-1)));choose(cursor);schedule();
+    }else if(e.key==='Enter'&&options.pick){e.preventDefault();options.pick(i);}
+    else if(e.key==='Escape'){e.preventDefault();setRange(0,axis.length);}
+  };
+  const savePNG=()=>{draw(true);cv.toBlob(blob=>{saveBlob(blob,(options.filename||'chart')+'.png');draw();});};
+  const saveCSV=()=>{
+    const list=visible(),intervals=options.intervals;
+    const display=options.exportHeaders?list.map(s=>exactExportHeader(s,unit)):list.map(s=>s.label+(unit?' ['+unit+']':''));
+    saveRows([options.exportHeaders?'Timestamp or period':'axis',...(intervals?['First retained timestamp','Last retained timestamp','Partial calendar bucket']:[]),...display],
+      axis.slice(left,right).map((v,j)=>{
+        const n=j+left,bucket=intervals?.[n];
+        return [v,...(bucket?[bucket.start,bucket.end,bucket.partial]:[]),...list.map(s=>s.data[n])];
+      }),(options.filename||'chart')+'.csv');
+  };
+  const controls=options.compact?elem('details',undefined,'chart-tools'):selectionPanel(panel);
+  if(options.compact){controls.append(elem('summary','Zoom / export'));panel.append(controls);}
+  if(time&&time.full){
+    button(controls,'Reset zoom',()=>setRange(0,axis.length));
+    for(const shift of [-1,1])button(controls,shift<0?'Pan left':'Pan right',()=>{time.pan(shift*.5);changed();});
+    tip.textContent='Wheel to zoom · Drag to pan · Shift + arrow keys to inspect';
+  }
+  button(controls,'Save PNG',savePNG);button(controls,'Save CSV',saveCSV);
+  const controller={draw,savePNG,saveCSV,publicationData(full=false){
+    const a=full?0:left,b=full?axis.length:right;
+    return {title,axis:axis.slice(a,b),coordinates:coordinates?.slice(a,b),axisLabel:options.axisLabel,unit,
+      intervals:options.intervals?.slice(a,b),categorical:options.categorical,markers:options.markers,stack,
+      traces:visible().map(s=>({...s,data:s.data.slice(a,b)}))};
+  },setCursor(i){if(cursor!==i){cursor=i;schedule();}},setRange,
+    setTimeBounds(bounds){if(time){time.bounds(...bounds);changed(false);}}};
+  redraw.push(draw);draw();
+  return controller;
 }
-
 
 function chooseScenario(controls) {
   const state=galleryState,options=Object.entries(run.scenarios);
@@ -213,34 +450,57 @@ function chooseScenario(controls) {
 function jump(group,entity,hour) {
   if(galleryState.span===-1||hour<galleryState.first||hour>=galleryState.first+(galleryState.span||Infinity))galleryState.first=hour;
   Object.assign(galleryState,{group,entity:String(entity),field:sensible[group],hour,mode:'Time series',overlay:''});
-  screen='Network';tabs();render();
+  if(typeof selectedEntity==='function' && run.scenarios[scenario]?.gallery){
+    const ctx=chartContext('current',scenario);
+    if(ctx){
+      void timeline(ctx).then(axis=>{
+        workspace.primary=ctx.scenario;workspace.state.scenario=ctx.scenario;
+        screen='Network';tabs();selectedEntity(group,entity,axis[hour]);
+      });
+      return;
+    }
+  }
+  screen='Network records';tabs();render();
 }
-function networkMap(root,topology,samples,group,field,onSelect) {
+function networkMap(root,topology,samples,group,field,onSelect,selection=null,health=null,equipment={}) {
   if(!run.metadata.layout?.positions)return;
   const positions=run.metadata.layout.positions,svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
   const pts=Object.values(positions),xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
   if(!pts.length)return;
   svg.setAttribute('viewBox',[Math.min(...xs)-36,Math.min(...ys)-45,Math.max(...xs)-Math.min(...xs)+72,Math.max(...ys)-Math.min(...ys)+85].join(' '));
-  svg.setAttribute('class','feeder');svg.setAttribute('aria-label','Clickable network at selected hour');
+  svg.setAttribute('class','feeder');svg.setAttribute('aria-label',health?'Whole-study feeder health':'Clickable network at selected hour');
   const values=Object.values(samples).filter(Number.isFinite),lo=Math.min(...values),hi=Math.max(...values);
   const color=v=>Number.isFinite(v)?'hsl('+(200-165*(v-lo)/(hi-lo||1))+' 58% 45%)':'#a3b0b5';
   function node(tag,attrs,kind,id,text){
     const n=document.createElementNS(svg.namespaceURI,tag);
     for(const [k,v] of Object.entries(attrs))n.setAttribute(k,v);
-    n.setAttribute('tabindex','0');n.setAttribute('role','button');n.setAttribute('aria-label',kind+' '+id);
+    n.setAttribute('tabindex','0');n.setAttribute('role','button');n.setAttribute('aria-label',text);
+    n.setAttribute('data-kind',kind);n.setAttribute('data-entity',id);
+    if(selection?.kind===kind&&selection.ids.includes(String(id)))n.classList.add('selected-element');
+    if(health?.[kind]?.[id]?.stress)n.classList.add('prior-stress');
     const title=document.createElementNS(svg.namespaceURI,'title');title.textContent=text;n.append(title);
-    n.onclick=()=>onSelect(kind,id);n.onkeydown=e=>{if(e.key==='Enter')onSelect(kind,id);};svg.append(n);return n;
+    n.onclick=()=>onSelect(kind,id);n.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onSelect(kind,id);}};svg.append(n);return n;
   }
   for(const line of topology?.lines||[]){
     const pts=run.metadata.layout.routes?.[line.line_id]||[positions[line.from_bus],positions[line.to_bus]];
-    if(pts.every(Boolean))node('polyline',{points:pts.map(p=>p.join(',')).join(' '),fill:'none',stroke:group==='line'?color(samples[line.line_id]):'#71878c','stroke-width':7},'line',line.line_id,
-      line.line_id+(group==='line'?' · '+(samples[line.line_id]??'Not recorded')+' '+unitOf(field):''));
+    const status=health?.line?.[line.line_id];
+    if(pts.every(Boolean))node('polyline',{points:pts.map(p=>p.join(',')).join(' '),fill:'none',
+      stroke:status?.color||(health?'#7d8995':group==='line'?color(samples[line.line_id]):'#71878c'),'stroke-width':7},'line',line.line_id,
+      line.line_id+(health?' · '+(status?.label||'Insufficient data'):group==='line'?' · '+fmt(samples[line.line_id])+' '+unitOf(field):''));
   }
   for(const [id,[x,y]] of Object.entries(positions)){
-    node('circle',{cx:x,cy:y,r:13,fill:group==='bus'?color(samples[id]):'#3b6c78',stroke:'#253d47','stroke-width':2},'bus',id,
-      'Bus '+id+(group==='bus'?' · '+(samples[id]??'Not recorded')+' '+unitOf(field):''));
+    const status=health?.bus?.[id];
+    const slack=topology?.buses?.find(bus=>String(bus.bus_id)===id)?.is_slack;
+    node(slack?'rect':'circle',{...(slack?{x:x-12,y:y-12,width:24,height:24}:{cx:x,cy:y,r:13}),
+      fill:status?.color||(health?'#7d8995':group==='bus'?color(samples[id]):'#3b6c78'),stroke:'#253d47','stroke-width':2},'bus',id,
+      'Bus '+id+(health?' · '+(status?.label||'Insufficient data'):group==='bus'?' · '+fmt(samples[id])+' '+unitOf(field):''));
     const label=document.createElementNS(svg.namespaceURI,'text');label.setAttribute('x',x);label.setAttribute('y',y-17);
     label.setAttribute('text-anchor','middle');label.setAttribute('font-size','21');label.setAttribute('pointer-events','none');label.textContent=id;svg.append(label);
+    const marks=[equipment.pv?.has(id)?'PV':'',equipment.bess?.has(id)?'BESS':''].filter(Boolean).join(' / ');
+    if(marks){
+      const badge=label.cloneNode(false);badge.setAttribute('y',y+32);badge.setAttribute('font-size','14');
+      badge.textContent=marks;svg.append(badge);
+    }
   }
   root.append(svg);
 }
@@ -273,7 +533,8 @@ async function gallery() {
     const context=run.metadata.context||{},slack=run.metadata.topology?.buses?.find(b=>b.is_slack);
     const info=elem('details');info.append(elem('summary','Input provenance and workbook settings'));
     grid(info,['Input','Recorded value'],[['Clock',run.manifest.clock],['Clock provenance',run.input_info?.clock_status],
-      ['Site',run.input_info?.site?JSON.stringify(run.input_info.site):null],['Slack voltage (pu)',slack?.v_set_pu],
+      ['Site latitude (°)',run.input_info?.site?.latitude],['Site longitude (°)',run.input_info?.site?.longitude],
+      ['Slack voltage (pu)',slack?.v_set_pu],
       ['Workbook',context['Workbook provenance']],['Selected workbook SHA256',context['Network SHA256']||run.manifest.input_hashes?.['inputs/network.xlsx']],
       ['Distributor workbook SHA256',context['Distributor network SHA256']],['Irradiance (W/m²)',g.groups['solar source']?.fields.includes('irradiance_w_m2')?'Archived source available':'Not recorded']]);
     panel.append(info);
@@ -299,7 +560,7 @@ async function gallery() {
   const field=state.field,entity=state.entity;
   const idList=ids.filter(id=>!['Total','residential','commercial','manufacturing'].includes(id));
   const samples={};
-  if(screen==='Network'&&['bus','line'].includes(state.group)||['Selected hour','Ranked at hour'].includes(state.mode)){
+  if(screen==='Network records'&&['bus','line'].includes(state.group)||['Selected hour','Ranked at hour'].includes(state.mode)){
     for(const id of ids)samples[id]=(await seriesValues(group,id,field,state.hour,state.hour+1))[0];
   }
   if(token!==galleryVersion||!panel.isConnected)return;
@@ -350,7 +611,7 @@ async function gallery() {
       {mode:state.mode,field,cursor:state.hour-state.first,pick:i=>{state.hour=state.first+i;render();}});
   }
   if(!panel.isConnected)return;
-  const info=elem('details');info.open=screen==='Network';info.append(elem('summary',entity+' · '+axis[state.hour]));
+  const info=elem('details');info.open=screen==='Network records';info.append(elem('summary',entity+' · '+axis[state.hour]));
   const rows=[];
   for(const k of group.fields)rows.push([readable(k),(await seriesValues(group,entity,k,state.hour,state.hour+1))[0],unitOf(k)]);
   grid(info,['Quantity','Selected value','Unit'],rows);panel.append(info);
@@ -364,7 +625,7 @@ async function gallery() {
                    ['PV capacity factor · delivered / nameplate hours',fmt(100*sum(production)/sum(ratings))+'%']]);
     }
   }
-  if(screen==='Network'&&['bus','line'].includes(state.group))networkMap(panel,run.metadata.topology,samples,state.group,field,(k,id)=>jump(k,id,state.hour));
+  if(screen==='Network records'&&['bus','line'].includes(state.group))networkMap(panel,run.metadata.topology,samples,state.group,field,(k,id)=>jump(k,id,state.hour));
 }
 function economicView(panel,scenario) {
   const rows=(scenario.metrics||[]).filter(m=>/cost|annual_|credit|purchases/.test(m.metric)&&typeof m.value==='number');
@@ -509,7 +770,7 @@ async function decisionView(panel,g,axis,first,last) {
 async function compareCurves(root,snapshots){
   const panel=section(root,'Aligned run series'),controls=selectionPanel(panel),graph=elem('div');panel.append(graph);
   const runs=snapshots.flatMap((r,i)=>Object.entries(r.scenarios).filter(([,s])=>s.gallery?.groups)
-    .map(([k,s])=>({label:(r.manifest.folder||'Run '+(i+1))+' · '+s.label+' · '+(r.metadata?.topology?.buses?.find(b=>b.is_slack)?.v_set_pu??'?')+' pu · '+String(r.manifest.run_id).slice(-8),sc:s,read:r.readBlock||block,clock:r.manifest.clock,currency:r.manifest.currency})));
+    .map(([k,s])=>({label:(r.manifest.folder||'Run '+(i+1))+' · '+s.label+' · '+fmt(r.metadata?.topology?.buses?.find(b=>b.is_slack)?.v_set_pu)+' pu · '+String(r.manifest.run_id).slice(-8),sc:s,read:r.readBlock||block,clock:r.manifest.clock,currency:r.manifest.currency})));
   if(runs.length<2)return;
   if(!runs[0].clock||runs.some(r=>r.clock!==runs[0].clock)){panel.append(elem('p','A common recorded source clock is required to align curves.'));return;}
   const all=runs[0].sc.gallery.groups;

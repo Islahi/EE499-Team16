@@ -92,7 +92,7 @@ def ledger_hours(result, context):
         if not event:
             continue
         actions = decisions(step)
-        if not actions and step.feasible:
+        if not actions and step.feasible and event.policy != "uncontrolled-fbs":
             continue
         checks = {name: dict(violations=dict(check.violations), binding=check.binding, converged=check.converged)
                   for name, check in (("before", event.pre), ("after_bess", event.after_bess), ("final", event.final))

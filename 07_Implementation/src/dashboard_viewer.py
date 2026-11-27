@@ -1,5 +1,6 @@
 """Show the saved HTML in Qt WebEngine or the system browser."""
 from pathlib import Path
+from urllib.parse import urlencode
 
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
@@ -11,7 +12,6 @@ def show_dashboard(parent, path, focus=None):
     url = QUrl.fromLocalFile(str(path))
 
     if focus:
-        from urllib.parse import urlencode
         url.setFragment(urlencode(focus))
 
     def external():
@@ -60,9 +60,20 @@ def show_dashboard(parent, path, focus=None):
 
     def download(request):
         filename = request.downloadFileName()
-        csv = Path(filename).suffix.lower() == ".csv"
-        target, _ = QFileDialog.getSaveFileName(dialog, "Save chart data" if csv else "Save chart image",
-                                               filename, "CSV files (*.csv)" if csv else "PNG images (*.png)")
+        formats = {".csv": ("Save exact data", "CSV files (*.csv)"),
+                   ".json": ("Save layout or exact records", "JSON files (*.json)"),
+                   ".png": ("Save chart image", "PNG images (*.png)"),
+                   ".svg": ("Save vector figure", "SVG images (*.svg)"),
+                   ".pdf": ("Save vector figure", "PDF files (*.pdf)"),
+                   ".xlsx": ("Save result workbook", "Excel workbooks (*.xlsx)"),
+                   ".tex": ("Save LaTeX table", "LaTeX sources (*.tex)"),
+                   ".zip": ("Save academic export package", "ZIP archives (*.zip)")}
+        selected = formats.get(Path(filename).suffix.lower())
+        if selected is None:
+            request.cancel()
+            return
+        title, file_filter = selected
+        target, _ = QFileDialog.getSaveFileName(dialog, title, filename, file_filter)
         if target:
             destination = Path(target)
             request.setDownloadDirectory(str(destination.parent.resolve()))
@@ -88,7 +99,9 @@ def show_dashboard(parent, path, focus=None):
     page.printRequested.connect(print_to_pdf)
     page.pdfPrintingFinished.connect(pdf_finished)
     view.loadFinished.connect(lambda ok: None if ok else browser.setText("Report could not load · Open in browser"))
-    view.load(url)
+    embedded_url = QUrl(url)
+    embedded_url.setFragment(urlencode({**(focus or {}), "_viewer": "qt"}))
+    view.load(embedded_url)
     dialog.resize(1220, 820)
     dialog.show()
     return dialog

@@ -17,6 +17,7 @@ from time import perf_counter
 from .metrics import evaluate_results, validate_annual_inputs, with_terminal_policy, annual_capital_recovery_factor
 from .optimizer import (BESSCandidate, CandidateEvaluation, OptimizationResult,
                         OptimizerConfig, OptimizationBounds, optimize, _without_progress)
+from .planning_policy import MAX_JOINT_ANNUAL_FINALISTS
 from .simulation import simulate_timeseries
 from .screening_soc import ChronologicalSOCWarmStarts
 from .single_bess_search import screen_buses
@@ -580,7 +581,7 @@ def _stress_screen_fleets(network, profiles, evaluator, finalists, scenarios, *,
 def _optimize_joint_fleet(
     network, profiles, bounds, evaluator, config,
     *, max_units=3, stage=lambda text: None, progress=None,
-    finalists_per_stage=6, improvement_rules=None, annual_workers=1,
+    finalists_per_stage=MAX_JOINT_ANNUAL_FINALISTS, improvement_rules=None, annual_workers=1,
     ga_crossover_rate=0.80, ga_mutation_rate=0.20,
     baseline_result=None, baseline_metrics=None, initial_laterals=None,
     started=None,
@@ -596,6 +597,7 @@ def _optimize_joint_fleet(
     start = started if started is not None else perf_counter()
     rules = improvement_rules or ImprovementRules()
     voltage_min = evaluator.simulation_config.voltage_min_pu
+    economic = evaluator.economic_config
     baseline_cost = baseline_metrics.annual_total_cost
 
     # V15.5: every explicitly permitted non-slack bus is a GA location gene.
@@ -662,6 +664,10 @@ def _optimize_joint_fleet(
         seed_fleets.append(tuple(BESSCandidate(b, p_mid, e_mid) for b in lateral_centers[:2]))
     if max_units >= 3 and len(lateral_centers) >= 3:
         seed_fleets.append(tuple(BESSCandidate(b, p_mid, e_mid) for b in lateral_centers[:3]))
+    experimental = max_units > 3
+    if experimental:
+        diverse = list(dict.fromkeys([*lateral_centers, *bus_order]))[:max_units]
+        seed_fleets.insert(0, tuple(BESSCandidate(bus, p_mid, e_mid) for bus in diverse))
 
     # 4. Run Joint Multi-BESS Stationary GA (Ahmed, Sindi et al. 2023 SESS Eq. 53)
     ga_cfg = FleetGAConfig(
@@ -691,14 +697,25 @@ def _optimize_joint_fleet(
     # 5. First screen distinct extreme/seasonal days. Then verify the
     # highest-ranked survivor over the full chronological year. Verify the next
     # survivor ONLY if the preceding fleet fails feasibility or savings.
-    # Keep the user's finalist budget as a safety cap, not an up-front batch.
-    finalist_budget=max(1,int(finalists_per_stage))
-    candidate_pool=_select_diverse_fleet_finalists(ga_out['ranked'],max(8,finalist_budget*3))
+    # Apply the finalist budget as a cap on the sequential attempts.
+    finalist_budget = min(MAX_JOINT_ANNUAL_FINALISTS, max(1, int(finalists_per_stage)))
+    stress_budget = max(8, finalist_budget * 3)
+    candidate_pool = _select_diverse_fleet_finalists(ga_out['ranked'], stress_budget)
+    if experimental and not any(len(candidate.fleet) == max_units for candidate in candidate_pool):
+        max_size_candidate = next((candidate for candidate in ga_out['ranked']
+                                   if len(candidate.fleet) == max_units and candidate.feasible), None)
+        if max_size_candidate is not None:
+            candidate_pool = [*candidate_pool[:stress_budget - 1], max_size_candidate]
     stage(f'SESS independent stress screen: up to {len(candidate_pool)} candidate fleets')
     survivors,stress_records,stress_days=_stress_screen_fleets(
         network, profiles, evaluator, candidate_pool, scenarios, max_days=6)
     finalists=survivors[:finalist_budget]
-    stage(f'SESS annual verification: {len(finalists)} eligible fallback(s), one chronological year at a time')
+    if experimental and not any(len(candidate.fleet) == max_units for candidate in finalists):
+        max_size_candidate = next((candidate for candidate in survivors if len(candidate.fleet) == max_units), None)
+        if max_size_candidate is not None:
+            finalists = [*finalists[:finalist_budget - 1], max_size_candidate]
+    stage(f'SESS adaptive annual verification: {len(finalists)} eligible candidate(s) '
+          f'(limit {finalist_budget}), one chronological year at a time')
     verified_records=[]
     verified_evals=[]
     annual_evaluations=0 if getattr(baseline_result,'dispatch_timing',{}).get('no_bess_cache_hit') else 1
@@ -708,8 +725,8 @@ def _optimize_joint_fleet(
     winner_cost=baseline_cost
     for rank,ga_ev in enumerate(finalists,1):
         fleet=ga_ev.fleet
-        stage(f'Annual finalist {rank}/{len(finalists)}: {[c.bus_id for c in fleet]} '
-              f'(full {len(profiles.timestamps)} hourly steps)')
+        finalist_label = f'Annual finalist {rank}/{len(finalists)}'
+        stage(f'{finalist_label}: {[c.bus_id for c in fleet]} (full {len(profiles.timestamps)} hourly steps)')
         fleet,yr_res,yr_met,cov=_verify_fleet_annual(network,profiles,evaluator,fleet)
         annual_evaluations+=1
         for unit in fleet:
@@ -732,11 +749,31 @@ def _optimize_joint_fleet(
             'annual_processed_hours':cov.get('processed_hours'),
             'annual_expected_hours':cov.get('expected_hours'),
         })
-        if econ_ok:
-            winner_fleet=fleet;winner_result=yr_res;winner_metrics=yr_met;winner_cost=cost_val
-            stage(f'Annual finalist {rank}: verified feasible saving '
-                  f'${baseline_cost-cost_val:,.2f}/year; stopping further annual runs')
-            break
+        if not ok:
+            if not cov.get('complete'):
+                reason = (f'incomplete chronological verification ({cov.get("status")}, '
+                          f'{cov.get("processed_hours")}/{cov.get("expected_hours")} hours)')
+            elif yr_met is None or not yr_met.feasible:
+                reason = f'technical feasibility not verified ({yr_res.message})'
+            else:
+                reason = 'technically feasible; finite annual total cost unavailable'
+            stage(f'{finalist_label} rejected: {reason}; no verified annual cost comparison')
+            continue
+
+        comparison = (f'{cost_val:,.2f} vs No-BESS {baseline_cost:,.2f} '
+                      f'{economic.currency}/year')
+        if not econ_ok:
+            stage(f'{finalist_label} rejected: technically feasible; annual cost did not improve '
+                  f'on No-BESS under the existing savings criterion ({comparison})')
+            continue
+
+        winner_fleet=fleet;winner_result=yr_res;winner_metrics=yr_met;winner_cost=cost_val
+        stage(f'{finalist_label} accepted: technically feasible and lower annual cost ({comparison})')
+        stage('Adaptive annual verification stopped: acceptable BESS fleet found')
+        break
+    else:
+        outcome = f'all {len(finalists)} eligible candidates rejected' if finalists else 'no eligible candidates'
+        stage(f'Adaptive annual verification exhausted: {outcome}; No-BESS retained')
 
     final_laterals = summarize_laterals(network, winner_result, voltage_min, profiles=profiles)
     base_shedding = sum(v['shedding_kwh'] for v in initial_laterals.values())
@@ -746,7 +783,6 @@ def _optimize_joint_fleet(
     accepted_laterals = [lat_map.get(c.bus_id, '') for c in winner_fleet]
 
     strict_mode = evaluator.simulation_config.fleet_dispatch_mode == 'daily_milp_dispatch'
-    economic = evaluator.economic_config
     annualization = ('real-discount CRF' if economic.annualization_method == 'real_crf' else
                      'straight-line recovery')
     power_cost = ('$ per inverter kVA' if economic.power_cost_basis == 'kva' else '$ per battery kW')
@@ -769,7 +805,7 @@ def _optimize_joint_fleet(
         'screening_hours_per_candidate': scenarios.total_screened_hours,
         'annual_finalists_verified': len(verified_records),
         'annual_finalists_screened': len(finalists),
-        'annual_finalist_budget': finalists_per_stage,
+        'annual_finalist_budget': finalist_budget,
         'full_year_candidates': verified_records,
         'selected': asdict(winner_fleet[-1]) if winner_fleet else None,
         'selected_fleet': [asdict(u) for u in winner_fleet],
@@ -809,10 +845,16 @@ def _optimize_joint_fleet(
             'elapsed_seconds': round(ga_out['elapsed_seconds'], 4),
             'config': ga_out['config'],
         },
+        'academic_ga_diagnostics': ga_out.get('academic_diagnostics'),
         'screening_method': ('k-means representative 24h medoid days; Daily MILP dispatch MILP with discharge-linked PF and daily SOC restoration; full-year FBS verification'
                              if strict_mode else 'k-means representative 24h medoid days with coupled P/Q OPF; full-year FBS verification'),
         'annual_verification_required_hours': len(profiles.timestamps),
-        'annual_verification_policy': 'One full chronological annual verification for first stress-passing best-ranked fleet; sequential annual fallback only on failed feasibility/economics; scenario and stress screening are not annual claims',
+        'annual_verification_policy': (
+            'Verify ranked stress survivors sequentially over the full chronological year and stop at '
+            'the first technically feasible fleet that lowers annual total cost versus No-BESS. '
+            'Retain No-BESS if no candidate qualifies. '
+            + (f'A qualified {max_units}-unit candidate is included in the shortlist when available.'
+               if experimental else 'Scenario and stress screening are not annual claims.')),
         'voltage_acceptance': (f'Verified final hourly {voltage_min:g}–'
                                f'{evaluator.simulation_config.voltage_max_pu:g} pu bounds, '
                                'with the existing voltage-deviation objective toward 1.0 pu'),
@@ -887,9 +929,9 @@ def _optimize_joint_fleet(
 
 def optimize_sequential_multi(network, profiles, bounds, evaluator, config,
                               *, max_units=3, stage=lambda text: None, progress=None,
-                              window_weeks=2, finalists_per_stage=6,
+                              window_weeks=2, finalists_per_stage=None,
                               improvement_rules=None, annual_workers=None,
-                              ga_crossover_rate=0.80, ga_mutation_rate=0.20):
+                              ga_crossover_rate=0.80, ga_mutation_rate=0.20, experimental_multi_bess=False):
     """Greedy sequential GWO with lateral-aware annual technical acceptance.
 
     In V13 OPF mode, annual cost becomes a mandatory improvement gate for
@@ -901,9 +943,14 @@ def optimize_sequential_multi(network, profiles, bounds, evaluator, config,
         annual_workers = min(2, config.workers)
     if isinstance(annual_workers, bool) or not isinstance(annual_workers, int) or not 1 <= annual_workers <= 2:
         raise ValueError('Annual verification workers must be 1 or 2')
+    from .ga_fleet_policy import validate_ga_fleet_limit
+    eligible = {bus.bus_id for bus in network.buses if not bus.is_slack}.intersection(bounds.allowed_bus_ids)
+    validate_ga_fleet_limit(max_units, experimental_multi_bess is True, eligible,
+                            evaluator.simulation_config.fleet_dispatch_mode)
     validate_annual_inputs(profiles.timestamps, evaluator.economic_config, profiles.dt_hours)
-    if not isinstance(max_units, int) or isinstance(max_units, bool) or not 1 <= max_units <= 3:
-        raise ValueError('BESS units must be an integer from 1 to 3')
+    joint_search = evaluator.simulation_config.fleet_dispatch_mode in ('opf', 'daily_milp_dispatch')
+    if finalists_per_stage is None:
+        finalists_per_stage = MAX_JOINT_ANNUAL_FINALISTS if joint_search else 6
     if window_weeks < 1 or finalists_per_stage < 1:
         raise ValueError('Screening weeks and annual finalists must be positive')
     if not bounds.allowed_bus_ids:
@@ -912,7 +959,7 @@ def optimize_sequential_multi(network, profiles, bounds, evaluator, config,
         raise ValueError('Initial candidates must be in the approved allowed buses')
     start = perf_counter()
     stage('No-BESS full-year baseline (all eligible buses stay available to SESS Joint GA)'
-          if evaluator.simulation_config.fleet_dispatch_mode in ('opf','daily_milp_dispatch')
+          if joint_search
           else 'No-BESS full-year simulation and combined voltage/shedding ranking')
     current_result, current_metrics = annual_fleet(network, profiles, evaluator, ())
     if current_metrics is None or not current_metrics.feasible or current_metrics.annual_total_cost is None:
@@ -922,8 +969,8 @@ def optimize_sequential_multi(network, profiles, bounds, evaluator, config,
     initial_laterals = summarize_laterals(network, current_result,
                                          evaluator.simulation_config.voltage_min_pu,
                                          profiles=profiles)
-    if evaluator.simulation_config.fleet_dispatch_mode in ('opf', 'daily_milp_dispatch'):
-        return _optimize_joint_fleet(
+    if joint_search:
+        outcome = _optimize_joint_fleet(
             network, profiles, bounds, evaluator, config,
             max_units=max_units, stage=stage, progress=progress,
             finalists_per_stage=finalists_per_stage,
@@ -932,6 +979,11 @@ def optimize_sequential_multi(network, profiles, bounds, evaluator, config,
             baseline_result=baseline_result, baseline_metrics=current_metrics,
             initial_laterals=initial_laterals, started=start,
         )
+        outcome[0].metadata.update(
+            optimization_mode="experimental_4_plus" if max_units > 3 else "standard_1_to_3",
+            experimental_enabled=max_units > 3, requested_max_units=max_units,
+            selected_fleet_count=len(outcome[0].metadata["fleet"]))
+        return outcome
     accepted_laterals = []
     installed = []
     history = []

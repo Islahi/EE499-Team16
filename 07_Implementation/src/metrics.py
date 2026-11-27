@@ -173,7 +173,8 @@ def service_verified(step):
     correction = getattr(step, "correction", None)
     return (step.power_flow.converged and step.requested_point is not None
             and (correction is None or correction.status in
-                 ("not_needed", "verified", "legacy_proportional_validation")))
+                 ("not_needed", "verified", "legacy_proportional_validation")
+                 or correction.status == "disabled_by_study_policy" and step.feasible))
 
 
 def summarize_service(simulation):
@@ -282,6 +283,8 @@ def evaluate_results(simulation_result: TimeSeriesSimulationResult,
         feasible=simulation_result.feasible and all(step.feasible for step in steps),
         notes=[],
     )
+    dispatch_timing = getattr(simulation_result, "dispatch_timing", None) or {}
+    uncontrolled = dispatch_timing.get("control_mode") == "uncontrolled"
     for step in steps:
         point = step.operating_point
         flow = step.power_flow
@@ -376,7 +379,9 @@ def evaluate_results(simulation_result: TimeSeriesSimulationResult,
             metrics.final_soc_deviation = max(deviations, key=abs)
             metrics.terminal_energy_change_kwh = energy_change
             metrics.terminal_soc_details = details
-            if (getattr(simulation_result, "dispatch_timing", None) or {}).get("fleet_dispatch_mode") == "daily_milp_dispatch":
+            if uncontrolled:
+                metrics.notes.append("Installed batteries stayed idle at their initial SOC.")
+            elif dispatch_timing.get("fleet_dispatch_mode") == "daily_milp_dispatch":
                 metrics.notes.append("Daily MILP dispatch dispatch enforces daily SOC restoration within the "
                                      "solver tolerance. The annual terminal inventory ledger uses the "
                                      "recorded final state.")
@@ -401,6 +406,10 @@ def evaluate_results(simulation_result: TimeSeriesSimulationResult,
         metrics.requested_load_energy_kwh = metrics.served_load_energy_kwh + metrics.load_shedding_energy_kwh
     if not metrics.feasible:
         metrics.notes.append("This run has unresolved network, line or battery constraints; retain its infeasible status.")
+    if uncontrolled:
+        metrics.notes.append("Uncontrolled FBS uses prescribed demand and PV. Annual operating cost is a diagnostic "
+                             "estimate. Zero shedding records zero automatic action.")
+        metrics.annual_total_cost = None
     for name, value in summarize_service(simulation_result)[0].items():
         setattr(metrics, name, value)
     return metrics

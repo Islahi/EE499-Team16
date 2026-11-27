@@ -8,6 +8,7 @@ from .approved_methodology import auto_workers
 DEFAULT_MINIMUM_DISCHARGE_PF = 0.95
 DEFAULT_DISPATCH_HORIZON_HOURS = 24
 DEFAULT_DISPATCH_EFFICIENCY = 0.95
+MAX_JOINT_ANNUAL_FINALISTS = 10
 
 
 def desktop_worker_limit() -> int:
@@ -24,7 +25,7 @@ class JointSearchPolicy:
     stall_generations: int = 6
     relative_tolerance: float = 0.001
     seed: int = 42
-    annual_fallbacks: int = 3
+    annual_fallbacks: int = MAX_JOINT_ANNUAL_FINALISTS
     annual_workers: int = 1
 
 

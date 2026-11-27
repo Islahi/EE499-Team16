@@ -2,14 +2,88 @@
 // Offline-only dashboard. Canonical CSVs and detailed event logs remain in the saved session.
 const $=id=>document.getElementById(id);
 const palette=['#167c80','#d17645','#445e99','#96649a'];
-const fmt=(value,digits=2)=>typeof value==='number'&&Number.isFinite(value)?
-  new Intl.NumberFormat('en-US',{maximumFractionDigits:digits}).format(value):'Unavailable';
-const money=value=>typeof value==='number'&&Number.isFinite(value)?'$'+fmt(value,0):'Unavailable';
-const energy=value=>typeof value==='number'&&Number.isFinite(value)?fmt(value/1000,2)+' MWh':'Unavailable';
-function elem(tag,content,cls){const x=document.createElement(tag);if(content!==undefined)x.textContent=content;if(cls)x.className=cls;return x;}
+const dashboardNumber=new Intl.NumberFormat('en-US',{maximumFractionDigits:3});
+const fmt=value=>{
+  if(!recordedNumber(value))return 'Not recorded';
+  if(value!==0&&Math.abs(value)<.0005)return value<0?'≈−0':'≈0';
+  return dashboardNumber.format(value===0?0:value).replace('-', '−');
+};
+const money=value=>recordedNumber(value)?fmt(value)+(run?.manifest.currency?' '+run.manifest.currency:''):'Not recorded';
+const energy=value=>recordedNumber(value)?fmt(value/1000)+' MWh':'Not recorded';
+function elem(tag,content,cls){const x=document.createElement(tag);if(content!==undefined)x.textContent=typeof content==='number'?fmt(content):content;if(cls)x.className=cls;return x;}
 function section(root,title){const s=elem('section');s.append(elem('h2',title));root.append(s);return s;}
-function cards(root,items){const grid=elem('div',undefined,'grid');for(const [name,value] of items){const tile=elem('div',undefined,'tile');tile.append(elem('span',name,'label'),elem('strong',value));grid.append(tile);}root.append(grid);}
-function grid(root,head,rows){const wrap=elem('div',undefined,'tablebox');const table=elem('table');const tr=table.createTHead().insertRow();head.forEach(h=>tr.append(elem('th',h)));const body=table.createTBody();rows.forEach(row=>{const r=body.insertRow();row.forEach(value=>r.append(elem('td',value==null?'—':String(value))));});wrap.append(table);root.append(wrap);}
+function displayRecord(value){
+  if(value==null || value==='')return {label:'Not recorded'};
+  if(typeof value==='number')return {label:fmt(value)};
+  if(typeof value==='boolean')return {label:value?'Yes':'No'};
+  if(Array.isArray(value)){
+    const small=value.length<=4&&value.every(item=>item==null||typeof item!=='object'&&!displayRecord(item).full);
+    if(small){
+      const label=value.map(item=>displayRecord(item).label).join(', ');
+      if(label.length<=96)return {label:label||'0 recorded items'};
+    }
+    return {label:value.length+' recorded items',full:JSON.stringify(value,null,2)};
+  }
+  if(typeof value==='object')return {label:Object.keys(value).length+' recorded fields',full:JSON.stringify(value,null,2)};
+  const raw=String(value);
+  if(/^[a-f0-9]{64}$/i.test(raw))return {label:raw.slice(0,12)+'…',full:raw};
+  if(raw.length>96){
+    const path=/^(?:[A-Za-z]:[\\/]|\\\\)/.test(raw);
+    const label=path?(raw.split(/[\\/]/).at(-1)||raw):/^[{[(]/.test(raw)?'Archived structured text':raw;
+    return {label:label.length>95?label.slice(0,93)+'…':label,full:raw};
+  }
+  return {label:raw};
+}
+function visualValue(element,value){
+  const record=displayRecord(value);
+  if(!record.full){element.textContent=record.label;return;}
+  const details=elem('details',undefined,'value-detail');
+  details.append(elem('summary',record.label));
+  details.addEventListener('toggle',()=>{
+    if(details.open&&details.childElementCount===1)details.append(elem('pre',record.full));
+  });
+  element.append(details);
+}
+function cards(root,items) {
+  const panel=elem('div',undefined,'grid');
+  for(const [name,value] of items){
+    const tile=elem('div',undefined,'tile'),content=elem('div',undefined,'tile-value');
+    visualValue(content,value);tile.append(elem('span',name,'label'),content);panel.append(tile);
+  }
+  root.append(panel);
+}
+function grid(root,head,rows,{renderCell}={}){
+  const wrap=elem('div',undefined,'tablebox'),table=elem('table');
+  const header=table.createTHead().insertRow();
+  head.forEach(h=>header.append(elem('th',h)));
+  const body=table.createTBody();
+  const limit=50;
+  let first=0;
+  function paint(){
+    body.replaceChildren();
+    for(const row of rows.slice(first,first+limit)){
+      const line=body.insertRow();
+      row.forEach((value,i)=>{
+        const cell=elem('td');cell.dataset.field=head[i]||'';
+        if(!renderCell?.(cell,value,i,row))visualValue(cell,value);
+        line.append(cell);
+      });
+    }
+  }
+  wrap.append(table);root.append(wrap);paint();
+  if(rows.length>limit){
+    const nav=elem('div',undefined,'table-pagination scope-inline');
+    const count=elem('output');count.setAttribute('aria-live','polite');
+    const previous=button(nav,'Previous rows',()=>{first=Math.max(0,first-limit);update();});
+    nav.append(count);
+    const next=button(nav,'Next rows',()=>{first=Math.min(rows.length-1,first+limit);update();});
+    function update(){
+      count.textContent=(first+1)+'–'+Math.min(first+limit,rows.length)+' of '+rows.length+' rows';
+      previous.disabled=first===0;next.disabled=first+limit>=rows.length;paint();
+    }
+    update();root.append(nav);
+  }
+}
 const asMetrics=sc=>Object.fromEntries((sc?.metrics||[]).map(row=>[row.metric,row.value]));
 async function inflate(value){const raw=atob(value.trim());const bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));const data=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));return new Response(data).json();}
 let run,screen='Summary',scenario='best_bess';
@@ -17,7 +91,9 @@ const cache=new Map();
 let cachedBytes=0;
 async function block(id){
   if(id==null)return null;
-  if(cache.has(id))return cache.get(id).data;
+  if(cache.has(id)){
+    const entry=cache.get(id);cache.delete(id);cache.set(id,entry);return entry.data;
+  }
   const el=$('report-block-'+id);if(!el)throw Error('Missing report block '+id);
   const size=Number(el.dataset.bytes)||0,data=await inflate(el.textContent);
   if(size<=16*1024*1024&&!cache.has(id)){
@@ -46,13 +122,15 @@ function plot(parent,title,series,labels){
 function statusLabel(value){return value===true?'Feasible':value===false?'Infeasible':'Not recorded';}
 function summary(){const root=$('content');const b=asMetrics(sc('no_bess')),c=asMetrics(sc('best_bess')),a=asMetrics(selected());const opt=run.metadata.optimizer||{};
   const economics=run.metadata.context?.['Economic inputs']||{};
-  const manual=run.metadata.context?.['Manual BESS'];
-  const runLabel=manual?'Manual BESS':run.manifest.kind==='optimization'?'Joint BESS optimization':selected()?.label||run.manifest.kind;
+  const settings=run.metadata.context||{}, manual=manualUnits(run.metadata), manualCount=manual.length;
+  const runLabel=manualCount?(manualCount===1?'Manual BESS':`Manual BESS (${manualCount} units)`):
+    run.manifest.kind==='optimization'?(settings['Optimization mode']==='experimental_4_plus'?'Experimental Joint GA':'Joint BESS optimization'):
+    selected()?.label||run.manifest.kind;
   const ratio=opt.inverter_kva_per_kw??economics.inverter_kva_per_kw??1;
-  const block=section(root,'Study and installed batteries');const fleet=manual?[manual]:opt.fleet||[];const candidate=opt.best_bess_candidate;cards(block,[['Network',run.metadata.topology?.buses?.length?run.metadata.topology.buses.length+' buses':'Recorded study'],['Run',runLabel],['Installed BESS units',fleet.length?String(fleet.length):opt.no_bess_selected?'No BESS':'—'],['Total BESS power',fleet.length?fmt(fleet.reduce((a,b)=>a+b.power_rating_kw,0),0)+' kW':candidate?fmt(candidate.power_rating_kw,0)+' kW':'—'],['Total BESS energy',fleet.length?fmt(fleet.reduce((a,b)=>a+b.energy_capacity_kwh,0),0)+' kWh':candidate?fmt(candidate.energy_capacity_kwh,0)+' kWh':'—'],['Installed inverter capacity',fleet.length?fmt(fleet.reduce((a,b)=>a+b.power_rating_kw,0)*ratio,1)+' kVA':candidate?fmt(candidate.power_rating_kw*ratio,1)+' kVA':'—'],['Initial BESS investment',money(c.bess_cost??a.bess_cost)]]);
-  if(fleet.length){const units=section(root,manual?'Manual battery installation':'Optimized battery installations');grid(units,['Unit','Bus','Battery P (kW)','Battery E (kWh)','Inverter S (kVA)','E/P (h)'],fleet.map((unit,index)=>[index+1,'Bus '+unit.bus_id,fmt(unit.power_rating_kw,0),fmt(unit.energy_capacity_kwh,0),fmt(unit.power_rating_kw*ratio,1),fmt(unit.energy_capacity_kwh/unit.power_rating_kw,2)]));}
+  const block=section(root,'Study and installed batteries');const fleet=manualCount?manual:opt.fleet||[];const candidate=opt.best_bess_candidate;cards(block,[['Network',run.metadata.topology?.buses?.length?run.metadata.topology.buses.length+' buses':'Recorded study'],['Run',runLabel],['Installed BESS units',fleet.length?String(fleet.length):opt.no_bess_selected?'No BESS':'—'],['Total BESS power',fleet.length?fmt(fleet.reduce((a,b)=>a+b.power_rating_kw,0),0)+' kW':candidate?fmt(candidate.power_rating_kw,0)+' kW':'—'],['Total BESS energy',fleet.length?fmt(fleet.reduce((a,b)=>a+b.energy_capacity_kwh,0),0)+' kWh':candidate?fmt(candidate.energy_capacity_kwh,0)+' kWh':'—'],['Installed inverter capacity',fleet.length?fmt(fleet.reduce((a,b)=>a+b.power_rating_kw,0)*ratio,1)+' kVA':candidate?fmt(candidate.power_rating_kw*ratio,1)+' kVA':'—'],['Initial BESS investment',money(c.bess_cost??a.bess_cost)]]);
+  if(fleet.length){const units=section(root,manualCount?'Manual battery installations':'Optimized battery installations');grid(units,['Unit','Bus','Battery P (kW)','Battery E (kWh)','Inverter S (kVA)','E/P (h)'],fleet.map((unit,index)=>[index+1,'Bus '+unit.bus_id,fmt(unit.power_rating_kw,0),fmt(unit.energy_capacity_kwh,0),fmt(unit.power_rating_kw*ratio,1),fmt(unit.energy_capacity_kwh/unit.power_rating_kw,2)]));}
   const limits=opt.bess_duration_constraint;if(limits){const duration=section(root,'Battery sizing constraint');cards(duration,[["Minimum nameplate duration",fmt(limits.minimum_hours,2)+' h'],["Maximum nameplate duration",fmt(limits.maximum_hours,2)+' h'],["Feasible P/E pairs per bus",fmt(limits.feasible_pairs_per_bus,0)]]);duration.append(elem('p','Duration = rated energy capacity (kWh) / rated active power (kW). Only matching search candidates are simulated.','fine'));}
-  const stages=opt.stages||[];if(stages.length && opt.initial_ranking_applied===false){const proof=section(root,'Joint GA placement and annual verification');grid(proof,['Fleet','Buses','Power / inverter / energy','Verification','Hours','Annual cost'],(stages[0].full_year_candidates||[]).map(x=>[String(x.unit_count)+' BESS',(x.fleet||[]).map(u=>'Bus '+u.bus_id).join(', '),(x.fleet||[]).reduce((s,u)=>s+u.power_rating_kw,0)+' kW / '+fmt((x.fleet||[]).reduce((s,u)=>s+u.power_rating_kw,0)*ratio,1)+' kVA / '+fmt((x.fleet||[]).reduce((s,u)=>s+u.energy_capacity_kwh,0),0)+' kWh',x.feasible?(x.economic_acceptable?'Accepted':'No annual saving'):'Rejected',String(x.annual_processed_hours)+' / '+String(x.annual_expected_hours),money(x.annual_cost)]));}
+  const stages=opt.stages||[];if(stages.length && opt.initial_ranking_applied===false){const proof=section(root,'Joint GA placement and annual verification');grid(proof,['Fleet','Buses','Power / inverter / energy','Verification','Hours','Annual cost'],(stages[0].full_year_candidates||[]).map(x=>[String(x.unit_count)+' BESS',(x.fleet||[]).map(u=>'Bus '+u.bus_id).join(', '),fmt((x.fleet||[]).reduce((s,u)=>s+u.power_rating_kw,0))+' kW / '+fmt((x.fleet||[]).reduce((s,u)=>s+u.power_rating_kw,0)*ratio,1)+' kVA / '+fmt((x.fleet||[]).reduce((s,u)=>s+u.energy_capacity_kwh,0),0)+' kWh',x.feasible?(x.economic_acceptable?'Accepted':'No annual saving'):'Rejected',String(x.annual_processed_hours)+' / '+String(x.annual_expected_hours),money(x.annual_cost)]));}
   if(stages.length && opt.initial_ranking_applied!==false){const progress=section(root,'Placement decisions');grid(progress,['Stage','Candidate buses','Selected','Lateral shedding','Voltage deficit','Annual cost difference'],stages.map(row=>[row.index,(row.shortlist||[]).length,row.selected?'Bus '+row.selected.bus_id+' ('+(row.selected_lateral||'lateral unknown')+')':row.status,row.technical_check?.shedding_improvement_percent==null?'—':fmt(row.technical_check.shedding_improvement_percent,1)+'%',row.technical_check?.voltage_improvement_percent==null?'—':fmt(row.technical_check.voltage_improvement_percent,1)+'%',row.annual_saving_vs_previous==null?'Not installed':(row.annual_saving_vs_previous>=0?'Saved ':'Added cost ')+money(Math.abs(row.annual_saving_vs_previous))]));
     progress.append(elem('p','Annual acceptance requires measurable improvement in target-lateral shedding or pre-control voltage, verified full-year network feasibility, no material shedding deterioration elsewhere, and reduced annual cost. Pre-control voltage deterioration is reported, not a veto when shedding improves. The configured 10% levels are cumulative reporting targets, not per-placement gates.','fine'));
     const diagnostics=stages.filter(st=>st.gwo_stop_reason).map(st=>'Stage '+st.index+': '+(st.gwo_stop_reason==='converged_no_meaningful_improvement'?'GWO converged':'GWO reached iteration limit')+' after '+(st.screening_iterations??'?')+' iterations, '+(st.annual_finalists_verified??'?')+' annual finalists ('+(st.screening_hours_per_candidate??'?')+' h screened per candidate; '+(st.annual_hours_required??'?')+' h required per annual finalist)');
@@ -129,7 +207,7 @@ function summary(){const root=$('content');const b=asMetrics(sc('no_bess')),c=as
   }
   if(terminal.terminal_energy_change_kwh!=null){
     finish.append(elem('p','Battery stored-energy change (final − initial): '+fmt(terminal.terminal_energy_change_kwh,2)+' kWh. Largest absolute SOC change: '+fmt(100*Math.abs(terminal.final_soc_deviation||0),3)+' percentage points.','fine'));
-    if(terminal.terminal_soc_details)finish.append(elem('p',String(terminal.terminal_soc_details),'fine'));
+    if(terminal.terminal_soc_details)grid(finish,['Terminal SOC evidence'],[[terminal.terminal_soc_details]]);
     if(run.metadata.simulation?.fleet_dispatch_mode==='daily_milp_dispatch')
       finish.append(elem('p','Daily MILP dispatch operation requires daily SOC restoration. The per-day audit is included in the numerical exports.','fine'));
     else finish.append(elem('p','No terminal SOC closure is required in this archived operating mode.','fine'));
@@ -346,27 +424,41 @@ function compareRuns() {
 
 async function render(){
   const root=$('content');root.replaceChildren();redraw=[];
+  const epoch=typeof workspace==='undefined'?0:++workspace.epoch;
   try {
-    if(screen==='Summary')summary();
+    if(typeof workspacePages!=='undefined'&&workspacePages.includes(screen))await renderWorkspace(root,epoch);
+    else if(screen==='Technical summary')summary();
     else if(screen==='Charts')await charts();
     else if(screen==='Forecast accuracy')await forecast();
     else if(screen==='Compare runs')compareRuns();
     else await gallery();
-  } catch(error) {root.append(elem('p','Unable to read saved report: '+error.message,'warning'));}
+  } catch(error) {
+    if(typeof workspace==='undefined'||epoch===workspace.epoch)
+      root.append(elem('p','Unable to read saved report: '+error.message,'warning'));
+  }
 }
 async function start(){
   run=await inflate($('report-data').textContent);
   if(!run?.manifest||!run.scenarios)throw Error('Incomplete report payload');
-  const labels=['Summary','Charts'];
-  labels.push('Study inputs','Network','Demand & PV','Decisions','BESS','Economics');
-  if(focusState.group)screen=groupsFor['Study inputs'].includes(focusState.group)?'Study inputs':'Network';
-  if(run.forecast_errors?.length)labels.push('Forecast accuracy');
-  if(Object.values(run.scenarios).some(s=>s.gallery?.groups?.forecast))labels.push('Forecast series');
-  labels.push('Compare runs');
+  initWorkspace();
+  const labels=['Summary','Network','Study Inputs','Power & Energy','BESS','Economics'];
+  if(run.metadata?.optimizer||run.convergence?.length)labels.push('Optimization');
+  labels.push('Compare Runs');
+  labels.push('My Dashboard');
+  if(!labels.includes(screen))screen='Summary';
   for(const name of labels){
-    const button=elem('button',name);button.type='button';
-    button.addEventListener('click',()=>{screen=name;tabs();render();});$('tabs').append(button);
+    const tab=elem('button',academicTopicLabels[name]||name);tab.type='button';tab.dataset.topic=name;
+    tab.addEventListener('click',()=>{screen=name;tabs();if(workspacePages.includes(name)){workspace.state.tab=name;saveLayout();}render();});
+    $('tabs').append(tab);
   }
+  const detailed=elem('select');detailed.setAttribute('aria-label','Detailed report views');
+  const options=['Technical summary','Charts','Study inputs','Demand & PV','Decisions','Network records','Compare runs'];
+  if(run.forecast_errors?.length)options.push('Forecast accuracy');
+  if(Object.values(run.scenarios).some(s=>s.gallery?.groups?.forecast))options.push('Forecast series');
+  detailed.add(new Option('Detailed views…',''));
+  for(const name of options)detailed.add(new Option(name,name));
+  detailed.onchange=()=>{if(detailed.value){screen=detailed.value;tabs();render();}};
+  $('tabs').append(detailed);
   $('tabs').hidden=false;
   $('study-label').textContent=[run.manifest.folder,run.manifest.clock,run.manifest.timestamp_count?run.manifest.timestamp_count+' hours':null].filter(Boolean).join(' · ');
   $('notice').textContent=run.metadata?.legacy?'Archived results: some details may be unavailable.':'';
@@ -378,5 +470,8 @@ async function start(){
   window.addEventListener('resize',()=>redraw.forEach(draw=>draw()));
   tabs();await render();
 }
-function tabs(){[...$('tabs').children].forEach(button=>button.setAttribute('aria-selected',button.textContent===screen));}
+function tabs(){[...$('tabs').children].forEach(control=>{
+  if(control.tagName==='BUTTON')control.setAttribute('aria-selected',control.dataset.topic===screen);
+  else control.value=[...control.options].some(option=>option.value===screen)?screen:'';
+});}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>start().catch(error=>$('notice').textContent=error.message),{once:true});else start().catch(error=>$('notice').textContent=error.message);

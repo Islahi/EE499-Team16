@@ -18,7 +18,7 @@ from src.pv_model import PVModelConfig, irradiance_to_power, make_pv_profile, re
 from src.simulation import SimulationConfig, simulate_timeseries
 
 
-DATA = Path(__file__).resolve().parents[2] / "04_Research/Working_Data/Jeddah_Weather_PV"
+DATA = Path(__file__).resolve().parents[2] / "08_Working_Data/Legacy/Jeddah_Weather_PV"
 
 
 class PVModelTests(unittest.TestCase):

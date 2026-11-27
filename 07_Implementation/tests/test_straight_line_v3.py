@@ -135,9 +135,9 @@ class StraightLineAnnualizationTests(unittest.TestCase):
         html=(ROOT/'src/assets/dashboard.html').read_text(encoding='utf-8')
         script=(ROOT/'src/assets/dashboard.js').read_text(encoding='utf-8')
         self.assertIn('Study results',html)
-        self.assertIn("['Summary','Charts']",script)
-        self.assertIn("if(run.forecast_errors?.length)labels.push('Forecast accuracy')",script)
-        self.assertIn("labels.push('Compare runs')",script)
+        self.assertIn("let run,screen='Summary'",script)
+        self.assertIn("if(run.forecast_errors?.length)options.push('Forecast accuracy')",script)
+        self.assertIn("labels.push('Compare Runs')",script)
         self.assertIn('Annual capital: initial BESS cost / useful life',script)
         self.assertIn('Annual O&M: initial BESS cost',script)
 

@@ -1,6 +1,6 @@
 # How the program was built — chronological explanation
 
-This is **not a progress report or presentation draft**. It is a dated explanation of what changed in the software, why, which tools/libraries were used, and what each calculation does. Use it as source material when writing your own report. Dates below follow the [project journal](../../../PROJECT_JOURNAL.md) and Git history; they are not guessed from file modification times. The current runnable application is `07_Implementation/src/`. Its modules are explained individually in [SCRIPT_REFERENCE.md](SCRIPT_REFERENCE.md).
+This is **not a progress report or presentation draft**. It is a dated explanation of what changed in the software, why, which tools/libraries were used, and what each calculation does. Use it as source material when writing your own report. Dates below follow the [project journal](../../../docs/PROJECT_JOURNAL.md) and Git history; they are not guessed from file modification times. The current runnable application is `07_Implementation/src/`. Its modules are explained individually in [SCRIPT_REFERENCE.md](SCRIPT_REFERENCE.md).
 
 The initial work was developed in `07_Implementation/src/`. On **19 October**, it was copied into `src` and extended; the copy's first Git commit must **not** be read as the date on which all of its algorithms were first written. The two folders are now separate versions. `src` is the current final working version for this discussion.
 

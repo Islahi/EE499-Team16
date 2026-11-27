@@ -13,16 +13,22 @@ and economic contracts:
   - Every executed operating point is verified by the actual nonlinear Numba FBS.
 """
 from dataclasses import dataclass, replace
-from math import cos, pi, sin, sqrt
+from math import cos, isfinite, pi, sin, sqrt
 from time import perf_counter
 import numpy as np
 from scipy.optimize import linprog
 from scipy.sparse import csr_matrix
 
+from .app_log import record_opf_pv_boundary
 from .daily_milp_dispatch import q_per_kw_at_min_pf
 from .bess import step_bess
 from .constraint_dispatch import check_flow
 from .network_control import Correction, NetworkCorrector
+
+
+# HiGHS' default primal feasibility tolerance. Apply it only when decoding
+# the active PV curtailment variable, in kW, before handing the point to FBS.
+PV_CURTAILMENT_TOLERANCE_KW = 1e-7
 
 
 @dataclass
@@ -97,7 +103,8 @@ class JointOPFController:
         return replace(anchor, p_bess_kw=p_bess, q_bess_kvar=q_bess,
                        p_pv_kw=p_pv, q_pv_kvar=q_pv, p_load_kw=p_load, q_load_kvar=q_load)
 
-    def dispatch(self, raw_point, raw_flow, configs, states, requests, q_requests=None):
+    def dispatch(self, raw_point, raw_flow, configs, states, requests, q_requests=None,
+                 *, timestamp=None, representative_day=None):
         """Return (final point, flow, actual step results, correction, audit).
 
         The caller must commit returned BESS states only after FBS converges.
@@ -146,7 +153,8 @@ class JointOPFController:
                 failure = 'no converged sensitivity anchor'
                 break
             try:
-                candidate = self._optimize(anchor, flow, configs, states, p_ref)
+                candidate = self._optimize(anchor, flow, configs, states, p_ref,
+                                           timestamp=timestamp, representative_day=representative_day)
             except Exception as exc:
                 self.opf_lp_failures += 1
                 failure = f'{type(exc).__name__}: {exc}'
@@ -215,7 +223,7 @@ class JointOPFController:
                                               for c in configs)
         return point, flow, result, correction, {'status': status}
 
-    def _optimize(self, point, flow, configs, states, p_ref):
+    def _optimize(self, point, flow, configs, states, p_ref, *, timestamp=None, representative_day=None):
         """Costed simultaneous P/Q, shedding, curtailment, and voltage-deviation LP."""
         controls = []
         c, bounds, directions = [], [], []
@@ -392,19 +400,45 @@ class JointOPFController:
                            b_ub=b, bounds=lohi, method='highs',
                            options={'presolve': True})
         self.opf_lp_seconds += perf_counter()-started
-        if not solution.success or solution.x is None or not np.isfinite(solution.x).all():
+        if not solution.success or solution.x is None:
             raise ValueError('HiGHS OPF: '+solution.message)
         x = solution.x
+        p_pv = point.p_pv_kw.copy()
+        for bus, idx in pv_curt.items():
+            available = p_pv[bus]
+            proposed = float(x[idx])
+            remaining = available - proposed
+            if not 0. <= proposed <= available:
+                valid_within_tolerance = (isfinite(proposed)
+                                          and proposed >= -PV_CURTAILMENT_TOLERANCE_KW
+                                          and remaining >= -PV_CURTAILMENT_TOLERANCE_KW)
+                record_opf_pv_boundary({
+                    "action": "clamped" if valid_within_tolerance else "fallback",
+                    "fleet": [{"bus": c.bus_id, "power_kw": c.power_rating_kw,
+                               "energy_kwh": c.energy_capacity_kwh} for c in configs],
+                    "representative_day": representative_day,
+                    "timestamp": str(timestamp) if timestamp is not None else None,
+                    "bus": bus,
+                    "available_pv_kw": float(available),
+                    "proposed_curtailment_kw": proposed if isfinite(proposed) else str(proposed),
+                    "resulting_pv_kw": float(remaining) if isfinite(remaining) else str(remaining),
+                    "tolerance_kw": PV_CURTAILMENT_TOLERANCE_KW,
+                })
+                if not valid_within_tolerance:
+                    raise ValueError(f'HiGHS OPF PV curtailment outside bounds at bus {bus}: '
+                                     f'{proposed!r} kW for {available!r} kW available')
+                remaining = 0. if proposed > available else available
+            p_pv[bus] = remaining
+        if not np.isfinite(x).all():
+            raise ValueError('HiGHS OPF: '+solution.message)
         p_bess=point.p_bess_kw.copy(); q_bess=point.q_bess_kvar.copy()
-        p_pv=point.p_pv_kw.copy(); q_pv=point.q_pv_kvar.copy()
+        q_pv=point.q_pv_kvar.copy()
         p_load=point.p_load_kw.copy(); q_load=point.q_load_kvar.copy()
         for battery in configs:
             bus=battery.bus_id
             up,dn=bess_p[bus]; pos,neg=bess_q[bus]
             p_bess[bus] += x[up]-x[dn]
             q_bess[bus] += x[pos]-x[neg]
-        for bus,idx in pv_curt.items():
-            p_pv[bus] -= x[idx]
         for bus,(pos,neg) in pv_q.items():
             q_pv[bus] += x[pos]-x[neg]
         for bus,parts in shed.items():

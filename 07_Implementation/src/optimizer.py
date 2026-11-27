@@ -187,6 +187,8 @@ class SimulationEvaluator:
 
     def __post_init__(self):
         self.simulation_config.__post_init__()
+        if not self.simulation_config.corrective_actions:
+            raise ValueError("Optimization requires controlled simulation. Use Simulate for uncontrolled diagnostics.")
         for name in ("cost_per_kwh", "cost_per_kw"):
             value = getattr(self.economic_config, name)
             if value is None:

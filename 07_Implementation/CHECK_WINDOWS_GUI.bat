@@ -1,7 +1,10 @@
 @echo off
 setlocal EnableDelayedExpansion
 cd /d "%~dp0"
-set "REPORT=%~dp0windows_gui_check.txt"
+set "REPORT_DIR=%~dp0Results\Diagnostics"
+if not exist "%REPORT_DIR%\" mkdir "%REPORT_DIR%"
+if not exist "%REPORT_DIR%\" exit /b 1
+set "REPORT=%REPORT_DIR%\windows_gui_check.txt"
 rem Run one interpreter only, so a failed integration check is not obscured.
 where py >nul 2>&1
 if not errorlevel 1 (

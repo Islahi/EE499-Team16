@@ -36,7 +36,8 @@ BUS_FIELDS = ("base_kv", "voltage_kv", "slack_setpoint_pu", "voltage_margin_pu",
 
 def battery_ratings(context):
     manual = context.get("Manual BESS")
-    units = [manual] if isinstance(manual, dict) else context.get("Selected BESS fleet", ())
+    units = context.get("Manual BESS Fleet") or ([manual] if isinstance(manual, dict)
+                                                 else context.get("Selected BESS fleet", ()))
     ratio = context.get("Effective inverter sizing (kVA/kW)")
     return {unit["bus_id"]: (unit["power_rating_kw"], unit["energy_capacity_kwh"],
                              unit["power_rating_kw"] * ratio if ratio is not None else None)

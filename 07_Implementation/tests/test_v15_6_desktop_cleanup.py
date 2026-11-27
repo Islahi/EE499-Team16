@@ -83,11 +83,12 @@ def test_settings_apply_restore_and_cancel(dialog):
 
 def test_manual_and_optimization_own_separate_bess_settings(dialog):
     widget(dialog, "group_manual_bess").setChecked(True)
-    location = widget(dialog, "combo_bess_bus")
+    table = widget(dialog, "table_manual_bess")
+    location = table.cellWidget(0, 1)
     assert location.findData(1) == -1
     location.setCurrentIndex(location.findData(3))
-    widget(dialog, "spin_bess_power_kw").setValue(25)
-    widget(dialog, "spin_bess_energy_kwh").setValue(75)
+    table.item(0, 2).setText("25")
+    table.item(0, 3).setText("75")
     for name, value in {
         "spin_opt_power_min_kw": 25, "spin_opt_power_max_kw": 250, "spin_opt_power_step_kw": 25,
         "spin_opt_energy_min_kwh": 75, "spin_opt_energy_max_kwh": 750, "spin_opt_energy_step_kwh": 75,
@@ -104,10 +105,57 @@ def test_manual_and_optimization_own_separate_bess_settings(dialog):
     for key in ("spin_ga_mutation", "spin_cpu_workers", "spin_cost_per_kw"):
         assert key not in planned.values
     assert planned.values["fleet_dispatch_mode"] == "daily_milp_dispatch"
-    widget(dialog, "spin_bess_energy_kwh").setValue(25)
+    table.item(0, 3).setText("25")
     with pytest.raises(ValueError, match="duration"):
         dialog.read_settings()
     assert dialog.read_settings(optimization=True).manual_bess is None
+
+
+def test_manual_fleet_applies_and_restores_order_and_disabled_rows(dialog, qt):
+    widget(dialog, "group_manual_bess").setChecked(True)
+    table = widget(dialog, "table_manual_bess")
+    table.setRowCount(0)
+    dialog.add_manual_row({"enabled": True, "bus_id": 3, "power_kw": 25, "energy_kwh": 75})
+    dialog.add_manual_row({"enabled": False, "bus_id": 3, "power_kw": 25, "energy_kwh": 100})
+    dialog.add_manual_row({"enabled": True, "bus_id": 2, "power_kw": 30, "energy_kwh": 120})
+    dialog.tariffs_confirmed = True
+    assert dialog.apply_settings()
+    assert [unit.bus_id for unit in dialog.read_settings().manual_units] == [3, 2]
+    assert table.item(2, 4).text() == "4"
+    assert "55.000 kW" in widget(dialog, "lbl_manual_fleet_summary").text()
+    table.item(1, 0).setCheckState(Qt.CheckState.Checked)
+    assert not dialog.apply_settings()
+    assert "row 2" in widget(dialog, "lbl_settings_validation").text()
+    table.setRowCount(0)
+    dialog.reject()
+    assert table.rowCount() == 3
+    assert table.item(1, 0).checkState() == Qt.CheckState.Unchecked
+    original = dialog.network
+    from tests.test_multi_v4 import make_network
+    dialog.add_manual_row({"enabled": True, "bus_id": 4, "power_kw": 10, "energy_kwh": 40})
+    assert dialog.apply_settings()
+    dialog.set_network(make_network())
+    assert table.cellWidget(3, 1).currentData() == 4
+    assert "unavailable" in table.cellWidget(3, 1).currentText()
+    with pytest.raises(ValueError, match="row 4"):
+        dialog.read_settings()
+    dialog.set_network(original)
+    assert [unit.bus_id for unit in dialog.read_settings().manual_units] == [3, 2, 4]
+
+
+def test_corrective_policy_persists_for_simulation_and_does_not_change_optimize(dialog):
+    policy = widget(dialog, "combo_corrective_actions")
+    assert dialog.read_settings().simulation.corrective_actions
+    policy.setCurrentIndex(policy.findData("uncontrolled"))
+    dialog.tariffs_confirmed = True
+    assert dialog.apply_settings()
+    assert not dialog.read_settings().simulation.corrective_actions
+    assert dialog.read_settings(optimization=True).simulation.corrective_actions
+    policy.setCurrentIndex(policy.findData("compare"))
+    assert dialog.read_settings().compare_corrective_actions
+    assert not dialog.read_settings(optimization=True).compare_corrective_actions
+    dialog.reject()
+    assert policy.currentData() == "uncontrolled"
 
 
 def test_initial_main_window_actions(qt):
@@ -407,10 +455,11 @@ def test_saved_model_information_freezes_effective_parameters_and_offline_math(q
                   str(annual_capital_recovery_factor(economics))):
         assert value in table
     assert "999" not in table
-    browser.setHtml(sections["Mathematical equations"])
-    math = browser.toPlainText()
-    for term in ("conj", "SOC", "E_end = E_start", "P_dis / √", "Σ_b", "C_inventory", "CRF"):
-        assert term in math
+    reference = InformationDialog([("Frozen result", metadata, snapshot)])
+    browser = widget(reference, "information_equations")
+    for term in ("Forward/Backward Sweep", "Battery energy and SOC", "Chronological annual operating cost"):
+        assert term in browser.toPlainText()
+    assert sections["Mathematical equations"].count("data:image/png;base64,") >= 15
     assert report.metrics.bess_cost == pytest.approx(123 * 75 + 456 * (25 / .8))
     assert report.result.dispatch_timing["minimum_discharge_pf"] == .8
     assert pd.read_csv(path / "battery_daily_audit.csv")["soc_restored"].all()
@@ -418,7 +467,7 @@ def test_saved_model_information_freezes_effective_parameters_and_offline_math(q
     html = dashboard.regenerate_dashboard(path).read_text(encoding="utf-8")
     assert (path / dashboard.RUN_FILE).read_bytes() == frozen_bytes
     assert sections["Mathematical equations"] in html
-    assert "31.25" in html and "456.0 USD" in html
+    assert "31.25" in html and "456 USD" in html
 
     class OfflineReport(HTMLParser):
         def handle_starttag(self, tag, attrs):
